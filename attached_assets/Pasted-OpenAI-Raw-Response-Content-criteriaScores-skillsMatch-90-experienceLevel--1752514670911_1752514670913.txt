@@ -1,0 +1,128 @@
+OpenAI Raw Response Content: {
+  "criteriaScores": {
+    "skillsMatch": 90,
+    "experienceLevel": 80,
+    "keywordRelevance": 90,
+    "professionalDepth": 80,
+    "domainExperience": 90
+  },
+  "detailedReasoning": "Akash Murme has a strong alignment with the required skills for the Hogan Developer position, particularly in COBOL, JCL, DB2, VSAM, and Hogan modules. His 6 years of experience is appropriate for a mid-level role, and he is currently employed in a relevant position, which enhances his recency score. He demonstrates a solid understanding of banking systems, particularly in loans and deposits, which aligns well with the job requirements. However, while he has experience with Hogan, the specific mention of ODS (Online Delivery Systems) is absent, which slightly affects his overall score.",
+  "scoreExplanations": {
+    "skillsMatch": "The score of 90 reflects Akash's strong proficiency in the required technologies, particularly with Hogan and COBOL, which are critical for the role. He possesses all the necessary skills except for explicit experience with ODS.",
+    "experienceLevel": "The score of 80 is due to Akash's 6 years of experience, which is suitable for a mid-level position. However, there is no indication of leadership or advanced responsibilities that might elevate his score further.",
+    "keywordRelevance": "The score of 90 is based on the presence of key job-related terms in his resume, including Hogan, COBOL, JCL, DB2, and VSAM, which are essential for the role.",
+    "professionalDepth": "The score of 80 indicates that while Akash has deep expertise in several areas, there is a slight lack of breadth in terms of exposure to all Hogan modules, particularly ODS.",
+    "domainExperience": "The score of 90 reflects Akash's direct experience in the banking domain, particularly with loans and deposits, which are crucial for the job."
+  },
+  "strengths": [
+    "Strong technical skills in COBOL, JCL, DB2, and VSAM",
+    "Relevant experience in the banking domain with a focus on Hogan modules"
+  ],
+  "concerns": [
+    "Lack of explicit experience with ODS (Online Delivery Systems)",
+    "Limited indication of leadership or advanced responsibilities"
+  ],
+  "recommendations": "Given Akash's strong alignment with the required skills and relevant experience, he is a strong candidate for the Hogan Developer position. However, it would be beneficial to assess his familiarity with ODS during the interview process.",
+  "skillBreakdown": {
+    "skillsMatch": {
+      "has": [
+        "COBOL",
+        "JCL",
+        "DB2",
+        "VSAM",
+        "Hogan ILP and IDS"
+      ],
+      "missing": [
+        "Experience with ODS (Online Delivery Systems)",
+        "Advanced knowledge of banking systems beyond loans and deposits"
+      ]
+    },
+    "experienceLevel": {
+      "has": [
+        "6 years of experience in mainframe development",
+        "Current role as a Mainframe Developer at Barclays"
+      ],
+      "missing": [
+        "Leadership experience or advanced responsibilities"
+      ]
+    },
+    "keywordRelevance": {
+      "has": [
+        "Hogan core banking platform",
+        "COBOL",
+        "JCL",
+        "DB2",
+        "VSAM"
+      ],
+      "missing": [
+        "Specific mention of ODS"
+      ]
+    },
+    "professionalDepth": {
+      "has": [
+        "Deep expertise in COBOL and JCL",
+        "Experience with Hogan modules (CAMS II, IDS, ILP)"
+      ],
+      "missing": [
+        "Broader exposure to all Hogan modules, particularly ODS"
+      ]
+    },
+    "domainExperience": {
+      "has": [
+        "Experience in the banking domain",
+        "Involvement in projects related to loans and deposits"
+      ],
+      "missing": [
+        "Experience with online delivery systems"
+      ]
+    }
+  }
+}
+🤖 OpenAI Response Length: 3745
+🤖 Parsed Result Keys: [
+  'criteriaScores',
+  'detailedReasoning',
+  'scoreExplanations',
+  'strengths',
+  'concerns',
+  'recommendations',
+  'skillBreakdown'
+]
+🤖 Has criteriaScores: true
+🤖 Has skillAnalysis: false
+🤖 SkillAnalysis structure: null
+🔢 Calculating weighted scores for candidate 48
+🔢 CriteriaScores: {
+  skillsMatch: 90,
+  experienceLevel: 80,
+  keywordRelevance: 90,
+  professionalDepth: 80,
+  domainExperience: 90
+}
+🔢 FinalWeights: {
+  skills: 30,
+  experience: 20,
+  keywords: 35,
+  professionalDepth: 10,
+  domainExperience: 5
+}
+🔢 WeightedScores: {
+  skillsMatch: 27,
+  experienceLevel: 16,
+  keywordRelevance: 31.5,
+  professionalDepth: 8,
+  domainExperience: 4.5
+}
+🔢 Adding score: 27 -> safeScore: 27 | running sum: 27
+🔢 Adding score: 16 -> safeScore: 16 | running sum: 43
+🔢 Adding score: 31.5 -> safeScore: 31.5 | running sum: 74.5
+🔢 Adding score: 8 -> safeScore: 8 | running sum: 82.5
+🔢 Adding score: 4.5 -> safeScore: 4.5 | running sum: 87
+🔢 WeightedSum: 87 | InitialMatchPercentage: 87
+🔍 AKASH MURME DETAILED CALCULATION:
+🔍 Skills: 90 % ×  30 % =  27  points
+🔍 Experience: 80 % ×  20 % =  16  points
+🔍 Keywords: 90 % ×  35 % =  31.5  points
+🔍 Professional Depth: 80 % ×  10 % =  8  points
+🔍 Domain Experience: 90 % ×  5 % =  4.5  points
+🔍 TOTAL SUM: 87 points

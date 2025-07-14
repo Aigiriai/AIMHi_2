@@ -570,6 +570,15 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
     
     console.log('🔢 WeightedSum:', weightedSum, '| InitialMatchPercentage:', initialMatchPercentage);
     
+    // Ensure we have a valid numeric result
+    if (isNaN(initialMatchPercentage)) {
+      console.warn('⚠️  NaN detected in match calculation for candidate', candidate.id, '- using fallback of 0');
+      initialMatchPercentage = 0;
+    }
+
+    // Use purely mathematical weighted sum - ignore OpenAI's overall percentage
+    const finalMatchPercentage = Math.min(100, Math.max(0, initialMatchPercentage));
+    
     // DETAILED DEBUG FOR AKASH MURME CASE
     if (candidate.name && candidate.name.includes('Akash')) {
       console.log('🔍 AKASH MURME DETAILED CALCULATION:');
@@ -581,15 +590,6 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       console.log('🔍 TOTAL SUM:', weightedSum, 'points');
       console.log('🔍 FINAL PERCENTAGE:', finalMatchPercentage, '%');
     }
-    
-    // Ensure we have a valid numeric result
-    if (isNaN(initialMatchPercentage)) {
-      console.warn('⚠️  NaN detected in match calculation for candidate', candidate.id, '- using fallback of 0');
-      initialMatchPercentage = 0;
-    }
-
-    // Use purely mathematical weighted sum - ignore OpenAI's overall percentage
-    const finalMatchPercentage = Math.min(100, Math.max(0, initialMatchPercentage));
     
     console.log('🔢 Final calculation - Mathematical weighted sum:', finalMatchPercentage);
     console.log('🔢 AI suggested overall percentage (ignored):', result.overallMatchPercentage);
