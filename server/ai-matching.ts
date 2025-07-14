@@ -13,16 +13,16 @@ export interface MatchCriteria {
   skillsMatch: number;
   experienceLevel: number;
   keywordRelevance: number;
-  technicalDepth: number;
-  projectDomainExperience: number;
+  professionalDepth: number;
+  domainExperience: number;
 }
 
 export interface MatchWeights {
   skills: number;
   experience: number;
   keywords: number;
-  technicalDepth: number;
-  projectDomain: number;
+  professionalDepth: number;
+  domainExperience: number;
 }
 
 export interface DetailedMatchResult {
@@ -64,7 +64,7 @@ function generateContentHash(
 }
 
 // Extract critical domain-specific technologies from job description using AI
-async function extractCriticalTechnologies(
+async function extractCriticalRequirements(
   jobDescription: string,
   keywords: string,
 ): Promise<string[]> {
@@ -72,48 +72,42 @@ async function extractCriticalTechnologies(
     const combined = jobDescription + (keywords ? ` ${keywords}` : "");
 
     const prompt = `
-Analyze the following job description and extract the critical technologies, then also identify closely associated technologies that are extremely relevant to this domain.
+Analyze the following job description and extract the critical requirements, skills, and qualifications explicitly mentioned as essential for this role.
 
 Job Description: ${combined}
 
-Extract technologies in these categories:
-1. PRIMARY CRITICAL TECHNOLOGIES - Specific platforms/systems explicitly mentioned (e.g., Hogan, SAP, Salesforce, Oracle, AWS)
-2. Programming languages that are mandatory (not just "nice to have")
-3. Critical databases or data systems
-4. Essential frameworks or libraries
-5. Required cloud platforms
-6. Specialized domain technologies
-
-Then for each primary technology, identify ASSOCIATED TECHNOLOGIES that are extremely closely related:
-- If C Programming is mentioned → include C++, Device Drivers, Embedded Programming, Firmware, Real-time Systems
-- If Hogan is mentioned → include Core Banking, Mainframe, COBOL, JCL, DB2, VSAM, CICS, Banking Systems, Financial Services
-- If React is mentioned → include JavaScript, TypeScript, Node.js, JSX, Redux, Next.js, Frontend Development
-- If AWS is mentioned → include EC2, S3, Lambda, CloudFormation, RDS, DynamoDB, Cloud Computing, DevOps
-- If SAP is mentioned → include ABAP, SAP HANA, SAP Fiori, SAP BASIS, SAP MM, SAP SD, ERP Systems
-- If Java is mentioned → include Spring, Spring Boot, Hibernate, Maven, Gradle, JPA, Backend Development
-- If Python is mentioned → include Django, Flask, FastAPI, Pandas, NumPy, Data Science, Backend Development
-- If .NET is mentioned → include C#, ASP.NET, Entity Framework, Azure, Microsoft Technologies
-- If Oracle is mentioned → include PL/SQL, Oracle Database, SQL, Database Administration, TOAD
+Extract requirements in these categories:
+1. ESSENTIAL SKILLS - Specific skills, competencies, or abilities explicitly mentioned as required
+2. REQUIRED QUALIFICATIONS - Degrees, certifications, licenses, or credentials that are mandatory
+3. CRITICAL TOOLS/EQUIPMENT - Specific tools, software, equipment, or systems that must be used
+4. MANDATORY EXPERIENCE - Specific types of experience, processes, or methodologies required
+5. ESSENTIAL KNOWLEDGE - Domain-specific knowledge, procedures, or expertise areas
+6. REQUIRED CAPABILITIES - Physical, mental, or professional capabilities needed
 
 Rules:
-- Only extract technologies that are clearly REQUIRED, not optional
-- Include both primary and closely associated technologies, synonyms, and domain terms
-- Focus on comprehensive domain coverage (banking with banking, cloud with cloud)
-- Include industry terminology and related job functions
-- Limit to maximum 50 total technologies for comprehensive matching
+- Only extract requirements that are clearly REQUIRED, ESSENTIAL, or MANDATORY
+- Include exact terms, names, and phrases from the job description
+- Focus on specific, measurable requirements rather than generic terms
+- Include professional terminology and industry-specific language
+- Avoid inferring or adding requirements not explicitly stated
+- Limit to maximum 30 total requirements for focused matching
 
 Respond with a JSON object:
 {
-  "primary_technologies": ["explicit technology from JD"],
-  "associated_technologies": ["closely related technology1", "related technology2"],
-  "all_critical_technologies": ["combined list of primary + associated"]
+  "essential_requirements": ["requirement1", "requirement2", "requirement3"],
+  "all_critical_requirements": ["combined list of all essential requirements"]
 }
 
-Example output: 
+Example for a nursing position:
 {
-  "primary_technologies": ["Hogan", "COBOL"],
-  "associated_technologies": ["Core Banking", "Mainframe", "JCL", "DB2", "VSAM", "CICS"],
-  "all_critical_technologies": ["Hogan", "COBOL", "Core Banking", "Mainframe", "JCL", "DB2", "VSAM", "CICS"]
+  "essential_requirements": ["RN License", "CPR Certification", "IV Therapy", "Electronic Health Records", "Patient Assessment"],
+  "all_critical_requirements": ["RN License", "CPR Certification", "IV Therapy", "Electronic Health Records", "Patient Assessment"]
+}
+
+Example for a pilot position:
+{
+  "essential_requirements": ["Commercial Pilot License", "Instrument Rating", "Aviation Medical Certificate", "Flight Hours", "Radio Communication"],
+  "all_critical_requirements": ["Commercial Pilot License", "Instrument Rating", "Aviation Medical Certificate", "Flight Hours", "Radio Communication"]
 }
 `;
 
@@ -127,215 +121,86 @@ Example output:
 
     const content =
       response.choices[0].message.content ||
-      '{"all_critical_technologies": []}';
+      '{"all_critical_requirements": []}';
     const result = JSON.parse(content);
 
     // Handle different possible response formats
-    let technologies: string[] = [];
+    let requirements: string[] = [];
     if (
-      result.all_critical_technologies &&
-      Array.isArray(result.all_critical_technologies)
+      result.all_critical_requirements &&
+      Array.isArray(result.all_critical_requirements)
     ) {
-      technologies = result.all_critical_technologies;
-    } else if (result.technologies && Array.isArray(result.technologies)) {
-      technologies = result.technologies;
-    } else if (
-      result.critical_technologies &&
-      Array.isArray(result.critical_technologies)
-    ) {
-      technologies = result.critical_technologies;
+      requirements = result.all_critical_requirements;
+    } else if (result.essential_requirements && Array.isArray(result.essential_requirements)) {
+      requirements = result.essential_requirements;
+    } else if (result.requirements && Array.isArray(result.requirements)) {
+      requirements = result.requirements;
     } else if (Array.isArray(result)) {
-      technologies = result;
+      requirements = result;
     }
 
     // Filter and normalize
-    const filteredTechnologies = technologies
-      .filter((tech) => tech && typeof tech === "string" && tech.length > 1)
-      .map((tech) => tech.trim().toUpperCase())
-      .slice(0, 50); // Increased to 50 technologies for comprehensive coverage
+    const filteredRequirements = requirements
+      .filter((req) => req && typeof req === "string" && req.length > 1)
+      .map((req) => req.trim().toUpperCase())
+      .slice(0, 30); // Focused on 30 critical requirements
 
-    // Log the extracted technologies for debugging
-    console.log("Extracted critical technologies:", {
-      primary: result.primary_technologies || [],
-      associated: result.associated_technologies || [],
-      total: filteredTechnologies,
+    // Log the extracted requirements for debugging
+    console.log("Extracted critical requirements:", {
+      essential: result.essential_requirements || [],
+      total: filteredRequirements,
     });
 
-    return filteredTechnologies;
+    return filteredRequirements;
   } catch (error) {
-    console.error("Error extracting critical technologies:", error);
+    console.error("Error extracting critical requirements:", error);
     // Fallback to basic keyword extraction if AI fails
-    return extractFallbackTechnologies(jobDescription, keywords);
+    return extractFallbackRequirements(jobDescription, keywords);
   }
 }
 
-// Fallback method for technology extraction if AI fails
-function extractFallbackTechnologies(
+// Fallback method for requirements extraction if AI fails
+function extractFallbackRequirements(
   jobDescription: string,
   keywords: string,
 ): string[] {
-  const techAssociations: { [key: string]: string[] } = {
-    hogan: ["CORE BANKING", "MAINFRAME", "COBOL", "JCL", "DB2", "VSAM", "CICS"],
-    sap: ["ABAP", "SAP HANA", "SAP FIORI", "SAP BASIS", "SAP MM", "SAP SD"],
-    oracle: ["PL/SQL", "ORACLE DB", "ORACLE FORMS", "ORACLE REPORTS", "TOAD"],
-    salesforce: ["APEX", "VISUALFORCE", "LIGHTNING", "SOQL", "CRM"],
-    aws: ["EC2", "S3", "LAMBDA", "CLOUDFORMATION", "RDS", "DYNAMODB"],
-    azure: ["AZURE FUNCTIONS", "AZURE SQL", "AZURE DEVOPS", "POWER BI"],
-    react: ["JAVASCRIPT", "TYPESCRIPT", "NODE.JS", "JSX", "REDUX"],
-    angular: ["TYPESCRIPT", "RXJS", "ANGULAR CLI", "ANGULAR MATERIAL"],
-    java: ["SPRING", "HIBERNATE", "MAVEN", "GRADLE", "JPA"],
-    python: ["DJANGO", "FLASK", "PANDAS", "NUMPY", "SCIKIT-LEARN"],
-    kubernetes: ["DOCKER", "HELM", "KUBECTL", "MICROSERVICES"],
-    mainframe: ["COBOL", "JCL", "DB2", "VSAM", "CICS", "TSO"],
-    cobol: ["MAINFRAME", "JCL", "DB2", "VSAM", "CICS"],
-  };
-
-  const combined = (jobDescription + " " + keywords).toLowerCase();
-  const foundTechnologies: string[] = [];
-
-  // Find primary technologies
-  for (const [primaryTech, associatedTechs] of Object.entries(
-    techAssociations,
-  )) {
-    if (combined.includes(primaryTech.toLowerCase())) {
-      foundTechnologies.push(primaryTech.toUpperCase());
-      // Add associated technologies
-      foundTechnologies.push(...associatedTechs);
-    }
-  }
-
-  // Add other common technologies found
-  const additionalTechs = [
-    "gcp",
-    "mysql",
-    "postgresql",
-    "mongodb",
-    "redis",
-    "elasticsearch",
-    "kafka",
+  const combined = `${jobDescription} ${keywords}`.toLowerCase();
+  
+  // Generic requirement patterns that work across all professions
+  const requirementPatterns = [
+    /required:?\s*([^.]+)/gi,
+    /must have:?\s*([^.]+)/gi,
+    /essential:?\s*([^.]+)/gi,
+    /mandatory:?\s*([^.]+)/gi,
+    /minimum:?\s*([^.]+)/gi,
+    /qualification:?\s*([^.]+)/gi,
+    /license:?\s*([^.]+)/gi,
+    /certification:?\s*([^.]+)/gi,
+    /degree:?\s*([^.]+)/gi,
+    /experience:?\s*([^.]+)/gi,
   ];
-  for (const tech of additionalTechs) {
-    if (combined.includes(tech.toLowerCase())) {
-      foundTechnologies.push(tech.toUpperCase());
-    }
-  }
 
-  return foundTechnologies
-    .filter((tech, index) => foundTechnologies.indexOf(tech) === index)
-    .slice(0, 50);
+  const foundRequirements: string[] = [];
+  
+  requirementPatterns.forEach(pattern => {
+    const matches = combined.match(pattern);
+    if (matches) {
+      matches.forEach(match => {
+        const requirement = match.replace(/^(required|must have|essential|mandatory|minimum|qualification|license|certification|degree|experience):?\s*/i, '').trim();
+        if (requirement.length > 2) {
+          foundRequirements.push(requirement.toUpperCase());
+        }
+      });
+    }
+  });
+
+  return foundRequirements.slice(0, 20); // Limit to 20 requirements
 }
 
-// Apply strict domain validation rules to enforce technology requirements
-function applyDomainValidationRules(
-  initialScore: number,
-  criticalTechnologies: string[],
-  jobDescription: string,
-  resumeContent: string,
-  criteriaScores: MatchCriteria,
-): number {
-  if (criticalTechnologies.length === 0) {
-    return initialScore; // No critical technologies detected, use original score
-  }
+// Domain validation rules have been removed to eliminate sector-specific biases
+// The system now relies purely on AI's natural language understanding
 
-  const normalizedResume = resumeContent.toLowerCase();
-  const normalizedJob = jobDescription.toLowerCase();
-
-  // Check for presence of each critical technology in resume
-  const missingCriticalTech: string[] = [];
-  const foundCriticalTech: string[] = [];
-
-  for (const tech of criticalTechnologies) {
-    if (normalizedResume.includes(tech.toLowerCase())) {
-      foundCriticalTech.push(tech);
-    } else {
-      missingCriticalTech.push(tech);
-    }
-  }
-
-  // Calculate penalty based on missing critical technologies
-  const criticalTechPercentage =
-    foundCriticalTech.length / criticalTechnologies.length;
-
-  // Apply severe penalties for missing critical technologies
-  if (criticalTechPercentage === 0) {
-    // No critical technologies found - maximum 20% match
-    return Math.min(initialScore, 20);
-  } else if (criticalTechPercentage < 0.5) {
-    // Less than 50% of critical technologies - maximum 35% match
-    return Math.min(initialScore, 35);
-  } else if (criticalTechPercentage < 1.0) {
-    // Missing some critical technologies - cap at 60%
-    return Math.min(initialScore, 60);
-  }
-
-  // Additional domain mismatch checks
-  const isDomainMismatch = checkDomainMismatch(normalizedJob, normalizedResume);
-  if (isDomainMismatch) {
-    // Complete domain mismatch - maximum 25% match
-    return Math.min(initialScore, 25);
-  }
-
-  return initialScore; // No penalties, return original score
-}
-
-// Check for major domain mismatches
-function checkDomainMismatch(
-  jobDescription: string,
-  resumeContent: string,
-): boolean {
-  const bankingKeywords = [
-    "banking",
-    "finance",
-    "core banking",
-    "hogan",
-    "temenos",
-    "mainframe",
-    "cobol",
-  ];
-  const audioKeywords = [
-    "audio",
-    "bluetooth",
-    "sound",
-    "music",
-    "speaker",
-    "headphone",
-  ];
-  const webKeywords = [
-    "web development",
-    "frontend",
-    "backend",
-    "react",
-    "angular",
-    "vue",
-  ];
-  const testingKeywords = [
-    "test automation",
-    "selenium",
-    "appium",
-    "qa",
-    "testing framework",
-  ];
-
-  const isBankingJob = bankingKeywords.some((keyword) =>
-    jobDescription.includes(keyword),
-  );
-  const isAudioResume = audioKeywords.some((keyword) =>
-    resumeContent.includes(keyword),
-  );
-  const isWebResume = webKeywords.some((keyword) =>
-    resumeContent.includes(keyword),
-  );
-  const isTestingResume = testingKeywords.some((keyword) =>
-    resumeContent.includes(keyword),
-  );
-
-  // Banking job with non-banking resume
-  if (isBankingJob && (isAudioResume || isWebResume || isTestingResume)) {
-    return true;
-  }
-
-  return false;
-}
+// Function removed to eliminate sector-specific biases
 
 export async function matchCandidateToJob(
   job: Job,
@@ -343,13 +208,13 @@ export async function matchCandidateToJob(
   weights?: MatchWeights,
 ): Promise<DetailedMatchResult> {
   try {
-    // Default weights if not provided - heavily prioritizing domain-specific experience
+    // Default weights if not provided - balanced approach across all criteria
     const defaultWeights: MatchWeights = {
-      skills: 20,
-      experience: 10,
-      keywords: 30,
-      technicalDepth: 10,
-      projectDomain: 30, // Maximum weight for domain-specific requirements
+      skills: 25,
+      experience: 15,
+      keywords: 25,
+      professionalDepth: 15,
+      domainExperience: 20, // Experience in the specific field/domain
     };
 
     const finalWeights = weights || defaultWeights;
@@ -370,53 +235,53 @@ export async function matchCandidateToJob(
     const fullResumeContent = candidate.resumeContent;
     const fullJobDescription = job.description;
 
-    // Extract critical domain-specific technologies from job description
-    const criticalTechnologies = await extractCriticalTechnologies(
+    // Extract critical requirements from job description
+    const criticalRequirements = await extractCriticalRequirements(
       fullJobDescription,
       job.keywords || "",
     );
-    const hasCriticalTech = criticalTechnologies.length > 0;
+    const hasCriticalReq = criticalRequirements.length > 0;
 
-    // Pre-filter: Check if candidate has ANY critical technologies before expensive AI processing
-    if (hasCriticalTech) {
+    // Pre-filter: Check if candidate has ANY critical requirements before expensive AI processing
+    if (hasCriticalReq) {
       const normalizedResumeContent = fullResumeContent.toLowerCase();
-      const foundTechCount = criticalTechnologies.filter((tech) =>
-        normalizedResumeContent.includes(tech.toLowerCase()),
+      const foundReqCount = criticalRequirements.filter((req) =>
+        normalizedResumeContent.includes(req.toLowerCase()),
       ).length;
 
-      if (foundTechCount === 0) {
-        // No critical technologies found - skip AI processing and return low score
+      if (foundReqCount === 0) {
+        // No critical requirements found - skip AI processing and return low score
         console.log(
-          `Pre-filter rejection: Candidate ${candidate.name} has no critical technologies`,
+          `Pre-filter rejection: Candidate ${candidate.name} has no critical requirements`,
         );
         return {
           candidateId: candidate.id,
           matchPercentage: 5,
-          reasoning: `Pre-screening failed: No critical technologies found in resume. Required technologies: ${criticalTechnologies.join(", ")}. This candidate's background does not align with the essential technical requirements for this role.`,
+          reasoning: `Pre-screening failed: No critical requirements found in resume. Required qualifications: ${criticalRequirements.join(", ")}. This candidate's background does not align with the essential requirements for this role.`,
           criteriaScores: {
             skillsMatch: 5,
             experienceLevel: 5,
             keywordRelevance: 5,
-            technicalDepth: 5,
-            projectDomainExperience: 5,
+            professionalDepth: 5,
+            domainExperience: 5,
           },
           weightedScores: {
-            skillsMatch: 1,
-            experienceLevel: 0.5,
-            keywordRelevance: 1.5,
-            technicalDepth: 0.5,
-            projectDomainExperience: 1.5,
+            skillsMatch: 1.25,
+            experienceLevel: 0.75,
+            keywordRelevance: 1.25,
+            professionalDepth: 0.75,
+            domainExperience: 1.0,
           },
         };
       }
 
       console.log(
-        `Pre-filter passed: Candidate ${candidate.name} has ${foundTechCount}/${criticalTechnologies.length} critical technologies`,
+        `Pre-filter passed: Candidate ${candidate.name} has ${foundReqCount}/${criticalRequirements.length} critical requirements`,
       );
     }
 
     const prompt = `
-You are an expert HR AI assistant that analyzes job requirements and candidate profiles with advanced multi-criteria matching, with special emphasis on domain-specific technology experience and keyword recency.
+You are an expert HR AI assistant that analyzes job requirements and candidate profiles with advanced multi-criteria matching, focusing on accurate skill assessment and experience recency analysis across all professions.
 
 Job Position: ${job.title}
 Job Description: ${fullJobDescription}
@@ -425,10 +290,10 @@ Job Type: ${job.jobType}
 Keywords: ${job.keywords}
 
 ${
-  hasCriticalTech
+  hasCriticalReq
     ? `
-CRITICAL DOMAIN TECHNOLOGIES DETECTED: ${criticalTechnologies.join(", ")}
-WARNING: This job requires specific platform/technology experience. Candidates without direct experience with these technologies should receive significantly lower scores.
+CRITICAL REQUIREMENTS DETECTED: ${criticalRequirements.join(", ")}
+NOTE: This job has specific requirements that are essential for success in this role. Candidates without direct experience with these requirements should receive appropriately adjusted scores.
 `
     : ""
 }
@@ -441,66 +306,46 @@ Resume Content: ${fullResumeContent}
 ANALYSIS CRITERIA (Rate each from 0-100):
 
 1. SKILLS MATCH (Weight: ${finalWeights.skills}%):
-   - Technical skills alignment with job requirements
-   - Programming languages/tools match
-   - Specialized competencies and certifications
+   - Required competencies alignment with job requirements
+   - Tools, equipment, software, or methodologies match
+   - Professional skills and certifications
+   - Domain-specific abilities and knowledge
 
 2. EXPERIENCE LEVEL (Weight: ${finalWeights.experience}%):
    - Years of experience vs requirements
    - Seniority level appropriateness
    - Career progression alignment
+   - Leadership and responsibility level match
 
 3. KEYWORD RELEVANCE & RECENCY (Weight: ${finalWeights.keywords}%):
    - Job keywords present in resume
    - CRITICAL: Parse employment dates accurately - "Present", "Current", "Till Date" means ONGOING work
    - Employment periods like "Aug 2024 - Present" or "April 2019 - Present" = CURRENT work (100% relevance)
-   - Skills used currently or within last 2 years: 100% relevance
-   - Skills used 3-5 years ago: 80% relevance
-   - Skills used 6-8 years ago: 60% relevance
-   - Skills used 8+ years ago: 40% relevance or lower
-   - Continuous employment with technology from past to present = Maximum recency score
-   - Industry terminology usage and domain-specific language
+   - Experience from 2023-Present = Very Recent (100% relevance)
+   - Experience from 2020-2022 = Recent (80% relevance)
+   - Experience from 2017-2019 = Somewhat Recent (60% relevance)
+   - Experience from 2014-2016 = Less Recent (40% relevance)
+   - Experience older than 2014 = Not Recent (20% relevance)
+   - Continuous employment in relevant field from past to present = Maximum recency score
+   - Professional terminology usage and field-specific language
 
-4. TECHNICAL DEPTH vs BREADTH (Weight: ${finalWeights.technicalDepth}%):
+4. PROFESSIONAL DEPTH vs BREADTH (Weight: ${finalWeights.professionalDepth}%):
    - Specialist vs generalist assessment
    - Deep expertise in specific domains vs broad knowledge
-   - Advanced technical competencies
-   - Mastery level of core technologies
+   - Advanced professional competencies
+   - Mastery level of core skills and methodologies
 
-5. PROJECT/DOMAIN EXPERIENCE (Weight: ${finalWeights.projectDomain}%):
-   - CRITICAL: Direct experience with specific technologies mentioned in job requirements
-   - If job mentions specific platforms (e.g., Hogan, SAP, Oracle), candidate MUST have worked with those exact platforms
-   - Candidates without domain-specific experience should score 0-20% in this category
-   - Similar domain/industry background and project complexity
-   - Technology stack and methodology familiarity
-
-CRITICAL MATCHING RULES - MANDATORY REQUIREMENTS:
-1. EXACT TECHNOLOGY MATCH REQUIREMENT: If the job mentions specific platforms/systems (like Hogan, SAP, Salesforce, Oracle), candidates MUST have that exact experience:
-   - NO EXPERIENCE with required platform: Project Domain score = 0%, Overall score ≤ 30%
-   - ZERO mention of required technology: Automatic severe penalty across all criteria
-   - Limited/indirect experience: Project Domain score = 10-30%, Overall score ≤ 50%
-   - Direct recent experience: Project Domain score = 80-100%
-
-2. ABSOLUTE KEYWORD REQUIREMENTS: For specialized technologies, absence = disqualification:
-   - Banking job requiring Hogan but no Hogan experience: Maximum 25% overall match
-   - ERP job requiring SAP but no SAP experience: Maximum 25% overall match
-   - Missing critical domain keywords should result in FAILING scores
-
-3. ZERO TOLERANCE FOR DOMAIN MISMATCHES: 
-   - Audio/Bluetooth engineer applying for banking role: Maximum 20% match
-   - Web developer applying for mainframe role: Maximum 20% match
-   - Different industry backgrounds should be heavily penalized
-
-4. OVERALL SCORING CONSTRAINTS:
-   - No critical domain experience: Overall score ≤ 25%
-   - Wrong domain entirely: Overall score ≤ 20%
-   - Missing essential technologies: Overall score ≤ 30%
+5. DOMAIN/FIELD EXPERIENCE (Weight: ${finalWeights.domainExperience}%):
+   - Direct experience with specific requirements mentioned in job description
+   - Relevant industry, sector, or field background
+   - Similar work environment and project complexity
+   - Methodology, process, and system familiarity
 
 CONSISTENCY REQUIREMENTS:
 - Use exact numeric scoring (avoid ranges like "75-80")
 - Identical resume content must produce identical scores
 - Base scores on quantifiable metrics rather than subjective interpretation
-- Be extremely strict about domain-specific technology requirements
+- Focus on exact matches and demonstrated experience
 
 CRITICAL DATE PARSING AND RECENCY ANALYSIS:
 - Parse employment dates carefully (e.g., "Aug 2024 - Present", "April 2019 - Present")
@@ -510,10 +355,10 @@ CRITICAL DATE PARSING AND RECENCY ANALYSIS:
 - Work from 2017-2019 = Somewhat Recent (60% recency)
 - Work from 2014-2016 = Less Recent (40% recency)
 - Work older than 2014 = Not Recent (20% recency)
-- Continuous employment in a technology from past to present = Maximum recency score
+- Continuous employment in relevant field from past to present = Maximum recency score
 - Pay special attention to "Present", "Current", "Till Date" indicators
 
-Provide detailed analysis with specific attention to accurate skill recency and currency parsing.
+Provide detailed analysis with specific attention to accurate experience recency and qualification matching.
 
 Respond in JSON format with:
 {
@@ -521,22 +366,22 @@ Respond in JSON format with:
     "skillsMatch": number,
     "experienceLevel": number,
     "keywordRelevance": number,
-    "technicalDepth": number,
-    "projectDomainExperience": number
+    "professionalDepth": number,
+    "domainExperience": number
   },
   "overallMatchPercentage": number,
-  "detailedReasoning": "comprehensive explanation including skill recency analysis",
+  "detailedReasoning": "comprehensive explanation including experience recency analysis",
   "scoreExplanations": {
     "skillsMatch": "Why this specific score for skills alignment",
     "experienceLevel": "Why this specific score for experience match", 
     "keywordRelevance": "Why this specific score for keyword/recency match",
-    "technicalDepth": "Why this specific score for technical depth",
-    "projectDomainExperience": "Why this specific score for domain experience"
+    "professionalDepth": "Why this specific score for professional depth",
+    "domainExperience": "Why this specific score for domain experience"
   },
   "overallScoreJustification": "Why the overall percentage makes sense given the criteria",
   "strengths": ["strength1", "strength2"],
   "concerns": ["concern1", "concern2"],
-  "recommendations": "hiring recommendation with focus on skill currency"
+  "recommendations": "hiring recommendation with focus on experience currency"
 }
 `;
 
@@ -580,20 +425,20 @@ Respond in JSON format with:
             50,
         ),
       ),
-      technicalDepth: Math.max(
+      professionalDepth: Math.max(
         0,
         Math.min(
           100,
-          result.criteriaScores?.technicalDepth ||
+          result.criteriaScores?.professionalDepth ||
             result.overallMatchPercentage ||
             50,
         ),
       ),
-      projectDomainExperience: Math.max(
+      domainExperience: Math.max(
         0,
         Math.min(
           100,
-          result.criteriaScores?.projectDomainExperience ||
+          result.criteriaScores?.domainExperience ||
             result.overallMatchPercentage ||
             50,
         ),
@@ -606,11 +451,10 @@ Respond in JSON format with:
         (criteriaScores.experienceLevel * finalWeights.experience) / 100,
       keywordRelevance:
         (criteriaScores.keywordRelevance * finalWeights.keywords) / 100,
-      technicalDepth:
-        (criteriaScores.technicalDepth * finalWeights.technicalDepth) / 100,
-      projectDomainExperience:
-        (criteriaScores.projectDomainExperience * finalWeights.projectDomain) /
-        100,
+      professionalDepth:
+        (criteriaScores.professionalDepth * finalWeights.professionalDepth) / 100,
+      domainExperience:
+        (criteriaScores.domainExperience * finalWeights.domainExperience) / 100,
     };
 
     // Calculate initial weighted score
@@ -618,8 +462,8 @@ Respond in JSON format with:
       weightedScores.skillsMatch +
         weightedScores.experienceLevel +
         weightedScores.keywordRelevance +
-        weightedScores.technicalDepth +
-        weightedScores.projectDomainExperience,
+        weightedScores.professionalDepth +
+        weightedScores.domainExperience,
     );
 
     // dont Apply strict domain-specific validation rules
@@ -649,11 +493,11 @@ CRITERIA SCORES WITH AI EXPLANATIONS:
 • Keyword Relevance: ${criteriaScores.keywordRelevance}% (Weight: ${finalWeights.keywords}% = ${weightedScores.keywordRelevance.toFixed(1)} points)
   ${scoreExplanations.keywordRelevance ? `AI Explanation: ${scoreExplanations.keywordRelevance}` : ""}
 
-• Technical Depth: ${criteriaScores.technicalDepth}% (Weight: ${finalWeights.technicalDepth}% = ${weightedScores.technicalDepth.toFixed(1)} points)
-  ${scoreExplanations.technicalDepth ? `AI Explanation: ${scoreExplanations.technicalDepth}` : ""}
+• Professional Depth: ${criteriaScores.professionalDepth}% (Weight: ${finalWeights.professionalDepth}% = ${weightedScores.professionalDepth.toFixed(1)} points)
+  ${scoreExplanations.professionalDepth ? `AI Explanation: ${scoreExplanations.professionalDepth}` : ""}
 
-• Project/Domain Experience: ${criteriaScores.projectDomainExperience}% (Weight: ${finalWeights.projectDomain}% = ${weightedScores.projectDomainExperience.toFixed(1)} points)
-  ${scoreExplanations.projectDomainExperience ? `AI Explanation: ${scoreExplanations.projectDomainExperience}` : ""}
+• Domain Experience: ${criteriaScores.domainExperience}% (Weight: ${finalWeights.domainExperience}% = ${weightedScores.domainExperience.toFixed(1)} points)
+  ${scoreExplanations.domainExperience ? `AI Explanation: ${scoreExplanations.domainExperience}` : ""}
 
 CALCULATION METHOD:
 Initial AI Score: ${initialMatchPercentage}%
@@ -691,8 +535,8 @@ ${result.recommendations || "No specific recommendation provided"}
       skillsMatch: 0,
       experienceLevel: 0,
       keywordRelevance: 0,
-      technicalDepth: 0,
-      projectDomainExperience: 0,
+      professionalDepth: 0,
+      domainExperience: 0,
     };
     return {
       candidateId: candidate.id,

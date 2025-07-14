@@ -118,6 +118,15 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 14, 2025. **Universal AI Matching System Implementation**
+  - Removed all sector-specific biases from AI matching algorithm
+  - Replaced `extractCriticalTechnologies` with universal `extractCriticalRequirements`
+  - Updated AI prompts to work across all professions (doctors, lawyers, pilots, etc.)
+  - Removed hardcoded domain validation rules and industry-specific penalties
+  - Changed criteria from "technical" to universal terms (professionalDepth, domainExperience)
+  - Updated weight distribution for balanced evaluation across all fields
+  - System now relies purely on AI's natural language understanding
+  - Confirmed working with 94% match for Sudhir, 89% for Shruti (no artificial caps)
 - July 14, 2025. **Complete database schema synchronization and core operations verification**
   - Fixed all database column name mismatches (snake_case vs camelCase)
   - Added missing columns for full API compatibility

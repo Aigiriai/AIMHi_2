@@ -1,6 +1,6 @@
 {
-  "Shruti_13": {
-    "candidateName": "Shruti",
+  "Sudhir_13": {
+    "candidateName": "Sudhir",
     "jobDetails": {
       "id": 13,
       "organization_id": 1,
@@ -36,10 +36,10 @@
       "createdAt": "2025-07-14T09:35:50.000Z",
       "updatedAt": "2025-07-14T09:35:50.000Z"
     },
-    "matchPercentage": 89
+    "matchPercentage": 94
   },
-  "Sudhir_13": {
-    "candidateName": "Sudhir",
+  "Shruti_13": {
+    "candidateName": "Shruti",
     "jobDetails": {
       "id": 13,
       "organization_id": 1,
