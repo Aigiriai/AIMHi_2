@@ -517,22 +517,33 @@ export class SQLiteStorage implements IStorage {
           console.log('🔍 PARSING: matchCriteria exists for match:', match.id);
           console.log('🔍 PARSING: raw match_criteria length:', match.match_criteria.length);
           console.log('🔍 PARSING: raw match_criteria start:', match.match_criteria.substring(0, 100));
-          // Alternative approach: Use eval for JSON parsing to avoid character array issue
+          // Robust JSON parsing to handle SQLite string serialization issues
           const rawCriteria = match.match_criteria;
           if (typeof rawCriteria === 'string') {
             try {
-              // Try standard JSON.parse first
+              // First attempt: standard JSON.parse
               parsedMatchCriteria = JSON.parse(rawCriteria);
-              // If it's still a string after parsing, use eval as fallback
+              
+              // Check if parsing resulted in a string (character array issue)
               if (typeof parsedMatchCriteria === 'string') {
-                parsedMatchCriteria = eval(`(${rawCriteria})`);
+                // Second attempt: handle double-escaped JSON
+                parsedMatchCriteria = JSON.parse(parsedMatchCriteria);
               }
-            } catch (evalError) {
-              console.log('🔍 PARSING: Both JSON.parse and eval failed, using empty object');
+              
+              // Validate it's actually an object with expected structure
+              if (typeof parsedMatchCriteria === 'object' && parsedMatchCriteria !== null) {
+                // Success - we have a proper object
+                console.log('🔍 PARSING: JSON parsed successfully as object');
+              } else {
+                console.log('🔍 PARSING: Parsed result is not an object, using empty structure');
+                parsedMatchCriteria = {};
+              }
+            } catch (parseError) {
+              console.log('🔍 PARSING: JSON parsing failed, using empty object:', parseError.message);
               parsedMatchCriteria = {};
             }
           } else {
-            parsedMatchCriteria = rawCriteria;
+            parsedMatchCriteria = rawCriteria || {};
           }
           console.log('🔍 PARSING: parsedMatchCriteria type:', typeof parsedMatchCriteria);
           console.log('🔍 PARSING: parsedMatchCriteria keys:', Object.keys(parsedMatchCriteria));
