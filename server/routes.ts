@@ -697,8 +697,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear existing matches for this job
       await storage.deleteJobMatchesByJobId(parseInt(jobId));
 
-      // Use advanced matching with custom weights
-      const matchResults = await batchMatchCandidates(job, candidates, weights);
+      // Use advanced matching with custom weights - add timeout to prevent hanging
+      const matchingTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Advanced matching timeout - process took too long')), 5 * 60 * 1000); // 5 minute timeout
+      });
+      
+      const matchResults = await Promise.race([
+        batchMatchCandidates(job, candidates, weights),
+        matchingTimeout
+      ]) as any;
       
       // Apply filters based on advanced options - but also filter out invalid matches
       console.log('🔍 Pre-filter: Found', matchResults.length, 'total results');

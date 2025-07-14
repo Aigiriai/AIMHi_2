@@ -440,14 +440,22 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
 }
 `;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo", // Cost-optimized model with increased token allowance
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      max_tokens: 2500, // Increased tokens for detailed analysis with cheaper model
-      temperature: 0.0, // Set to 0 for deterministic results
-      seed: contentSeed, // Use content-based seed for identical resumes to get identical results
+    // Add timeout to prevent hanging
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI API timeout')), 30000); // 30 second timeout
     });
+
+    const response = await Promise.race([
+      openai.chat.completions.create({
+        model: "gpt-3.5-turbo", // Cost-optimized model with increased token allowance
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        max_tokens: 2500, // Increased tokens for detailed analysis with cheaper model
+        temperature: 0.0, // Set to 0 for deterministic results
+        seed: contentSeed, // Use content-based seed for identical resumes to get identical results
+      }),
+      timeoutPromise
+    ]) as any;
 
     // Log the raw OpenAI response for debugging
     console.log('🤖 OpenAI Raw Response Content:', response.choices[0].message.content);
@@ -690,11 +698,31 @@ export async function batchMatchCandidates(
 ): Promise<DetailedMatchResult[]> {
   console.log('🔄 Starting batch matching for', candidates.length, 'candidates');
   
-  const results = await Promise.all(
-    candidates.map((candidate) => matchCandidateToJob(job, candidate, weights)),
-  );
+  // Process candidates in smaller batches to prevent hanging
+  const batchSize = 3;
+  const results: DetailedMatchResult[] = [];
   
-  console.log('🔄 Batch matching complete - checking results:');
+  for (let i = 0; i < candidates.length; i += batchSize) {
+    const batch = candidates.slice(i, i + batchSize);
+    console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(candidates.length/batchSize)} (${batch.length} candidates)`);
+    
+    try {
+      const batchResults = await Promise.all(
+        batch.map((candidate) => matchCandidateToJob(job, candidate, weights)),
+      );
+      results.push(...batchResults);
+      
+      // Add small delay between batches to prevent rate limiting
+      if (i + batchSize < candidates.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    } catch (error) {
+      console.error(`❌ Error processing batch ${Math.floor(i/batchSize) + 1}:`, error);
+      // Continue with next batch instead of failing completely
+    }
+  }
+  
+  console.log('🔄 Batch matching complete - processed', results.length, 'candidates');
   results.forEach((result, index) => {
     console.log(`🔄 Result ${index + 1}: Candidate ${result.candidateId}, Match: ${result.matchPercentage}%, HasSkillAnalysis: ${!!result.skillAnalysis}`);
   });
