@@ -501,6 +501,11 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       ),
     };
 
+    // Debug weighted score calculation
+    console.log('🔢 Calculating weighted scores for candidate', candidate.id);
+    console.log('🔢 CriteriaScores:', criteriaScores);
+    console.log('🔢 FinalWeights:', finalWeights);
+    
     const weightedScores: MatchCriteria = {
       skillsMatch: (criteriaScores.skillsMatch * finalWeights.skills) / 100,
       experienceLevel:
@@ -512,15 +517,32 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       domainExperience:
         (criteriaScores.domainExperience * finalWeights.domainExperience) / 100,
     };
+    
+    console.log('🔢 WeightedScores:', weightedScores);
 
-    // Calculate initial weighted score
-    let initialMatchPercentage = Math.round(
-      weightedScores.skillsMatch +
-        weightedScores.experienceLevel +
-        weightedScores.keywordRelevance +
-        weightedScores.professionalDepth +
-        weightedScores.domainExperience,
-    );
+    // Calculate initial weighted score with NaN protection
+    const weightedSum = [
+      weightedScores.skillsMatch,
+      weightedScores.experienceLevel,
+      weightedScores.keywordRelevance,
+      weightedScores.professionalDepth,
+      weightedScores.domainExperience
+    ].reduce((sum, score) => {
+      // Replace any NaN values with 0
+      const safeScore = isNaN(score) ? 0 : score;
+      console.log('🔢 Adding score:', score, '-> safeScore:', safeScore, '| running sum:', sum + safeScore);
+      return sum + safeScore;
+    }, 0);
+
+    let initialMatchPercentage = Math.round(weightedSum);
+    
+    console.log('🔢 WeightedSum:', weightedSum, '| InitialMatchPercentage:', initialMatchPercentage);
+    
+    // Ensure we have a valid numeric result
+    if (isNaN(initialMatchPercentage)) {
+      console.warn('⚠️  NaN detected in match calculation for candidate', candidate.id, '- using fallback of 0');
+      initialMatchPercentage = 0;
+    }
 
     // dont Apply strict domain-specific validation rules
     const finalMatchPercentage = initialMatchPercentage; //applyDomainValidationRules(
@@ -658,8 +680,16 @@ export async function batchMatchCandidates(
   candidates: Candidate[],
   weights?: MatchWeights,
 ): Promise<DetailedMatchResult[]> {
+  console.log('🔄 Starting batch matching for', candidates.length, 'candidates');
+  
   const results = await Promise.all(
     candidates.map((candidate) => matchCandidateToJob(job, candidate, weights)),
   );
+  
+  console.log('🔄 Batch matching complete - checking results:');
+  results.forEach((result, index) => {
+    console.log(`🔄 Result ${index + 1}: Candidate ${result.candidateId}, Match: ${result.matchPercentage}%, HasSkillAnalysis: ${!!result.skillAnalysis}`);
+  });
+  
   return results.sort((a, b) => b.matchPercentage - a.matchPercentage);
 }

@@ -700,8 +700,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use advanced matching with custom weights
       const matchResults = await batchMatchCandidates(job, candidates, weights);
       
-      // Apply filters based on advanced options
-      let filteredMatches = matchResults.filter(match => match.matchPercentage >= minMatchPercentage);
+      // Apply filters based on advanced options - but also filter out invalid matches
+      console.log('🔍 Pre-filter: Found', matchResults.length, 'total results');
+      matchResults.forEach(match => {
+        console.log('🔍 Candidate', match.candidateId, '- Match%:', match.matchPercentage, '- Valid:', !isNaN(match.matchPercentage) && match.matchPercentage >= minMatchPercentage);
+      });
+      
+      let filteredMatches = matchResults.filter(match => {
+        const isValidMatch = !isNaN(match.matchPercentage) && match.matchPercentage >= minMatchPercentage;
+        if (!isValidMatch) {
+          console.log('🚫 Filtering out candidate', match.candidateId, '- Match%:', match.matchPercentage, '- Reason:', isNaN(match.matchPercentage) ? 'NaN' : 'Below threshold');
+        }
+        return isValidMatch;
+      });
+      
+      console.log('🔍 Post-filter: Found', filteredMatches.length, 'valid matches');
       
       // Sort by match percentage (highest first)
       filteredMatches.sort((a, b) => b.matchPercentage - a.matchPercentage);
