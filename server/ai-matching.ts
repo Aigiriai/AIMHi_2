@@ -2,8 +2,11 @@ import OpenAI from "openai";
 import type { Job, Candidate } from "@shared/schema";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key"
+const openai = new OpenAI({
+  apiKey:
+    process.env.OPENAI_API_KEY ||
+    process.env.OPENAI_API_KEY_ENV_VAR ||
+    "default_key",
 });
 
 export interface MatchCriteria {
@@ -40,28 +43,34 @@ export interface MatchResult {
 function normalizeResumeContent(content: string): string {
   return content
     .toLowerCase()
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/[^\w\s]/g, ' ') // Remove special characters
+    .replace(/\s+/g, " ") // Normalize whitespace
+    .replace(/[^\w\s]/g, " ") // Remove special characters
     .trim();
 }
 
 // Generate a hash for consistent seed generation
-function generateContentHash(jobDescription: string, resumeContent: string): number {
+function generateContentHash(
+  jobDescription: string,
+  resumeContent: string,
+): number {
   const combined = normalizeResumeContent(jobDescription + resumeContent);
   let hash = 0;
   for (let i = 0; i < combined.length; i++) {
     const char = combined.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash; // Convert to 32bit integer
   }
   return Math.abs(hash);
 }
 
 // Extract critical domain-specific technologies from job description using AI
-async function extractCriticalTechnologies(jobDescription: string, keywords: string): Promise<string[]> {
+async function extractCriticalTechnologies(
+  jobDescription: string,
+  keywords: string,
+): Promise<string[]> {
   try {
-    const combined = jobDescription + (keywords ? ` ${keywords}` : '');
-    
+    const combined = jobDescription + (keywords ? ` ${keywords}` : "");
+
     const prompt = `
 Analyze the following job description and extract the critical technologies, then also identify closely associated technologies that are extremely relevant to this domain.
 
@@ -113,19 +122,27 @@ Example output:
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       max_tokens: 500,
-      temperature: 0.0
+      temperature: 0.0,
     });
 
-    const content = response.choices[0].message.content || '{"all_critical_technologies": []}';
+    const content =
+      response.choices[0].message.content ||
+      '{"all_critical_technologies": []}';
     const result = JSON.parse(content);
-    
+
     // Handle different possible response formats
     let technologies: string[] = [];
-    if (result.all_critical_technologies && Array.isArray(result.all_critical_technologies)) {
+    if (
+      result.all_critical_technologies &&
+      Array.isArray(result.all_critical_technologies)
+    ) {
       technologies = result.all_critical_technologies;
     } else if (result.technologies && Array.isArray(result.technologies)) {
       technologies = result.technologies;
-    } else if (result.critical_technologies && Array.isArray(result.critical_technologies)) {
+    } else if (
+      result.critical_technologies &&
+      Array.isArray(result.critical_technologies)
+    ) {
       technologies = result.critical_technologies;
     } else if (Array.isArray(result)) {
       technologies = result;
@@ -133,49 +150,53 @@ Example output:
 
     // Filter and normalize
     const filteredTechnologies = technologies
-      .filter(tech => tech && typeof tech === 'string' && tech.length > 1)
-      .map(tech => tech.trim().toUpperCase())
+      .filter((tech) => tech && typeof tech === "string" && tech.length > 1)
+      .map((tech) => tech.trim().toUpperCase())
       .slice(0, 50); // Increased to 50 technologies for comprehensive coverage
 
     // Log the extracted technologies for debugging
-    console.log('Extracted critical technologies:', {
+    console.log("Extracted critical technologies:", {
       primary: result.primary_technologies || [],
       associated: result.associated_technologies || [],
-      total: filteredTechnologies
+      total: filteredTechnologies,
     });
 
     return filteredTechnologies;
-
   } catch (error) {
-    console.error('Error extracting critical technologies:', error);
+    console.error("Error extracting critical technologies:", error);
     // Fallback to basic keyword extraction if AI fails
     return extractFallbackTechnologies(jobDescription, keywords);
   }
 }
 
 // Fallback method for technology extraction if AI fails
-function extractFallbackTechnologies(jobDescription: string, keywords: string): string[] {
+function extractFallbackTechnologies(
+  jobDescription: string,
+  keywords: string,
+): string[] {
   const techAssociations: { [key: string]: string[] } = {
-    'hogan': ['CORE BANKING', 'MAINFRAME', 'COBOL', 'JCL', 'DB2', 'VSAM', 'CICS'],
-    'sap': ['ABAP', 'SAP HANA', 'SAP FIORI', 'SAP BASIS', 'SAP MM', 'SAP SD'],
-    'oracle': ['PL/SQL', 'ORACLE DB', 'ORACLE FORMS', 'ORACLE REPORTS', 'TOAD'],
-    'salesforce': ['APEX', 'VISUALFORCE', 'LIGHTNING', 'SOQL', 'CRM'],
-    'aws': ['EC2', 'S3', 'LAMBDA', 'CLOUDFORMATION', 'RDS', 'DYNAMODB'],
-    'azure': ['AZURE FUNCTIONS', 'AZURE SQL', 'AZURE DEVOPS', 'POWER BI'],
-    'react': ['JAVASCRIPT', 'TYPESCRIPT', 'NODE.JS', 'JSX', 'REDUX'],
-    'angular': ['TYPESCRIPT', 'RXJS', 'ANGULAR CLI', 'ANGULAR MATERIAL'],
-    'java': ['SPRING', 'HIBERNATE', 'MAVEN', 'GRADLE', 'JPA'],
-    'python': ['DJANGO', 'FLASK', 'PANDAS', 'NUMPY', 'SCIKIT-LEARN'],
-    'kubernetes': ['DOCKER', 'HELM', 'KUBECTL', 'MICROSERVICES'],
-    'mainframe': ['COBOL', 'JCL', 'DB2', 'VSAM', 'CICS', 'TSO'],
-    'cobol': ['MAINFRAME', 'JCL', 'DB2', 'VSAM', 'CICS']
+    hogan: ["CORE BANKING", "MAINFRAME", "COBOL", "JCL", "DB2", "VSAM", "CICS"],
+    sap: ["ABAP", "SAP HANA", "SAP FIORI", "SAP BASIS", "SAP MM", "SAP SD"],
+    oracle: ["PL/SQL", "ORACLE DB", "ORACLE FORMS", "ORACLE REPORTS", "TOAD"],
+    salesforce: ["APEX", "VISUALFORCE", "LIGHTNING", "SOQL", "CRM"],
+    aws: ["EC2", "S3", "LAMBDA", "CLOUDFORMATION", "RDS", "DYNAMODB"],
+    azure: ["AZURE FUNCTIONS", "AZURE SQL", "AZURE DEVOPS", "POWER BI"],
+    react: ["JAVASCRIPT", "TYPESCRIPT", "NODE.JS", "JSX", "REDUX"],
+    angular: ["TYPESCRIPT", "RXJS", "ANGULAR CLI", "ANGULAR MATERIAL"],
+    java: ["SPRING", "HIBERNATE", "MAVEN", "GRADLE", "JPA"],
+    python: ["DJANGO", "FLASK", "PANDAS", "NUMPY", "SCIKIT-LEARN"],
+    kubernetes: ["DOCKER", "HELM", "KUBECTL", "MICROSERVICES"],
+    mainframe: ["COBOL", "JCL", "DB2", "VSAM", "CICS", "TSO"],
+    cobol: ["MAINFRAME", "JCL", "DB2", "VSAM", "CICS"],
   };
 
-  const combined = (jobDescription + ' ' + keywords).toLowerCase();
+  const combined = (jobDescription + " " + keywords).toLowerCase();
   const foundTechnologies: string[] = [];
 
   // Find primary technologies
-  for (const [primaryTech, associatedTechs] of Object.entries(techAssociations)) {
+  for (const [primaryTech, associatedTechs] of Object.entries(
+    techAssociations,
+  )) {
     if (combined.includes(primaryTech.toLowerCase())) {
       foundTechnologies.push(primaryTech.toUpperCase());
       // Add associated technologies
@@ -184,7 +205,15 @@ function extractFallbackTechnologies(jobDescription: string, keywords: string): 
   }
 
   // Add other common technologies found
-  const additionalTechs = ['gcp', 'mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'kafka'];
+  const additionalTechs = [
+    "gcp",
+    "mysql",
+    "postgresql",
+    "mongodb",
+    "redis",
+    "elasticsearch",
+    "kafka",
+  ];
   for (const tech of additionalTechs) {
     if (combined.includes(tech.toLowerCase())) {
       foundTechnologies.push(tech.toUpperCase());
@@ -202,7 +231,7 @@ function applyDomainValidationRules(
   criticalTechnologies: string[],
   jobDescription: string,
   resumeContent: string,
-  criteriaScores: MatchCriteria
+  criteriaScores: MatchCriteria,
 ): number {
   if (criticalTechnologies.length === 0) {
     return initialScore; // No critical technologies detected, use original score
@@ -210,11 +239,11 @@ function applyDomainValidationRules(
 
   const normalizedResume = resumeContent.toLowerCase();
   const normalizedJob = jobDescription.toLowerCase();
-  
+
   // Check for presence of each critical technology in resume
   const missingCriticalTech: string[] = [];
   const foundCriticalTech: string[] = [];
-  
+
   for (const tech of criticalTechnologies) {
     if (normalizedResume.includes(tech.toLowerCase())) {
       foundCriticalTech.push(tech);
@@ -224,8 +253,9 @@ function applyDomainValidationRules(
   }
 
   // Calculate penalty based on missing critical technologies
-  const criticalTechPercentage = foundCriticalTech.length / criticalTechnologies.length;
-  
+  const criticalTechPercentage =
+    foundCriticalTech.length / criticalTechnologies.length;
+
   // Apply severe penalties for missing critical technologies
   if (criticalTechPercentage === 0) {
     // No critical technologies found - maximum 20% match
@@ -249,26 +279,69 @@ function applyDomainValidationRules(
 }
 
 // Check for major domain mismatches
-function checkDomainMismatch(jobDescription: string, resumeContent: string): boolean {
-  const bankingKeywords = ['banking', 'finance', 'core banking', 'hogan', 'temenos', 'mainframe', 'cobol'];
-  const audioKeywords = ['audio', 'bluetooth', 'sound', 'music', 'speaker', 'headphone'];
-  const webKeywords = ['web development', 'frontend', 'backend', 'react', 'angular', 'vue'];
-  const testingKeywords = ['test automation', 'selenium', 'appium', 'qa', 'testing framework'];
-  
-  const isBankingJob = bankingKeywords.some(keyword => jobDescription.includes(keyword));
-  const isAudioResume = audioKeywords.some(keyword => resumeContent.includes(keyword));
-  const isWebResume = webKeywords.some(keyword => resumeContent.includes(keyword));
-  const isTestingResume = testingKeywords.some(keyword => resumeContent.includes(keyword));
-  
+function checkDomainMismatch(
+  jobDescription: string,
+  resumeContent: string,
+): boolean {
+  const bankingKeywords = [
+    "banking",
+    "finance",
+    "core banking",
+    "hogan",
+    "temenos",
+    "mainframe",
+    "cobol",
+  ];
+  const audioKeywords = [
+    "audio",
+    "bluetooth",
+    "sound",
+    "music",
+    "speaker",
+    "headphone",
+  ];
+  const webKeywords = [
+    "web development",
+    "frontend",
+    "backend",
+    "react",
+    "angular",
+    "vue",
+  ];
+  const testingKeywords = [
+    "test automation",
+    "selenium",
+    "appium",
+    "qa",
+    "testing framework",
+  ];
+
+  const isBankingJob = bankingKeywords.some((keyword) =>
+    jobDescription.includes(keyword),
+  );
+  const isAudioResume = audioKeywords.some((keyword) =>
+    resumeContent.includes(keyword),
+  );
+  const isWebResume = webKeywords.some((keyword) =>
+    resumeContent.includes(keyword),
+  );
+  const isTestingResume = testingKeywords.some((keyword) =>
+    resumeContent.includes(keyword),
+  );
+
   // Banking job with non-banking resume
   if (isBankingJob && (isAudioResume || isWebResume || isTestingResume)) {
     return true;
   }
-  
+
   return false;
 }
 
-export async function matchCandidateToJob(job: Job, candidate: Candidate, weights?: MatchWeights): Promise<DetailedMatchResult> {
+export async function matchCandidateToJob(
+  job: Job,
+  candidate: Candidate,
+  weights?: MatchWeights,
+): Promise<DetailedMatchResult> {
   try {
     // Default weights if not provided - heavily prioritizing domain-specific experience
     const defaultWeights: MatchWeights = {
@@ -276,58 +349,70 @@ export async function matchCandidateToJob(job: Job, candidate: Candidate, weight
       experience: 10,
       keywords: 30,
       technicalDepth: 10,
-      projectDomain: 30  // Maximum weight for domain-specific requirements
+      projectDomain: 30, // Maximum weight for domain-specific requirements
     };
-    
+
     const finalWeights = weights || defaultWeights;
-    
+
     // Generate consistent seed based on content for deterministic results
-    const contentSeed = generateContentHash(job.description, candidate.resumeContent);
+    const contentSeed = generateContentHash(
+      job.description,
+      candidate.resumeContent,
+    );
 
     // Normalize content to ensure consistent analysis
-    const normalizedResumeContent = normalizeResumeContent(candidate.resumeContent);
+    const normalizedResumeContent = normalizeResumeContent(
+      candidate.resumeContent,
+    );
     const normalizedJobDescription = normalizeResumeContent(job.description);
-    
+
     // Use original content for display but normalized for consistent hashing
     const fullResumeContent = candidate.resumeContent;
     const fullJobDescription = job.description;
 
     // Extract critical domain-specific technologies from job description
-    const criticalTechnologies = await extractCriticalTechnologies(fullJobDescription, job.keywords || '');
+    const criticalTechnologies = await extractCriticalTechnologies(
+      fullJobDescription,
+      job.keywords || "",
+    );
     const hasCriticalTech = criticalTechnologies.length > 0;
 
     // Pre-filter: Check if candidate has ANY critical technologies before expensive AI processing
     if (hasCriticalTech) {
       const normalizedResumeContent = fullResumeContent.toLowerCase();
-      const foundTechCount = criticalTechnologies.filter(tech => 
-        normalizedResumeContent.includes(tech.toLowerCase())
+      const foundTechCount = criticalTechnologies.filter((tech) =>
+        normalizedResumeContent.includes(tech.toLowerCase()),
       ).length;
-      
+
       if (foundTechCount === 0) {
         // No critical technologies found - skip AI processing and return low score
-        console.log(`Pre-filter rejection: Candidate ${candidate.name} has no critical technologies`);
+        console.log(
+          `Pre-filter rejection: Candidate ${candidate.name} has no critical technologies`,
+        );
         return {
           candidateId: candidate.id,
           matchPercentage: 5,
-          reasoning: `Pre-screening failed: No critical technologies found in resume. Required technologies: ${criticalTechnologies.join(', ')}. This candidate's background does not align with the essential technical requirements for this role.`,
+          reasoning: `Pre-screening failed: No critical technologies found in resume. Required technologies: ${criticalTechnologies.join(", ")}. This candidate's background does not align with the essential technical requirements for this role.`,
           criteriaScores: {
             skillsMatch: 5,
             experienceLevel: 5,
             keywordRelevance: 5,
             technicalDepth: 5,
-            projectDomainExperience: 5
+            projectDomainExperience: 5,
           },
           weightedScores: {
             skillsMatch: 1,
             experienceLevel: 0.5,
             keywordRelevance: 1.5,
             technicalDepth: 0.5,
-            projectDomainExperience: 1.5
-          }
+            projectDomainExperience: 1.5,
+          },
         };
       }
-      
-      console.log(`Pre-filter passed: Candidate ${candidate.name} has ${foundTechCount}/${criticalTechnologies.length} critical technologies`);
+
+      console.log(
+        `Pre-filter passed: Candidate ${candidate.name} has ${foundTechCount}/${criticalTechnologies.length} critical technologies`,
+      );
     }
 
     const prompt = `
@@ -339,10 +424,14 @@ Required Experience Level: ${job.experienceLevel}
 Job Type: ${job.jobType}
 Keywords: ${job.keywords}
 
-${hasCriticalTech ? `
-CRITICAL DOMAIN TECHNOLOGIES DETECTED: ${criticalTechnologies.join(', ')}
+${
+  hasCriticalTech
+    ? `
+CRITICAL DOMAIN TECHNOLOGIES DETECTED: ${criticalTechnologies.join(", ")}
 WARNING: This job requires specific platform/technology experience. Candidates without direct experience with these technologies should receive significantly lower scores.
-` : ''}
+`
+    : ""
+}
 
 Candidate Profile:
 Name: ${candidate.name}
@@ -457,45 +546,90 @@ Respond in JSON format with:
       response_format: { type: "json_object" },
       max_tokens: 2500, // Increased tokens for detailed analysis with cheaper model
       temperature: 0.0, // Set to 0 for deterministic results
-      seed: contentSeed // Use content-based seed for identical resumes to get identical results
+      seed: contentSeed, // Use content-based seed for identical resumes to get identical results
     });
 
     const result = JSON.parse(response.choices[0].message.content || "{}");
-    
+
     // Calculate weighted scores with fallback values
     const criteriaScores: MatchCriteria = {
-      skillsMatch: Math.max(0, Math.min(100, result.criteriaScores?.skillsMatch || result.overallMatchPercentage || 50)),
-      experienceLevel: Math.max(0, Math.min(100, result.criteriaScores?.experienceLevel || result.overallMatchPercentage || 50)),
-      keywordRelevance: Math.max(0, Math.min(100, result.criteriaScores?.keywordRelevance || result.overallMatchPercentage || 50)),
-      technicalDepth: Math.max(0, Math.min(100, result.criteriaScores?.technicalDepth || result.overallMatchPercentage || 50)),
-      projectDomainExperience: Math.max(0, Math.min(100, result.criteriaScores?.projectDomainExperience || result.overallMatchPercentage || 50))
+      skillsMatch: Math.max(
+        0,
+        Math.min(
+          100,
+          result.criteriaScores?.skillsMatch ||
+            result.overallMatchPercentage ||
+            50,
+        ),
+      ),
+      experienceLevel: Math.max(
+        0,
+        Math.min(
+          100,
+          result.criteriaScores?.experienceLevel ||
+            result.overallMatchPercentage ||
+            50,
+        ),
+      ),
+      keywordRelevance: Math.max(
+        0,
+        Math.min(
+          100,
+          result.criteriaScores?.keywordRelevance ||
+            result.overallMatchPercentage ||
+            50,
+        ),
+      ),
+      technicalDepth: Math.max(
+        0,
+        Math.min(
+          100,
+          result.criteriaScores?.technicalDepth ||
+            result.overallMatchPercentage ||
+            50,
+        ),
+      ),
+      projectDomainExperience: Math.max(
+        0,
+        Math.min(
+          100,
+          result.criteriaScores?.projectDomainExperience ||
+            result.overallMatchPercentage ||
+            50,
+        ),
+      ),
     };
 
     const weightedScores: MatchCriteria = {
       skillsMatch: (criteriaScores.skillsMatch * finalWeights.skills) / 100,
-      experienceLevel: (criteriaScores.experienceLevel * finalWeights.experience) / 100,
-      keywordRelevance: (criteriaScores.keywordRelevance * finalWeights.keywords) / 100,
-      technicalDepth: (criteriaScores.technicalDepth * finalWeights.technicalDepth) / 100,
-      projectDomainExperience: (criteriaScores.projectDomainExperience * finalWeights.projectDomain) / 100
+      experienceLevel:
+        (criteriaScores.experienceLevel * finalWeights.experience) / 100,
+      keywordRelevance:
+        (criteriaScores.keywordRelevance * finalWeights.keywords) / 100,
+      technicalDepth:
+        (criteriaScores.technicalDepth * finalWeights.technicalDepth) / 100,
+      projectDomainExperience:
+        (criteriaScores.projectDomainExperience * finalWeights.projectDomain) /
+        100,
     };
 
     // Calculate initial weighted score
     let initialMatchPercentage = Math.round(
       weightedScores.skillsMatch +
-      weightedScores.experienceLevel +
-      weightedScores.keywordRelevance +
-      weightedScores.technicalDepth +
-      weightedScores.projectDomainExperience
+        weightedScores.experienceLevel +
+        weightedScores.keywordRelevance +
+        weightedScores.technicalDepth +
+        weightedScores.projectDomainExperience,
     );
 
-    // Apply strict domain-specific validation rules
-    const finalMatchPercentage = applyDomainValidationRules(
-      initialMatchPercentage,
-      criticalTechnologies,
-      fullJobDescription,
-      fullResumeContent,
-      criteriaScores
-    );
+    // dont Apply strict domain-specific validation rules
+    const finalMatchPercentage = initialMatchPercentage; //applyDomainValidationRules(
+    //  initialMatchPercentage,
+    //criticalTechnologies,
+    //fullJobDescription,
+    //fullResumeContent,
+    //criteriaScores
+    //);
 
     // Enhanced reasoning with criteria breakdown and AI explanations
     const scoreExplanations = result.scoreExplanations || {};
@@ -503,65 +637,80 @@ Respond in JSON format with:
 MATCH ANALYSIS BREAKDOWN:
 
 Overall Score: ${finalMatchPercentage}%
-${result.overallScoreJustification ? `Overall Justification: ${result.overallScoreJustification}` : ''}
+${result.overallScoreJustification ? `Overall Justification: ${result.overallScoreJustification}` : ""}
 
 CRITERIA SCORES WITH AI EXPLANATIONS:
 • Skills Match: ${criteriaScores.skillsMatch}% (Weight: ${finalWeights.skills}% = ${weightedScores.skillsMatch.toFixed(1)} points)
-  ${scoreExplanations.skillsMatch ? `AI Explanation: ${scoreExplanations.skillsMatch}` : ''}
+  ${scoreExplanations.skillsMatch ? `AI Explanation: ${scoreExplanations.skillsMatch}` : ""}
 
 • Experience Level: ${criteriaScores.experienceLevel}% (Weight: ${finalWeights.experience}% = ${weightedScores.experienceLevel.toFixed(1)} points)
-  ${scoreExplanations.experienceLevel ? `AI Explanation: ${scoreExplanations.experienceLevel}` : ''}
+  ${scoreExplanations.experienceLevel ? `AI Explanation: ${scoreExplanations.experienceLevel}` : ""}
 
 • Keyword Relevance: ${criteriaScores.keywordRelevance}% (Weight: ${finalWeights.keywords}% = ${weightedScores.keywordRelevance.toFixed(1)} points)
-  ${scoreExplanations.keywordRelevance ? `AI Explanation: ${scoreExplanations.keywordRelevance}` : ''}
+  ${scoreExplanations.keywordRelevance ? `AI Explanation: ${scoreExplanations.keywordRelevance}` : ""}
 
 • Technical Depth: ${criteriaScores.technicalDepth}% (Weight: ${finalWeights.technicalDepth}% = ${weightedScores.technicalDepth.toFixed(1)} points)
-  ${scoreExplanations.technicalDepth ? `AI Explanation: ${scoreExplanations.technicalDepth}` : ''}
+  ${scoreExplanations.technicalDepth ? `AI Explanation: ${scoreExplanations.technicalDepth}` : ""}
 
 • Project/Domain Experience: ${criteriaScores.projectDomainExperience}% (Weight: ${finalWeights.projectDomain}% = ${weightedScores.projectDomainExperience.toFixed(1)} points)
-  ${scoreExplanations.projectDomainExperience ? `AI Explanation: ${scoreExplanations.projectDomainExperience}` : ''}
+  ${scoreExplanations.projectDomainExperience ? `AI Explanation: ${scoreExplanations.projectDomainExperience}` : ""}
 
 CALCULATION METHOD:
 Initial AI Score: ${initialMatchPercentage}%
 Final Score After Validation: ${finalMatchPercentage}%
-${initialMatchPercentage !== finalMatchPercentage ? '(Score adjusted by domain validation rules)' : '(No domain adjustments applied)'}
+${initialMatchPercentage !== finalMatchPercentage ? "(Score adjusted by domain validation rules)" : "(No domain adjustments applied)"}
 
 DETAILED ANALYSIS:
-${result.detailedReasoning || 'No detailed reasoning provided'}
+${result.detailedReasoning || "No detailed reasoning provided"}
 
 STRENGTHS:
-${result.strengths ? result.strengths.map((s: string) => `• ${s}`).join('\n') : '• None identified'}
+${result.strengths ? result.strengths.map((s: string) => `• ${s}`).join("\n") : "• None identified"}
 
 CONCERNS:
-${result.concerns ? result.concerns.map((c: string) => `• ${c}`).join('\n') : '• None identified'}
+${result.concerns ? result.concerns.map((c: string) => `• ${c}`).join("\n") : "• None identified"}
 
 RECOMMENDATION:
-${result.recommendations || 'No specific recommendation provided'}
+${result.recommendations || "No specific recommendation provided"}
 `;
-    
+
     return {
       candidateId: candidate.id,
       matchPercentage: Math.max(0, Math.min(100, finalMatchPercentage)),
       reasoning: enhancedReasoning,
       criteriaScores,
-      weightedScores
+      weightedScores,
     };
   } catch (error) {
-    console.error("Error in advanced AI matching for candidate", candidate.id, ":", error);
-    const defaultScores = { skillsMatch: 0, experienceLevel: 0, keywordRelevance: 0, technicalDepth: 0, projectDomainExperience: 0 };
+    console.error(
+      "Error in advanced AI matching for candidate",
+      candidate.id,
+      ":",
+      error,
+    );
+    const defaultScores = {
+      skillsMatch: 0,
+      experienceLevel: 0,
+      keywordRelevance: 0,
+      technicalDepth: 0,
+      projectDomainExperience: 0,
+    };
     return {
       candidateId: candidate.id,
       matchPercentage: 0,
-      reasoning: `Error occurred during advanced matching analysis: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      reasoning: `Error occurred during advanced matching analysis: ${error instanceof Error ? error.message : "Unknown error"}`,
       criteriaScores: defaultScores,
-      weightedScores: defaultScores
+      weightedScores: defaultScores,
     };
   }
 }
 
-export async function batchMatchCandidates(job: Job, candidates: Candidate[], weights?: MatchWeights): Promise<DetailedMatchResult[]> {
+export async function batchMatchCandidates(
+  job: Job,
+  candidates: Candidate[],
+  weights?: MatchWeights,
+): Promise<DetailedMatchResult[]> {
   const results = await Promise.all(
-    candidates.map(candidate => matchCandidateToJob(job, candidate, weights))
+    candidates.map((candidate) => matchCandidateToJob(job, candidate, weights)),
   );
   return results.sort((a, b) => b.matchPercentage - a.matchPercentage);
 }
