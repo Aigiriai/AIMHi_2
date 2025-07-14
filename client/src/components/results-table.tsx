@@ -28,6 +28,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { DownloadIcon, ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon, PhoneIcon, Phone, PhoneCall, InfoIcon } from "lucide-react";
+import EnhancedSkillAnalysis from "./enhanced-skill-analysis";
 
 interface ResultsTableProps {
   matches: JobMatchResult[];
@@ -474,14 +475,30 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
                                 <InfoIcon className="h-3 w-3 text-gray-500" />
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                            <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle>AI Matching Analysis - {match.candidate.name}</DialogTitle>
                               </DialogHeader>
                               <div className="mt-4">
-                                <pre className="whitespace-pre-wrap text-sm bg-gray-50 p-4 rounded-lg overflow-auto">
-                                  {match.aiReasoning || 'No detailed analysis available'}
-                                </pre>
+                                <EnhancedSkillAnalysis
+                                  candidateName={match.candidate.name}
+                                  matchPercentage={match.matchPercentage}
+                                  criteriaScores={{
+                                    skillsMatch: criteriaScores.find(c => c.name === 'Skills Match')?.score || 0,
+                                    experienceLevel: criteriaScores.find(c => c.name === 'Experience Level')?.score || 0,
+                                    keywordRelevance: criteriaScores.find(c => c.name === 'Keyword Relevance')?.score || 0,
+                                    professionalDepth: criteriaScores.find(c => c.name === 'Professional Depth')?.score || 0,
+                                    domainExperience: criteriaScores.find(c => c.name === 'Domain Experience')?.score || 0,
+                                  }}
+                                  weightedScores={{
+                                    skillsMatch: criteriaScores.find(c => c.name === 'Skills Match')?.points || 0,
+                                    experienceLevel: criteriaScores.find(c => c.name === 'Experience Level')?.points || 0,
+                                    keywordRelevance: criteriaScores.find(c => c.name === 'Keyword Relevance')?.points || 0,
+                                    professionalDepth: criteriaScores.find(c => c.name === 'Professional Depth')?.points || 0,
+                                    domainExperience: criteriaScores.find(c => c.name === 'Domain Experience')?.points || 0,
+                                  }}
+                                  skillAnalysis={(match as any).skillAnalysis}
+                                />
                               </div>
                             </DialogContent>
                           </Dialog>

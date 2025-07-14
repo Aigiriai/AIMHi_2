@@ -25,12 +25,25 @@ export interface MatchWeights {
   domainExperience: number;
 }
 
+export interface SkillAnalysis {
+  skillsHas: string[];
+  skillsMissing: string[];
+  criteriaExplanation: string;
+}
+
 export interface DetailedMatchResult {
   candidateId: number;
   matchPercentage: number;
   reasoning: string;
   criteriaScores: MatchCriteria;
   weightedScores: MatchCriteria;
+  skillAnalysis: {
+    skillsMatch: SkillAnalysis;
+    experienceLevel: SkillAnalysis;
+    keywordRelevance: SkillAnalysis;
+    professionalDepth: SkillAnalysis;
+    domainExperience: SkillAnalysis;
+  };
 }
 
 export interface MatchResult {
@@ -381,7 +394,29 @@ Respond in JSON format with:
   "overallScoreJustification": "Why the overall percentage makes sense given the criteria",
   "strengths": ["strength1", "strength2"],
   "concerns": ["concern1", "concern2"],
-  "recommendations": "hiring recommendation with focus on experience currency"
+  "recommendations": "hiring recommendation with focus on experience currency",
+  "skillBreakdown": {
+    "skillsMatch": {
+      "has": ["skill1", "skill2"],
+      "missing": ["skill3", "skill4"]
+    },
+    "experienceLevel": {
+      "has": ["experience1", "experience2"],
+      "missing": ["experience3", "experience4"]
+    },
+    "keywordRelevance": {
+      "has": ["keyword1", "keyword2"],
+      "missing": ["keyword3", "keyword4"]
+    },
+    "professionalDepth": {
+      "has": ["expertise1", "expertise2"],
+      "missing": ["expertise3", "expertise4"]
+    },
+    "domainExperience": {
+      "has": ["domain1", "domain2"],
+      "missing": ["domain3", "domain4"]
+    }
+  }
 }
 `;
 
@@ -517,12 +552,42 @@ RECOMMENDATION:
 ${result.recommendations || "No specific recommendation provided"}
 `;
 
+    // Extract skill analysis from the AI result
+    const skillAnalysis = {
+      skillsMatch: {
+        skillsHas: result.skillBreakdown?.skillsMatch?.has || [],
+        skillsMissing: result.skillBreakdown?.skillsMatch?.missing || [],
+        criteriaExplanation: result.scoreExplanations?.skillsMatch || 'No explanation available'
+      },
+      experienceLevel: {
+        skillsHas: result.skillBreakdown?.experienceLevel?.has || [],
+        skillsMissing: result.skillBreakdown?.experienceLevel?.missing || [],
+        criteriaExplanation: result.scoreExplanations?.experienceLevel || 'No explanation available'
+      },
+      keywordRelevance: {
+        skillsHas: result.skillBreakdown?.keywordRelevance?.has || [],
+        skillsMissing: result.skillBreakdown?.keywordRelevance?.missing || [],
+        criteriaExplanation: result.scoreExplanations?.keywordRelevance || 'No explanation available'
+      },
+      professionalDepth: {
+        skillsHas: result.skillBreakdown?.professionalDepth?.has || [],
+        skillsMissing: result.skillBreakdown?.professionalDepth?.missing || [],
+        criteriaExplanation: result.scoreExplanations?.professionalDepth || 'No explanation available'
+      },
+      domainExperience: {
+        skillsHas: result.skillBreakdown?.domainExperience?.has || [],
+        skillsMissing: result.skillBreakdown?.domainExperience?.missing || [],
+        criteriaExplanation: result.scoreExplanations?.domainExperience || 'No explanation available'
+      }
+    };
+
     return {
       candidateId: candidate.id,
       matchPercentage: Math.max(0, Math.min(100, finalMatchPercentage)),
       reasoning: enhancedReasoning,
       criteriaScores,
       weightedScores,
+      skillAnalysis,
     };
   } catch (error) {
     console.error(
@@ -544,6 +609,13 @@ ${result.recommendations || "No specific recommendation provided"}
       reasoning: `Error occurred during advanced matching analysis: ${error instanceof Error ? error.message : "Unknown error"}`,
       criteriaScores: defaultScores,
       weightedScores: defaultScores,
+      skillAnalysis: {
+        skillsMatch: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' },
+        experienceLevel: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' },
+        keywordRelevance: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' },
+        professionalDepth: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' },
+        domainExperience: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' }
+      },
     };
   }
 }
