@@ -60,14 +60,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobMatches(jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
+    console.log('❌ FALLBACK: getJobMatches called - this should NOT be called!');
     let query = db
       .select({
         id: jobMatches.id,
+        organizationId: jobMatches.organizationId,
         jobId: jobMatches.jobId,
         candidateId: jobMatches.candidateId,
+        matchedBy: jobMatches.matchedBy,
         matchPercentage: jobMatches.matchPercentage,
         aiReasoning: jobMatches.aiReasoning,
+        matchCriteria: jobMatches.matchCriteria,
+        status: jobMatches.status,
         createdAt: jobMatches.createdAt,
+        updatedAt: jobMatches.updatedAt,
         job: jobs,
         candidate: candidates,
       })
@@ -90,16 +96,46 @@ export class DatabaseStorage implements IStorage {
     // Sort by match percentage (highest first)
     filteredResults.sort((a, b) => b.matchPercentage - a.matchPercentage);
 
-    return filteredResults.map(result => ({
-      id: result.id,
-      jobId: result.jobId,
-      candidateId: result.candidateId,
-      matchPercentage: result.matchPercentage,
-      aiReasoning: result.aiReasoning,
-      createdAt: result.createdAt,
-      job: result.job!,
-      candidate: result.candidate!,
-    }));
+    return filteredResults.map(result => {
+      // Parse skill analysis from matchCriteria
+      let skillAnalysis = null;
+      let criteriaScores = null;
+      let weightedScores = null;
+      
+      if (result.matchCriteria && result.matchCriteria !== '{}') {
+        try {
+          console.log('🔍 PARSING: matchCriteria exists:', !!result.matchCriteria);
+          const parsedCriteria = JSON.parse(result.matchCriteria);
+          console.log('🔍 PARSING: parsed successfully, has skillAnalysis:', !!parsedCriteria.skillAnalysis);
+          skillAnalysis = parsedCriteria.skillAnalysis;
+          criteriaScores = parsedCriteria.criteriaScores;
+          weightedScores = parsedCriteria.weightedScores;
+        } catch (e) {
+          console.error('Error parsing matchCriteria:', e);
+        }
+      } else {
+        console.log('🔍 PARSING: No matchCriteria found or is empty');
+      }
+      
+      return {
+        id: result.id,
+        organizationId: result.organizationId,
+        jobId: result.jobId,
+        candidateId: result.candidateId,
+        matchedBy: result.matchedBy,
+        matchPercentage: result.matchPercentage,
+        aiReasoning: result.aiReasoning,
+        matchCriteria: result.matchCriteria,
+        skillAnalysis,
+        criteriaScores,
+        weightedScores,
+        status: result.status,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+        job: result.job!,
+        candidate: result.candidate!,
+      };
+    });
   }
 
   async deleteJobMatchesByJobId(jobId: number): Promise<void> {
@@ -124,8 +160,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getJobMatchesByOrganization(organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
-    console.log('🚀 DATABASE-STORAGE getJobMatchesByOrganization called with:', { organizationId, jobId, minPercentage });
-    console.log('🚀 DATABASE-STORAGE: Starting query execution...');
+    console.log('🚀🚀🚀 DATABASE-STORAGE getJobMatchesByOrganization ENTRY POINT called with:', { organizationId, jobId, minPercentage });
+    console.log('🚀🚀🚀 DATABASE-STORAGE: Starting query execution...');
     
     let whereConditions = [eq(jobMatches.organizationId, organizationId)];
 

@@ -505,31 +505,69 @@ export class SQLiteStorage implements IStorage {
     
     const matches = this.sqlite.prepare(query).all(...params);
     
-    return matches.map(match => ({
-      id: match.id,
-      organizationId: match.organization_id,
-      jobId: match.job_id,
-      candidateId: match.candidate_id,
-      matchedBy: match.matched_by,
-      matchPercentage: match.match_percentage,
-      aiReasoning: match.ai_reasoning,
-      matchCriteria: JSON.parse(match.match_criteria || '{}'),
-      status: match.status,
-      createdAt: new Date(match.created_at),
-      updatedAt: new Date(match.updated_at),
-      job: {
-        id: match.job_id,
-        title: match.job_title,
-        description: match.job_description
-      } as Job,
-      candidate: {
-        id: match.candidate_id,
-        name: match.candidate_name,
-        email: match.candidate_email,
-        phone: match.candidate_phone,
-        experience: match.candidate_experience
-      } as Candidate
-    }));
+    return matches.map(match => {
+      // Parse skill analysis from matchCriteria
+      let skillAnalysis = null;
+      let criteriaScores = null;
+      let weightedScores = null;
+      let parsedMatchCriteria = {};
+      
+      if (match.match_criteria && match.match_criteria !== '{}') {
+        try {
+          console.log('🔍 PARSING: matchCriteria exists for match:', match.id);
+          console.log('🔍 PARSING: raw match_criteria length:', match.match_criteria.length);
+          console.log('🔍 PARSING: raw match_criteria start:', match.match_criteria.substring(0, 100));
+          // Try to parse the JSON string correctly
+          const rawCriteria = match.match_criteria;
+          if (typeof rawCriteria === 'string') {
+            parsedMatchCriteria = JSON.parse(rawCriteria);
+          } else {
+            parsedMatchCriteria = rawCriteria;
+          }
+          console.log('🔍 PARSING: parsedMatchCriteria type:', typeof parsedMatchCriteria);
+          console.log('🔍 PARSING: parsedMatchCriteria keys:', Object.keys(parsedMatchCriteria));
+          skillAnalysis = parsedMatchCriteria.skillAnalysis || null;
+          criteriaScores = parsedMatchCriteria.criteriaScores || null;
+          weightedScores = parsedMatchCriteria.weightedScores || null;
+          console.log('🔍 PARSING: parsed successfully, has skillAnalysis:', !!skillAnalysis);
+          console.log('🔍 PARSING: skillAnalysis type:', typeof skillAnalysis);
+          console.log('🔍 PARSING: skillAnalysis content:', skillAnalysis ? Object.keys(skillAnalysis) : 'null');
+        } catch (e) {
+          console.error('Error parsing matchCriteria:', e);
+        }
+      } else {
+        console.log('🔍 PARSING: No matchCriteria found or is empty for match:', match.id);
+      }
+      
+      return {
+        id: match.id,
+        organizationId: match.organization_id,
+        jobId: match.job_id,
+        candidateId: match.candidate_id,
+        matchedBy: match.matched_by,
+        matchPercentage: match.match_percentage,
+        aiReasoning: match.ai_reasoning,
+        matchCriteria: parsedMatchCriteria,
+        skillAnalysis,
+        criteriaScores,
+        weightedScores,
+        status: match.status,
+        createdAt: new Date(match.created_at),
+        updatedAt: new Date(match.updated_at),
+        job: {
+          id: match.job_id,
+          title: match.job_title,
+          description: match.job_description
+        } as Job,
+        candidate: {
+          id: match.candidate_id,
+          name: match.candidate_name,
+          email: match.candidate_email,
+          phone: match.candidate_phone,
+          experience: match.candidate_experience
+        } as Candidate
+      };
+    });
   }
 
   async getJobMatchesByOrganization(organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {

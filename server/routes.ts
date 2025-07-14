@@ -778,21 +778,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;
       const minPercentage = req.query.minPercentage ? parseFloat(req.query.minPercentage as string) : undefined;
       
-      console.log('🔍 ROUTE: Calling getJobMatchesByOrganization with org:', req.user!.organizationId!, 'jobId:', jobId, 'minPercentage:', minPercentage);
+      console.log('🔍 ROUTE: Getting matches with organization filtering');
       
-      try {
-        const matches = await storage.getJobMatchesByOrganization(req.user!.organizationId!, jobId, minPercentage);
-        console.log('🔍 ROUTE: Got matches count:', matches.length);
-        if (matches.length > 0) {
-          console.log('🔍 ROUTE: First match has skillAnalysis:', !!matches[0].skillAnalysis);
-        }
-        res.json(matches);
-      } catch (dbError) {
-        console.error('🔍 ROUTE: Error in getJobMatchesByOrganization:', dbError);
-        console.log('🔍 ROUTE: Falling back to regular getJobMatches');
-        const matches = await storage.getJobMatches(jobId, minPercentage);
-        res.json(matches);
+      const allMatches = await storage.getJobMatches(jobId, minPercentage);
+      // Filter by organization
+      const matches = allMatches.filter(match => match.organizationId === req.user!.organizationId!);
+      
+      console.log('🔍 ROUTE: Got matches count:', matches.length);
+      if (matches.length > 0) {
+        console.log('🔍 ROUTE: First match has skillAnalysis:', !!matches[0].skillAnalysis);
       }
+      res.json(matches);
     } catch (error) {
       console.error("Error fetching matches:", error);
       res.status(500).json({ message: "Failed to fetch matches" });
