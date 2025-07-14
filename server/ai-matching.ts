@@ -558,6 +558,18 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
     
     console.log('🔢 WeightedSum:', weightedSum, '| InitialMatchPercentage:', initialMatchPercentage);
     
+    // DETAILED DEBUG FOR AKASH MURME CASE
+    if (candidate.name && candidate.name.includes('Akash')) {
+      console.log('🔍 AKASH MURME DETAILED CALCULATION:');
+      console.log('🔍 Skills:', criteriaScores.skillsMatch, '% × ', finalWeights.skills, '% = ', weightedScores.skillsMatch, ' points');
+      console.log('🔍 Experience:', criteriaScores.experienceLevel, '% × ', finalWeights.experience, '% = ', weightedScores.experienceLevel, ' points');
+      console.log('🔍 Keywords:', criteriaScores.keywordRelevance, '% × ', finalWeights.keywords, '% = ', weightedScores.keywordRelevance, ' points');
+      console.log('🔍 Professional Depth:', criteriaScores.professionalDepth, '% × ', finalWeights.professionalDepth, '% = ', weightedScores.professionalDepth, ' points');
+      console.log('🔍 Domain Experience:', criteriaScores.domainExperience, '% × ', finalWeights.domainExperience, '% = ', weightedScores.domainExperience, ' points');
+      console.log('🔍 TOTAL SUM:', weightedSum, 'points');
+      console.log('🔍 FINAL PERCENTAGE:', finalMatchPercentage, '%');
+    }
+    
     // Ensure we have a valid numeric result
     if (isNaN(initialMatchPercentage)) {
       console.warn('⚠️  NaN detected in match calculation for candidate', candidate.id, '- using fallback of 0');
