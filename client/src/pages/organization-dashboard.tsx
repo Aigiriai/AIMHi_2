@@ -21,34 +21,19 @@ import { authService } from "@/lib/auth";
 import ResultsTable from "@/components/results-table";
 import type { JobMatchResult } from "@shared/schema";
 
-// Function to calculate match labels based on relative performance
+// Function to calculate match labels based on absolute thresholds
 const calculateMatchLabel = (matchPercentage: number, allMatches: JobMatchResult[]): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; color: string } => {
   if (allMatches.length === 0) return { label: 'No Data', variant: 'outline', color: 'text-gray-500' };
   
-  const percentages = allMatches.map(m => m.matchPercentage);
-  const maxScore = Math.max(...percentages);
-  const minScore = Math.min(...percentages);
-  const range = maxScore - minScore;
-  
-  // If all scores are very close (within 5%), treat them all as "Best"
-  if (range <= 5) {
-    return { label: 'Best', variant: 'default', color: 'text-green-700' };
-  }
-  
-  // Calculate thresholds based on the top performer
-  const bestThreshold = maxScore - 5; // Within 5% of top score
-  const aboveAverageThreshold = maxScore - (range * 0.3); // Top 30% range
-  const averageThreshold = maxScore - (range * 0.6); // Middle 30% range
-  const belowAverageThreshold = maxScore - (range * 0.85); // Next 25% range
-  
-  if (matchPercentage >= bestThreshold) {
+  // Use absolute thresholds instead of relative ranking
+  if (matchPercentage >= 80) {
     return { label: 'BEST', variant: 'outline', color: 'bg-white text-black border-gray-300 font-bold' };
-  } else if (matchPercentage >= aboveAverageThreshold) {
-    return { label: 'ABOVE AVERAGE', variant: 'outline', color: 'bg-white text-black border-gray-300 font-bold' };
-  } else if (matchPercentage >= averageThreshold) {
+  } else if (matchPercentage >= 60) {
+    return { label: 'V.GOOD', variant: 'outline', color: 'bg-white text-black border-gray-300 font-bold' };
+  } else if (matchPercentage >= 40) {
+    return { label: 'GOOD', variant: 'outline', color: 'bg-white text-black border-gray-300 font-bold' };
+  } else if (matchPercentage >= 20) {
     return { label: 'AVERAGE', variant: 'outline', color: 'bg-white text-black border-gray-300 font-bold' };
-  } else if (matchPercentage >= belowAverageThreshold) {
-    return { label: 'BELOW AVERAGE', variant: 'outline', color: 'bg-white text-black border-gray-300 font-bold' };
   } else {
     return { label: 'POOR', variant: 'outline', color: 'bg-white text-black border-gray-300 font-bold' };
   }
