@@ -164,6 +164,11 @@ export class SQLiteStorage implements IStorage {
     return await this.db.select().from(schema.candidates).orderBy(desc(schema.candidates.createdAt));
   }
 
+  async getCandidatesByOrganization(organizationId: number): Promise<Candidate[]> {
+    await this.ensureConnection();
+    return await this.db.select().from(schema.candidates).where(eq(schema.candidates.organizationId, organizationId)).orderBy(desc(schema.candidates.createdAt));
+  }
+
   async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
     await this.ensureConnection();
     const [candidate] = await this.db.select().from(schema.candidates).where(eq(schema.candidates.email, email));
@@ -235,17 +240,36 @@ export class SQLiteStorage implements IStorage {
 
     const results = await query.orderBy(desc(schema.jobMatches.matchPercentage));
     
-    return results.map((result: any) => ({
-      id: result.id,
-      organizationId: result.organizationId,
-      jobId: result.jobId,
-      candidateId: result.candidateId,
-      matchPercentage: result.matchPercentage,
-      status: result.status,
-      aiReasoning: result.aiReasoning,
-      matchCriteria: result.matchCriteria,
-      matchedBy: result.matchedBy,
-      createdAt: result.createdAt,
+    return results.map((result: any) => {
+      let skillAnalysis = null;
+      let criteriaScores = null;
+      let weightedScores = null;
+      
+      try {
+        if (result.matchCriteria && result.matchCriteria !== '{}') {
+          const parsedCriteria = JSON.parse(result.matchCriteria);
+          skillAnalysis = parsedCriteria.skillAnalysis;
+          criteriaScores = parsedCriteria.criteriaScores;
+          weightedScores = parsedCriteria.weightedScores;
+        }
+      } catch (e) {
+        console.error('Error parsing matchCriteria:', e);
+      }
+      
+      return {
+        id: result.id,
+        organizationId: result.organizationId,
+        jobId: result.jobId,
+        candidateId: result.candidateId,
+        matchPercentage: result.matchPercentage,
+        status: result.status,
+        aiReasoning: result.aiReasoning,
+        matchCriteria: result.matchCriteria,
+        skillAnalysis,
+        criteriaScores,
+        weightedScores,
+        matchedBy: result.matchedBy,
+        createdAt: result.createdAt,
       job: {
         id: result.jobId_ref,
         organizationId: result.jobOrganizationId,
@@ -286,6 +310,133 @@ export class SQLiteStorage implements IStorage {
   async clearAllMatches(): Promise<void> {
     await this.ensureConnection();
     await this.db.delete(schema.jobMatches);
+  }
+
+  async getJobMatchesByOrganization(organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
+    await this.ensureConnection();
+    
+    // Explicit field selection to avoid team_id column errors
+    let query = this.db
+      .select({
+        id: schema.jobMatches.id,
+        organizationId: schema.jobMatches.organizationId,
+        jobId: schema.jobMatches.jobId,
+        candidateId: schema.jobMatches.candidateId,
+        matchPercentage: schema.jobMatches.matchPercentage,
+        status: schema.jobMatches.status,
+        aiReasoning: schema.jobMatches.aiReasoning,
+        matchCriteria: schema.jobMatches.matchCriteria,
+        matchedBy: schema.jobMatches.matchedBy,
+        createdAt: schema.jobMatches.createdAt,
+        // Job fields - explicit selection
+        jobId_ref: schema.jobs.id,
+        jobOrganizationId: schema.jobs.organizationId,
+        jobCreatedBy: schema.jobs.createdBy,
+        jobTitle: schema.jobs.title,
+        jobDescription: schema.jobs.description,
+        jobExperienceLevel: schema.jobs.experienceLevel,
+        jobType: schema.jobs.jobType,
+        jobKeywords: schema.jobs.keywords,
+        jobStatus: schema.jobs.status,
+        jobCreatedAt: schema.jobs.createdAt,
+        jobUpdatedAt: schema.jobs.updatedAt,
+        // Candidate fields
+        candidateId_ref: schema.candidates.id,
+        candidateOrganizationId: schema.candidates.organizationId,
+        candidateAddedBy: schema.candidates.addedBy,
+        candidateName: schema.candidates.name,
+        candidateEmail: schema.candidates.email,
+        candidatePhone: schema.candidates.phone,
+        candidateExperience: schema.candidates.experience,
+        candidateResumeContent: schema.candidates.resumeContent,
+        candidateResumeFileName: schema.candidates.resumeFileName,
+        candidateSource: schema.candidates.source,
+        candidateTags: schema.candidates.tags,
+        candidateStatus: schema.candidates.status,
+        candidateCreatedAt: schema.candidates.createdAt,
+        candidateUpdatedAt: schema.candidates.updatedAt
+      })
+      .from(schema.jobMatches)
+      .leftJoin(schema.jobs, eq(schema.jobMatches.jobId, schema.jobs.id))
+      .leftJoin(schema.candidates, eq(schema.jobMatches.candidateId, schema.candidates.id));
+
+    let whereConditions = [eq(schema.jobMatches.organizationId, organizationId)];
+
+    if (jobId) {
+      whereConditions.push(eq(schema.jobMatches.jobId, jobId));
+    }
+
+    if (minPercentage) {
+      whereConditions.push(gte(schema.jobMatches.matchPercentage, minPercentage));
+    }
+
+    query = query.where(and(...whereConditions));
+
+    const results = await query.orderBy(desc(schema.jobMatches.matchPercentage));
+    
+    return results.map((result: any) => {
+      let skillAnalysis = null;
+      let criteriaScores = null;
+      let weightedScores = null;
+      
+      try {
+        if (result.matchCriteria && result.matchCriteria !== '{}') {
+          console.log('Parsing matchCriteria:', result.matchCriteria.substring(0, 100));
+          const parsedCriteria = JSON.parse(result.matchCriteria);
+          skillAnalysis = parsedCriteria.skillAnalysis;
+          criteriaScores = parsedCriteria.criteriaScores;
+          weightedScores = parsedCriteria.weightedScores;
+          console.log('Successfully parsed skill analysis:', skillAnalysis ? 'Yes' : 'No');
+        }
+      } catch (e) {
+        console.error('Error parsing matchCriteria:', e);
+      }
+      
+      return {
+        id: result.id,
+        organizationId: result.organizationId,
+        jobId: result.jobId,
+        candidateId: result.candidateId,
+        matchPercentage: result.matchPercentage,
+        status: result.status,
+        aiReasoning: result.aiReasoning,
+        matchCriteria: result.matchCriteria,
+        skillAnalysis,
+        criteriaScores,
+        weightedScores,
+        matchedBy: result.matchedBy,
+        createdAt: result.createdAt,
+        job: {
+          id: result.jobId_ref,
+          organizationId: result.jobOrganizationId,
+          createdBy: result.jobCreatedBy,
+          title: result.jobTitle,
+          description: result.jobDescription,
+          experienceLevel: result.jobExperienceLevel,
+          jobType: result.jobType,
+          keywords: result.jobKeywords,
+          status: result.jobStatus,
+          createdAt: result.jobCreatedAt,
+          updatedAt: result.jobUpdatedAt
+        },
+        candidate: {
+          id: result.candidateId_ref,
+          organizationId: result.candidateOrganizationId,
+          addedBy: result.candidateAddedBy,
+          name: result.candidateName,
+          email: result.candidateEmail,
+          phone: result.candidatePhone,
+          experience: result.candidateExperience,
+          resumeContent: result.candidateResumeContent,
+          resumeFileName: result.candidateResumeFileName,
+          source: result.candidateSource,
+          tags: result.candidateTags,
+          status: result.candidateStatus,
+          createdAt: result.candidateCreatedAt,
+          updatedAt: result.candidateUpdatedAt
+        }
+      };
+    });
   }
 
   // Interviews

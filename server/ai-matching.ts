@@ -323,6 +323,7 @@ ANALYSIS CRITERIA (Rate each from 0-100):
    - Tools, equipment, software, or methodologies match
    - Professional skills and certifications
    - Domain-specific abilities and knowledge
+   - IMPORTANT: In skillBreakdown.skillsMatch, list specific skills the candidate HAS vs MISSING
 
 2. EXPERIENCE LEVEL (Weight: ${finalWeights.experience}%):
    - Years of experience vs requirements
@@ -397,26 +398,33 @@ Respond in JSON format with:
   "recommendations": "hiring recommendation with focus on experience currency",
   "skillBreakdown": {
     "skillsMatch": {
-      "has": ["skill1", "skill2"],
-      "missing": ["skill3", "skill4"]
+      "has": ["specific skills/competencies candidate possesses"],
+      "missing": ["specific skills/competencies candidate lacks"]
     },
     "experienceLevel": {
-      "has": ["experience1", "experience2"],
-      "missing": ["experience3", "experience4"]
+      "has": ["experience levels/types candidate has"],
+      "missing": ["experience gaps candidate has"]
     },
     "keywordRelevance": {
-      "has": ["keyword1", "keyword2"],
-      "missing": ["keyword3", "keyword4"]
+      "has": ["job keywords found in candidate resume"],
+      "missing": ["job keywords not found in candidate resume"]
     },
     "professionalDepth": {
-      "has": ["expertise1", "expertise2"],
-      "missing": ["expertise3", "expertise4"]
+      "has": ["areas of deep expertise candidate shows"],
+      "missing": ["areas where candidate needs deeper expertise"]
     },
     "domainExperience": {
-      "has": ["domain1", "domain2"],
-      "missing": ["domain3", "domain4"]
+      "has": ["relevant industry/domain experience candidate has"],
+      "missing": ["industry/domain experience candidate lacks"]
     }
   }
+
+CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
+- For each criteria, provide specific, actionable items in "has" and "missing" arrays
+- "has" should contain actual skills/experience found in the candidate's resume
+- "missing" should contain specific requirements from the job that the candidate doesn't have
+- Be specific rather than generic (e.g., "React.js" not "frontend skills")
+- Include at least 2-5 items in each "has" and "missing" array when possible
 }
 `;
 

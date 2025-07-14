@@ -715,6 +715,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           matchedBy: req.user!.id,
           matchPercentage: match.matchPercentage,
           aiReasoning: match.reasoning,
+          matchCriteria: JSON.stringify({
+            criteriaScores: match.criteriaScores,
+            weightedScores: match.weightedScores,
+            skillAnalysis: match.skillAnalysis
+          }),
           status: 'pending'
         });
       }

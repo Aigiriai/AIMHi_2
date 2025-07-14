@@ -10,11 +10,13 @@ export interface IStorage {
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
   getCandidate(id: number): Promise<Candidate | undefined>;
   getAllCandidates(): Promise<Candidate[]>;
+  getCandidatesByOrganization(organizationId: number): Promise<Candidate[]>;
   getCandidateByEmail(email: string): Promise<Candidate | undefined>;
   
   // Job match operations
   createJobMatch(match: InsertJobMatch): Promise<JobMatch>;
   getJobMatches(jobId?: number, minPercentage?: number): Promise<JobMatchResult[]>;
+  getJobMatchesByOrganization(organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]>;
   deleteJobMatchesByJobId(jobId: number): Promise<void>;
   clearAllMatches(): Promise<void>;
   
