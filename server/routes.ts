@@ -707,7 +707,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       filteredMatches.sort((a, b) => b.matchPercentage - a.matchPercentage);
       
       // Save matches to database
+      console.log('💾 Saving', filteredMatches.length, 'matches to database');
       for (const match of filteredMatches) {
+        console.log('💾 Processing match for candidate', match.candidateId, 'with', match.matchPercentage, '% match');
+        console.log('💾 Match has skillAnalysis:', !!match.skillAnalysis);
+        console.log('💾 SkillAnalysis keys:', match.skillAnalysis ? Object.keys(match.skillAnalysis) : 'none');
+        
+        const matchCriteriaToStore = {
+          criteriaScores: match.criteriaScores,
+          weightedScores: match.weightedScores,
+          skillAnalysis: match.skillAnalysis
+        };
+        
+        console.log('💾 Storing matchCriteria:', JSON.stringify(matchCriteriaToStore, null, 2));
+        
         await storage.createJobMatch({
           organizationId: req.user!.organizationId,
           jobId: parseInt(jobId),
@@ -715,13 +728,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           matchedBy: req.user!.id,
           matchPercentage: match.matchPercentage,
           aiReasoning: match.reasoning,
-          matchCriteria: JSON.stringify({
-            criteriaScores: match.criteriaScores,
-            weightedScores: match.weightedScores,
-            skillAnalysis: match.skillAnalysis
-          }),
+          matchCriteria: JSON.stringify(matchCriteriaToStore),
           status: 'pending'
         });
+        
+        console.log('💾 Successfully stored match for candidate', match.candidateId);
       }
 
       // Create call contexts for ALL matches that passed the threshold

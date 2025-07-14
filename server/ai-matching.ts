@@ -437,7 +437,20 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       seed: contentSeed, // Use content-based seed for identical resumes to get identical results
     });
 
+    // Log the raw OpenAI response for debugging
+    console.log('🤖 OpenAI Raw Response Content:', response.choices[0].message.content);
+    console.log('🤖 OpenAI Response Length:', response.choices[0].message.content?.length || 0);
+    
     const result = JSON.parse(response.choices[0].message.content || "{}");
+
+    // Log the parsed result structure for debugging
+    console.log('🤖 Parsed Result Keys:', Object.keys(result));
+    console.log('🤖 Has criteriaScores:', !!result.criteriaScores);
+    console.log('🤖 Has skillAnalysis:', !!result.skillAnalysis);
+    console.log('🤖 SkillAnalysis structure:', result.skillAnalysis ? Object.keys(result.skillAnalysis) : 'null');
+    if (result.skillAnalysis) {
+      console.log('🤖 SkillAnalysis detailed:', JSON.stringify(result.skillAnalysis, null, 2));
+    }
 
     // Calculate weighted scores with fallback values
     const criteriaScores: MatchCriteria = {
@@ -561,6 +574,8 @@ ${result.recommendations || "No specific recommendation provided"}
 `;
 
     // Extract skill analysis from the AI result
+    console.log('🤖 Extracting skillAnalysis from result.skillBreakdown:', result.skillBreakdown ? Object.keys(result.skillBreakdown) : 'null');
+    
     const skillAnalysis = {
       skillsMatch: {
         skillsHas: result.skillBreakdown?.skillsMatch?.has || [],
@@ -589,7 +604,7 @@ ${result.recommendations || "No specific recommendation provided"}
       }
     };
 
-    return {
+    const finalResult = {
       candidateId: candidate.id,
       matchPercentage: Math.max(0, Math.min(100, finalMatchPercentage)),
       reasoning: enhancedReasoning,
@@ -597,6 +612,16 @@ ${result.recommendations || "No specific recommendation provided"}
       weightedScores,
       skillAnalysis,
     };
+    
+    console.log('🤖 Final DetailedMatchResult for candidate', candidate.id, ':', {
+      matchPercentage: finalResult.matchPercentage,
+      hasSkillAnalysis: !!finalResult.skillAnalysis,
+      skillAnalysisKeys: Object.keys(finalResult.skillAnalysis),
+      skillsMatchHas: finalResult.skillAnalysis.skillsMatch.skillsHas.length,
+      skillsMatchMissing: finalResult.skillAnalysis.skillsMatch.skillsMissing.length,
+    });
+    
+    return finalResult;
   } catch (error) {
     console.error(
       "Error in advanced AI matching for candidate",
