@@ -397,7 +397,6 @@ Respond in JSON format with:
     "professionalDepth": number,
     "domainExperience": number
   },
-  "overallMatchPercentage": number,
   "detailedReasoning": "comprehensive explanation including experience recency analysis",
   "scoreExplanations": {
     "skillsMatch": "Why this specific score for skills alignment",
@@ -406,7 +405,6 @@ Respond in JSON format with:
     "professionalDepth": "Why this specific score for professional depth",
     "domainExperience": "Why this specific score for domain experience"
   },
-  "overallScoreJustification": "Why the overall percentage makes sense given the criteria",
   "strengths": ["strength1", "strength2"],
   "concerns": ["concern1", "concern2"],
   "recommendations": "hiring recommendation with focus on experience currency",
@@ -558,14 +556,11 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       initialMatchPercentage = 0;
     }
 
-    // dont Apply strict domain-specific validation rules
-    const finalMatchPercentage = initialMatchPercentage; //applyDomainValidationRules(
-    //  initialMatchPercentage,
-    //criticalTechnologies,
-    //fullJobDescription,
-    //fullResumeContent,
-    //criteriaScores
-    //);
+    // Use purely mathematical weighted sum - ignore OpenAI's overall percentage
+    const finalMatchPercentage = Math.min(100, Math.max(0, initialMatchPercentage));
+    
+    console.log('🔢 Final calculation - Mathematical weighted sum:', finalMatchPercentage);
+    console.log('🔢 AI suggested overall percentage (ignored):', result.overallMatchPercentage);
 
     // Enhanced reasoning with criteria breakdown and AI explanations
     const scoreExplanations = result.scoreExplanations || {};
@@ -573,7 +568,7 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
 MATCH ANALYSIS BREAKDOWN:
 
 Overall Score: ${finalMatchPercentage}%
-${result.overallScoreJustification ? `Overall Justification: ${result.overallScoreJustification}` : ""}
+Mathematical Calculation: Pure weighted sum of criteria scores (AI overall percentage ignored)
 
 CRITERIA SCORES WITH AI EXPLANATIONS:
 • Skills Match: ${criteriaScores.skillsMatch}% (Weight: ${finalWeights.skills}% = ${weightedScores.skillsMatch.toFixed(1)} points)
@@ -592,9 +587,8 @@ CRITERIA SCORES WITH AI EXPLANATIONS:
   ${scoreExplanations.domainExperience ? `AI Explanation: ${scoreExplanations.domainExperience}` : ""}
 
 CALCULATION METHOD:
-Initial AI Score: ${initialMatchPercentage}%
-Final Score After Validation: ${finalMatchPercentage}%
-${initialMatchPercentage !== finalMatchPercentage ? "(Score adjusted by domain validation rules)" : "(No domain adjustments applied)"}
+Weighted Sum: ${weightedSum.toFixed(1)}
+Final Score: ${finalMatchPercentage}% (mathematical result, capped at 100%)
 
 DETAILED ANALYSIS:
 ${result.detailedReasoning || "No detailed reasoning provided"}

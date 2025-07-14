@@ -118,6 +118,12 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 14, 2025. **Fixed mathematical calculation for match percentages**
+  - Changed from AI-suggested overall percentage to pure mathematical weighted sum
+  - Ensures overall match percentage is always accurate weighted average of criteria scores
+  - Prevents impossible scores above 100% when no individual criteria reaches 100%
+  - Added comprehensive debugging logs for weight mapping and calculation validation
+  - System now uses absolute thresholds for match labels instead of relative ranking
 - July 14, 2025. **Universal AI Matching System Implementation**
   - Removed all sector-specific biases from AI matching algorithm
   - Replaced `extractCriticalTechnologies` with universal `extractCriticalRequirements`
