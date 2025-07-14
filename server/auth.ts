@@ -66,7 +66,7 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
       .from(users)
       .where(and(
         eq(users.id, decoded.userId),
-        eq(users.isActive, true)
+        eq(users.isActive, 1)
       ))
       .limit(1);
 
@@ -85,11 +85,11 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     };
     req.organizationId = user[0].organizationId;
 
-    // Update last login
-    await db
-      .update(users)
-      .set({ lastLoginAt: new Date() })
-      .where(eq(users.id, user[0].id));
+    // Update last login (skip for SQLite compatibility)
+    // await db
+    //   .update(users)
+    //   .set({ lastLoginAt: new Date() })
+    //   .where(eq(users.id, user[0].id));
 
     next();
   } catch (error) {

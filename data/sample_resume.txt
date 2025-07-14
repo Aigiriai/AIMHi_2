@@ -1,0 +1,35 @@
+John Doe
+Senior Full Stack Developer
+Email: john.doe@example.com
+Phone: +1-555-123-4567
+
+PROFESSIONAL SUMMARY
+Experienced full stack developer with 6+ years of expertise in React, Node.js, and PostgreSQL. Proven track record of building scalable web applications and leading development teams. Strong background in JavaScript, TypeScript, and REST API development.
+
+TECHNICAL SKILLS
+- Frontend: React, Redux, HTML5, CSS3, JavaScript, TypeScript
+- Backend: Node.js, Express.js, RESTful APIs
+- Database: PostgreSQL, MongoDB, Redis
+- Tools: Git, Docker, Webpack, Jest
+- Cloud: AWS, Google Cloud Platform
+
+EXPERIENCE
+Senior Full Stack Developer | Tech Solutions Inc. | 2020-Present
+• Led development of enterprise web applications using React and Node.js
+• Architected and implemented RESTful APIs serving 100K+ daily requests
+• Optimized database queries improving application performance by 40%
+• Mentored junior developers and conducted code reviews
+
+Full Stack Developer | StartupXYZ | 2018-2020
+• Developed responsive web applications using React and Express.js
+• Implemented user authentication and authorization systems
+• Built real-time features using WebSockets and Socket.io
+• Collaborated with UX team to improve user experience
+
+EDUCATION
+Bachelor of Science in Computer Science | University of Technology | 2018
+
+PROJECTS
+• E-commerce Platform: Built full-stack e-commerce solution with React, Node.js, and PostgreSQL
+• Real-time Chat Application: Developed chat app using React, Socket.io, and Redis
+• Task Management System: Created project management tool with React and Express.js
