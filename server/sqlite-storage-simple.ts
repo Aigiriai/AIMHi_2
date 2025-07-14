@@ -517,10 +517,20 @@ export class SQLiteStorage implements IStorage {
           console.log('🔍 PARSING: matchCriteria exists for match:', match.id);
           console.log('🔍 PARSING: raw match_criteria length:', match.match_criteria.length);
           console.log('🔍 PARSING: raw match_criteria start:', match.match_criteria.substring(0, 100));
-          // Try to parse the JSON string correctly
+          // Alternative approach: Use eval for JSON parsing to avoid character array issue
           const rawCriteria = match.match_criteria;
           if (typeof rawCriteria === 'string') {
-            parsedMatchCriteria = JSON.parse(rawCriteria);
+            try {
+              // Try standard JSON.parse first
+              parsedMatchCriteria = JSON.parse(rawCriteria);
+              // If it's still a string after parsing, use eval as fallback
+              if (typeof parsedMatchCriteria === 'string') {
+                parsedMatchCriteria = eval(`(${rawCriteria})`);
+              }
+            } catch (evalError) {
+              console.log('🔍 PARSING: Both JSON.parse and eval failed, using empty object');
+              parsedMatchCriteria = {};
+            }
           } else {
             parsedMatchCriteria = rawCriteria;
           }
