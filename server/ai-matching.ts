@@ -230,7 +230,21 @@ export async function matchCandidateToJob(
       domainExperience: 20, // Experience in the specific field/domain
     };
 
-    const finalWeights = weights || defaultWeights;
+    // Map frontend weight names to backend weight names
+    let finalWeights = defaultWeights;
+    if (weights) {
+      finalWeights = {
+        skills: weights.skills || defaultWeights.skills,
+        experience: weights.experience || defaultWeights.experience,
+        keywords: weights.keywords || defaultWeights.keywords,
+        // Map frontend names to backend names
+        professionalDepth: (weights as any).technicalDepth || defaultWeights.professionalDepth,
+        domainExperience: (weights as any).projectDomain || defaultWeights.domainExperience,
+      };
+    }
+    
+    console.log('🔧 Weight mapping - Input weights:', weights);
+    console.log('🔧 Weight mapping - Final weights:', finalWeights);
 
     // Generate consistent seed based on content for deterministic results
     const contentSeed = generateContentHash(
