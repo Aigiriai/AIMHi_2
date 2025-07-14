@@ -1,0 +1,21 @@
+Software Engineer - Full Stack Development
+
+We are seeking a talented Full Stack Software Engineer to join our dynamic development team. The ideal candidate will have experience with modern web technologies including React, Node.js, TypeScript, and cloud platforms.
+
+Key Responsibilities:
+- Develop and maintain web applications using React and Node.js
+- Design and implement RESTful APIs
+- Work with databases (PostgreSQL, MongoDB)
+- Collaborate with cross-functional teams
+- Write clean, maintainable code with proper testing
+
+Required Skills:
+- 3+ years of experience in full stack development
+- Proficiency in JavaScript, TypeScript, React, Node.js
+- Experience with SQL and NoSQL databases
+- Knowledge of Git, Docker, and CI/CD pipelines
+- Strong problem-solving and communication skills
+
+Experience Level: Mid Level
+Job Type: Full Time
+Keywords: React, Node.js, TypeScript, JavaScript, PostgreSQL, MongoDB, Docker, Git, API Development, Full Stack

@@ -1,10 +1,52 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
+import { WebSocketServer } from "ws";
+import { spawn, ChildProcess } from "child_process";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { handleMediaStream, initializeCallContext } from "./ai-calling";
+import { startNgrokAndGetDomain, getNgrokDomain } from "./ngrok-service";
+
+let pythonProcess: ChildProcess | null = null;
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+async function waitForService(url: string, serviceName: string, maxRetries = 30): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        log(`${serviceName} is ready`);
+        return true;
+      }
+    } catch (error) {
+      // Service not ready yet
+    }
+    
+    if (i % 5 === 0) { // Log every 5 seconds
+      log(`Waiting for ${serviceName}... (${i + 1}/${maxRetries})`);
+    }
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  
+  log(`${serviceName} failed to start after ${maxRetries} seconds`);
+  return false;
+}
+
+async function startPythonBackend(): Promise<boolean> {
+  // Disable Python backend for AI calling to prevent domain caching issues
+  log('Skipping Python FastAPI backend - using Node.js for AI calling...');
+  
+  // pythonProcess = spawn('python', ['main.py'], {
+  //   stdio: ['ignore', 'pipe', 'pipe'],
+  //   cwd: process.cwd()
+  // });
+  
+  // Return true to indicate backend is ready (Node.js only)
+  return true;
+}
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -37,7 +79,33 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  // Single Node.js backend for cost optimization - disable Python backend for AI calling
+  log('Initializing consolidated Node.js backend...');
+  
+  // Start ngrok tunnel for Twilio AI calling
+  log('🔗 Setting up ngrok tunnel for AI calling...');
+  const ngrokDomain = await startNgrokAndGetDomain(5000);
+  if (!ngrokDomain) {
+    log('⚠️ Warning: Ngrok failed to start. AI calling features may not work.');
+  } else {
+    log(`✅ Ngrok tunnel established: ${ngrokDomain}`);
+  }
+
+  // Create HTTP server and WebSocket server
+  const httpServer = createServer(app);
+  const wss = new WebSocketServer({ server: httpServer, path: '/media-stream' });
+
+  // Handle WebSocket connections for AI calling
+  wss.on('connection', (ws) => {
+    handleMediaStream(ws);
+  });
+
+  // AI calling route disabled - using routes.ts handler with context storage instead
+
+  // Initialize call context from previous session
+  initializeCallContext();
+  
+  await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -47,24 +115,38 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
+  if (process.env.NODE_ENV === "production") {
     serveStatic(app);
+  } else {
+    await setupVite(app, httpServer);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Start the server
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  httpServer.listen(port, '0.0.0.0', async () => {
+    log(`Server running on port ${port} with AI calling support`);
+    const domain = await getNgrokDomain();
+    log(`Ngrok domain: ${domain || 'Not available'}`);
+  });
+
+  // Cleanup on exit
+  process.on('SIGINT', () => {
+    log('Shutting down services...');
+    if (pythonProcess) {
+      pythonProcess.kill();
+    }
+    wss.close();
+    httpServer.close();
+    process.exit(0);
+  });
+
+  process.on('SIGTERM', () => {
+    log('Shutting down services...');
+    if (pythonProcess) {
+      pythonProcess.kill();
+    }
+    wss.close();
+    httpServer.close();
+    process.exit(0);
   });
 })();

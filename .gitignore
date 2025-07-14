@@ -4,3 +4,22 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Sensitive files with API keys and secrets
+attached_assets/call_with_ai.py
+ai_call_service.py
+ai_service.log
+ai_service_restart.log
+
+# Call transcripts and recordings (may contain sensitive data)
+call-transcripts/
+
+# Environment and configuration files
+.env
+.env.local
+.env.production
+
+# Temporary files
+*.tmp
+*.log
+ngrok.log

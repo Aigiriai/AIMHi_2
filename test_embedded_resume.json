@@ -1,0 +1,7 @@
+{
+  "id": 1,
+  "name": "Alex Rodriguez",
+  "email": "alex.rodriguez@email.com",
+  "experience": 6,
+  "resumeContent": "ALEX RODRIGUEZ\nEmbedded Systems Engineer\n\nEXPERIENCE:\n\nSenior Embedded Engineer | TechCorp | 2019-2024\n- Developed device drivers for UART, USB, SPI, and I2C peripherals on ARM Cortex-M microcontrollers\n- Implemented thread-safe communication protocols for real-time systems running on FreeRTOS\n- Optimized memory allocation and interrupt handling for resource-constrained environments\n- Led firmware development for IoT devices with strict power consumption requirements\n- Collaborated with hardware team on PCB design and signal integrity analysis\n\nEmbedded Software Developer | StartupTech | 2018-2019\n- Built bootloaders and flash memory management systems for automotive ECUs\n- Developed custom communication stacks for CAN bus and LIN protocols\n- Implemented diagnostic protocols and over-the-air update mechanisms\n- Worked extensively with debugging tools like JTAG, oscilloscopes, and logic analyzers\n\nEDUCATION:\nB.S. Electrical Engineering | State University | 2018\n\nSKILLS:\n- Microcontroller programming (ARM, AVR, PIC)\n- Real-time operating systems (FreeRTOS, ThreadX)\n- Hardware interfaces (UART, SPI, I2C, CAN, USB)\n- Development tools (GCC, Keil, IAR, Git)\n- Protocol development and optimization\n- Power management and low-power design\n- Hardware debugging and validation"
+}

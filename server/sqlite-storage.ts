@@ -1,0 +1,398 @@
+import { getSQLiteDB } from './sqlite-db';
+import type { 
+  Job, Candidate, JobMatch, Interview, User, Organization,
+  InsertJob, InsertCandidate, InsertJobMatch, InsertInterview, InsertUser, InsertOrganization
+} from '@shared/schema';
+import { eq, desc, and, gte } from 'drizzle-orm';
+
+export interface IStorage {
+  // Jobs
+  createJob(insertJob: InsertJob): Promise<Job>;
+  getJob(id: number): Promise<Job | undefined>;
+  getAllJobs(): Promise<Job[]>;
+  
+  // Candidates
+  createCandidate(insertCandidate: InsertCandidate): Promise<Candidate>;
+  getCandidate(id: number): Promise<Candidate | undefined>;
+  getAllCandidates(): Promise<Candidate[]>;
+  getCandidateByEmail(email: string): Promise<Candidate | undefined>;
+  
+  // Job Matches
+  createJobMatch(insertMatch: InsertJobMatch): Promise<JobMatch>;
+  getJobMatches(jobId?: number, minPercentage?: number): Promise<JobMatchResult[]>;
+  deleteJobMatchesByJobId(jobId: number): Promise<void>;
+  clearAllMatches(): Promise<void>;
+  
+  // Interviews
+  createInterview(insertInterview: InsertInterview): Promise<Interview>;
+  getInterview(id: number): Promise<Interview | undefined>;
+  getAllInterviews(): Promise<InterviewWithDetails[]>;
+  getInterviewsByCandidate(candidateId: number): Promise<InterviewWithDetails[]>;
+  getInterviewsByJob(jobId: number): Promise<InterviewWithDetails[]>;
+  updateInterviewStatus(id: number, status: string): Promise<void>;
+  deleteInterview(id: number): Promise<void>;
+  
+  // Users
+  createUser(insertUser: InsertUser): Promise<User>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  updateUser(id: number, updates: Partial<User>): Promise<void>;
+  deleteUser(id: number): Promise<void>;
+  
+  // Organizations
+  createOrganization(insertOrg: InsertOrganization): Promise<Organization>;
+  getOrganization(id: number): Promise<Organization | undefined>;
+  getOrganizationByName(name: string): Promise<Organization | undefined>;
+  getAllOrganizations(): Promise<Organization[]>;
+  deleteOrganization(id: number): Promise<void>;
+  
+  // Cleanup
+  deleteAllJobs(): Promise<void>;
+  deleteAllCandidates(): Promise<void>;
+}
+
+
+
+export class SQLiteStorage implements IStorage {
+  private db: any;
+  private sqlite: any;
+
+  constructor() {
+    this.initializeConnection();
+  }
+
+  private async initializeConnection() {
+    try {
+      const dbInstance = await getSQLiteDB();
+      this.db = dbInstance.db;
+      this.sqlite = dbInstance.sqlite;
+    } catch (error) {
+      console.error('Failed to initialize SQLite connection:', error);
+    }
+  }
+
+  private async ensureConnection() {
+    if (!this.db) {
+      await this.initializeConnection();
+    }
+  }
+
+  // Jobs
+  async createJob(insertJob: InsertJob): Promise<Job> {
+    await this.ensureConnection();
+    console.log('Creating job with data:', insertJob);
+    
+    try {
+      // Use raw SQL to insert job directly
+      const stmt = this.sqlite.prepare(`
+        INSERT INTO jobs (
+          organization_id, team_id, created_by, title, description, 
+          experience_level, job_type, keywords, status, settings
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      const result = stmt.run(
+        insertJob.organizationId,
+        insertJob.teamId || null,
+        insertJob.createdBy,
+        insertJob.title,
+        insertJob.description,
+        insertJob.experienceLevel,
+        insertJob.jobType,
+        insertJob.keywords,
+        insertJob.status || 'active',
+        '{}' // settings as JSON string
+      );
+      
+      // Fetch the created job
+      const job = this.sqlite.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
+      console.log('Job created successfully:', job);
+      return job;
+    } catch (error) {
+      console.error('Error creating job:', error);
+      throw error;
+    }
+  }
+
+  async getJob(id: number): Promise<Job | undefined> {
+    await this.ensureConnection();
+    const [job] = await this.db.select().from(schema.jobs).where(eq(schema.jobs.id, id));
+    return job;
+  }
+
+  async getAllJobs(): Promise<Job[]> {
+    await this.ensureConnection();
+    console.log('Fetching all jobs from database...');
+    
+    try {
+      // First check if there are any jobs at all
+      const count = this.sqlite.prepare('SELECT COUNT(*) as count FROM jobs').get();
+      console.log('Total jobs in database:', count);
+      
+      // Use raw SQL to fetch jobs
+      const jobs = this.sqlite.prepare(`
+        SELECT id, organization_id as organizationId, team_id as teamId, created_by as createdBy,
+               title, description, experience_level as experienceLevel, job_type as jobType,
+               keywords, status, settings, created_at as createdAt, updated_at as updatedAt
+        FROM jobs 
+        ORDER BY created_at DESC
+      `).all();
+      
+      console.log('Retrieved jobs:', jobs.length);
+      return jobs;
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      return [];
+    }
+  }
+
+  // Candidates
+  async createCandidate(insertCandidate: InsertCandidate): Promise<Candidate> {
+    await this.ensureConnection();
+    const [candidate] = await this.db.insert(schema.candidates).values(insertCandidate).returning();
+    return candidate;
+  }
+
+  async getCandidate(id: number): Promise<Candidate | undefined> {
+    await this.ensureConnection();
+    const [candidate] = await this.db.select().from(schema.candidates).where(eq(schema.candidates.id, id));
+    return candidate;
+  }
+
+  async getAllCandidates(): Promise<Candidate[]> {
+    await this.ensureConnection();
+    return await this.db.select().from(schema.candidates).orderBy(desc(schema.candidates.createdAt));
+  }
+
+  async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
+    await this.ensureConnection();
+    const [candidate] = await this.db.select().from(schema.candidates).where(eq(schema.candidates.email, email));
+    return candidate;
+  }
+
+  // Job Matches
+  async createJobMatch(insertMatch: InsertJobMatch): Promise<JobMatch> {
+    await this.ensureConnection();
+    const [match] = await this.db.insert(schema.jobMatches).values(insertMatch).returning();
+    return match;
+  }
+
+  async getJobMatches(jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
+    await this.ensureConnection();
+    
+    // Explicit field selection to avoid team_id column errors
+    let query = this.db
+      .select({
+        id: schema.jobMatches.id,
+        organizationId: schema.jobMatches.organizationId,
+        jobId: schema.jobMatches.jobId,
+        candidateId: schema.jobMatches.candidateId,
+        matchPercentage: schema.jobMatches.matchPercentage,
+        status: schema.jobMatches.status,
+        aiReasoning: schema.jobMatches.aiReasoning,
+        matchCriteria: schema.jobMatches.matchCriteria,
+        matchedBy: schema.jobMatches.matchedBy,
+        createdAt: schema.jobMatches.createdAt,
+        // Job fields - explicit selection
+        jobId_ref: schema.jobs.id,
+        jobOrganizationId: schema.jobs.organizationId,
+        jobCreatedBy: schema.jobs.createdBy,
+        jobTitle: schema.jobs.title,
+        jobDescription: schema.jobs.description,
+        jobExperienceLevel: schema.jobs.experienceLevel,
+        jobType: schema.jobs.jobType,
+        jobKeywords: schema.jobs.keywords,
+        jobStatus: schema.jobs.status,
+        jobCreatedAt: schema.jobs.createdAt,
+        jobUpdatedAt: schema.jobs.updatedAt,
+        // Candidate fields
+        candidateId_ref: schema.candidates.id,
+        candidateOrganizationId: schema.candidates.organizationId,
+        candidateAddedBy: schema.candidates.addedBy,
+        candidateName: schema.candidates.name,
+        candidateEmail: schema.candidates.email,
+        candidatePhone: schema.candidates.phone,
+        candidateExperience: schema.candidates.experience,
+        candidateResumeContent: schema.candidates.resumeContent,
+        candidateResumeFileName: schema.candidates.resumeFileName,
+        candidateSource: schema.candidates.source,
+        candidateTags: schema.candidates.tags,
+        candidateStatus: schema.candidates.status,
+        candidateCreatedAt: schema.candidates.createdAt,
+        candidateUpdatedAt: schema.candidates.updatedAt
+      })
+      .from(schema.jobMatches)
+      .leftJoin(schema.jobs, eq(schema.jobMatches.jobId, schema.jobs.id))
+      .leftJoin(schema.candidates, eq(schema.jobMatches.candidateId, schema.candidates.id));
+
+    if (jobId) {
+      query = query.where(eq(schema.jobMatches.jobId, jobId));
+    }
+
+    if (minPercentage) {
+      query = query.where(gte(schema.jobMatches.matchPercentage, minPercentage));
+    }
+
+    const results = await query.orderBy(desc(schema.jobMatches.matchPercentage));
+    
+    return results.map((result: any) => ({
+      id: result.id,
+      organizationId: result.organizationId,
+      jobId: result.jobId,
+      candidateId: result.candidateId,
+      matchPercentage: result.matchPercentage,
+      status: result.status,
+      aiReasoning: result.aiReasoning,
+      matchCriteria: result.matchCriteria,
+      matchedBy: result.matchedBy,
+      createdAt: result.createdAt,
+      job: {
+        id: result.jobId_ref,
+        organizationId: result.jobOrganizationId,
+        createdBy: result.jobCreatedBy,
+        title: result.jobTitle,
+        description: result.jobDescription,
+        experienceLevel: result.jobExperienceLevel,
+        jobType: result.jobType,
+        keywords: result.jobKeywords,
+        status: result.jobStatus,
+        createdAt: result.jobCreatedAt,
+        updatedAt: result.jobUpdatedAt
+      },
+      candidate: {
+        id: result.candidateId_ref,
+        organizationId: result.candidateOrganizationId,
+        addedBy: result.candidateAddedBy,
+        name: result.candidateName,
+        email: result.candidateEmail,
+        phone: result.candidatePhone,
+        experience: result.candidateExperience,
+        resumeContent: result.candidateResumeContent,
+        resumeFileName: result.candidateResumeFileName,
+        source: result.candidateSource,
+        tags: result.candidateTags,
+        status: result.candidateStatus,
+        createdAt: result.candidateCreatedAt,
+        updatedAt: result.candidateUpdatedAt
+      }
+    }));
+  }
+
+  async deleteJobMatchesByJobId(jobId: number): Promise<void> {
+    await this.ensureConnection();
+    await this.db.delete(schema.jobMatches).where(eq(schema.jobMatches.jobId, jobId));
+  }
+
+  async clearAllMatches(): Promise<void> {
+    await this.ensureConnection();
+    await this.db.delete(schema.jobMatches);
+  }
+
+  // Interviews
+  async createInterview(insertInterview: InsertInterview): Promise<Interview> {
+    await this.ensureConnection();
+    const [interview] = await this.db.insert(schema.interviews).values(insertInterview).returning();
+    return interview;
+  }
+
+  async getInterview(id: number): Promise<Interview | undefined> {
+    await this.ensureConnection();
+    const [interview] = await this.db.select().from(schema.interviews).where(eq(schema.interviews.id, id));
+    return interview;
+  }
+
+  async getAllInterviews(): Promise<InterviewWithDetails[]> {
+    await this.ensureConnection();
+    return [];
+  }
+
+  async getInterviewsByCandidate(candidateId: number): Promise<InterviewWithDetails[]> {
+    await this.ensureConnection();
+    return [];
+  }
+
+  async getInterviewsByJob(jobId: number): Promise<InterviewWithDetails[]> {
+    await this.ensureConnection();
+    return [];
+  }
+
+  async updateInterviewStatus(id: number, status: string): Promise<void> {
+    await this.ensureConnection();
+    await this.db.update(schema.interviews).set({ status }).where(eq(schema.interviews.id, id));
+  }
+
+  async deleteInterview(id: number): Promise<void> {
+    await this.ensureConnection();
+    await this.db.delete(schema.interviews).where(eq(schema.interviews.id, id));
+  }
+
+  // Users
+  async createUser(insertUser: InsertUser): Promise<User> {
+    await this.ensureConnection();
+    const [user] = await this.db.insert(schema.users).values(insertUser).returning();
+    return user;
+  }
+
+  async getUser(id: number): Promise<User | undefined> {
+    await this.ensureConnection();
+    const [user] = await this.db.select().from(schema.users).where(eq(schema.users.id, id));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    await this.ensureConnection();
+    const [user] = await this.db.select().from(schema.users).where(eq(schema.users.email, email));
+    return user;
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<void> {
+    await this.ensureConnection();
+    await this.db.update(schema.users).set(updates).where(eq(schema.users.id, id));
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await this.ensureConnection();
+    await this.db.delete(schema.users).where(eq(schema.users.id, id));
+  }
+
+  // Organizations
+  async createOrganization(insertOrg: InsertOrganization): Promise<Organization> {
+    await this.ensureConnection();
+    const [org] = await this.db.insert(schema.organizations).values(insertOrg).returning();
+    return org;
+  }
+
+  async getOrganization(id: number): Promise<Organization | undefined> {
+    await this.ensureConnection();
+    const [org] = await this.db.select().from(schema.organizations).where(eq(schema.organizations.id, id));
+    return org;
+  }
+
+  async getOrganizationByName(name: string): Promise<Organization | undefined> {
+    await this.ensureConnection();
+    const [org] = await this.db.select().from(schema.organizations).where(eq(schema.organizations.name, name));
+    return org;
+  }
+
+  async getAllOrganizations(): Promise<Organization[]> {
+    await this.ensureConnection();
+    return await this.db.select().from(schema.organizations).orderBy(desc(schema.organizations.createdAt));
+  }
+
+  async deleteOrganization(id: number): Promise<void> {
+    await this.ensureConnection();
+    await this.db.delete(schema.organizations).where(eq(schema.organizations.id, id));
+  }
+
+  async deleteAllJobs(): Promise<void> {
+    await this.ensureConnection();
+    await this.db.delete(schema.jobs);
+  }
+
+  async deleteAllCandidates(): Promise<void> {
+    await this.ensureConnection();
+    await this.db.delete(schema.candidates);
+  }
+}
+
+export const storage = new SQLiteStorage();

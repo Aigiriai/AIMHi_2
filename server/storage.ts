@@ -1,39 +1,37 @@
-import { users, type User, type InsertUser } from "@shared/schema";
-
-// modify the interface with any CRUD methods
-// you might need
+import type { InsertJob, Job, InsertCandidate, Candidate, InsertJobMatch, JobMatch, JobMatchResult, InsertInterview, Interview, InterviewWithDetails } from "@shared/schema";
 
 export interface IStorage {
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Job operations
+  createJob(job: InsertJob): Promise<Job>;
+  getJob(id: number): Promise<Job | undefined>;
+  getAllJobs(): Promise<Job[]>;
+  
+  // Candidate operations
+  createCandidate(candidate: InsertCandidate): Promise<Candidate>;
+  getCandidate(id: number): Promise<Candidate | undefined>;
+  getAllCandidates(): Promise<Candidate[]>;
+  getCandidateByEmail(email: string): Promise<Candidate | undefined>;
+  
+  // Job match operations
+  createJobMatch(match: InsertJobMatch): Promise<JobMatch>;
+  getJobMatches(jobId?: number, minPercentage?: number): Promise<JobMatchResult[]>;
+  deleteJobMatchesByJobId(jobId: number): Promise<void>;
+  clearAllMatches(): Promise<void>;
+  
+  // Bulk delete operations
+  deleteAllJobs(): Promise<void>;
+  deleteAllCandidates(): Promise<void>;
+  
+  // Interview operations
+  createInterview(interview: InsertInterview): Promise<Interview>;
+  getInterview(id: number): Promise<Interview | undefined>;
+  getAllInterviews(): Promise<InterviewWithDetails[]>;
+  getInterviewsByCandidate(candidateId: number): Promise<InterviewWithDetails[]>;
+  getInterviewsByJob(jobId: number): Promise<InterviewWithDetails[]>;
+  updateInterviewStatus(id: number, status: string): Promise<void>;
+  deleteInterview(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  currentId: number;
+import { DatabaseStorage } from "./database-storage";
 
-  constructor() {
-    this.users = new Map();
-    this.currentId = 1;
-  }
-
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
-  }
-}
-
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
