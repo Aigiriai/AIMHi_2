@@ -314,6 +314,7 @@ export class SQLiteStorage implements IStorage {
 
   async getJobMatchesByOrganization(organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
     await this.ensureConnection();
+    console.log('getJobMatchesByOrganization called with:', { organizationId, jobId, minPercentage });
     
     // Explicit field selection to avoid team_id column errors
     let query = this.db

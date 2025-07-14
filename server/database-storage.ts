@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, gte } from "drizzle-orm";
 import { jobs, candidates, jobMatches, interviews, jobTemplates } from "@shared/schema";
 import type { IStorage } from "./storage";
 import type { InsertJob, Job, InsertCandidate, Candidate, InsertJobMatch, JobMatch, JobMatchResult, InsertInterview, Interview, InterviewWithDetails, InsertJobTemplate, JobTemplate } from "@shared/schema";
@@ -42,6 +42,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAllCandidates(): Promise<Candidate[]> {
     return await db.select().from(candidates).orderBy(desc(candidates.createdAt));
+  }
+
+  async getCandidatesByOrganization(organizationId: number): Promise<Candidate[]> {
+    return await db.select().from(candidates).where(eq(candidates.organizationId, organizationId)).orderBy(desc(candidates.createdAt));
   }
 
   async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
@@ -117,6 +121,94 @@ export class DatabaseStorage implements IStorage {
     // Verify deletion
     const afterCount = await db.select().from(jobMatches);
     console.log("Matches after deletion:", afterCount.length);
+  }
+
+  async getJobMatchesByOrganization(organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
+    console.log('🚀 DATABASE-STORAGE getJobMatchesByOrganization called with:', { organizationId, jobId, minPercentage });
+    console.log('🚀 DATABASE-STORAGE: Starting query execution...');
+    
+    let whereConditions = [eq(jobMatches.organizationId, organizationId)];
+
+    if (jobId !== undefined) {
+      whereConditions.push(eq(jobMatches.jobId, jobId));
+    }
+
+    if (minPercentage !== undefined) {
+      whereConditions.push(gte(jobMatches.matchPercentage, minPercentage));
+    }
+
+    const results = await db
+      .select({
+        id: jobMatches.id,
+        organizationId: jobMatches.organizationId,
+        jobId: jobMatches.jobId,
+        candidateId: jobMatches.candidateId,
+        matchedBy: jobMatches.matchedBy,
+        matchPercentage: jobMatches.matchPercentage,
+        aiReasoning: jobMatches.aiReasoning,
+        matchCriteria: jobMatches.matchCriteria,
+        status: jobMatches.status,
+        createdAt: jobMatches.createdAt,
+        updatedAt: jobMatches.updatedAt,
+        job: jobs,
+        candidate: candidates,
+      })
+      .from(jobMatches)
+      .leftJoin(jobs, eq(jobMatches.jobId, jobs.id))
+      .leftJoin(candidates, eq(jobMatches.candidateId, candidates.id))
+      .where(and(...whereConditions))
+      .orderBy(desc(jobMatches.matchPercentage));
+
+    console.log('Raw results count:', results.length);
+    if (results.length > 0) {
+      console.log('First result sample:', {
+        id: results[0].id,
+        matchCriteria: results[0].matchCriteria ? results[0].matchCriteria.substring(0, 100) : 'null'
+      });
+    }
+    
+    const mappedResults = results.map((result: any) => {
+      console.log('🔍 PROCESSING result:', result.id, 'matchCriteria type:', typeof result.matchCriteria);
+      
+      let skillAnalysis = null;
+      let criteriaScores = null;
+      let weightedScores = null;
+      
+      if (result.matchCriteria && result.matchCriteria !== '{}') {
+        try {
+          const parsedCriteria = JSON.parse(result.matchCriteria);
+          skillAnalysis = parsedCriteria.skillAnalysis;
+          criteriaScores = parsedCriteria.criteriaScores;
+          weightedScores = parsedCriteria.weightedScores;
+          console.log('🔍 PARSING: ID', result.id, '- skillAnalysis:', skillAnalysis ? 'OBJECT' : 'NULL');
+        } catch (e) {
+          console.error('Error parsing matchCriteria for result:', result.id, e);
+        }
+      } else {
+        console.log('🔍 PARSING: ID', result.id, '- NO matchCriteria to parse');
+      }
+      
+      return {
+        id: result.id,
+        organizationId: result.organizationId,
+        jobId: result.jobId,
+        candidateId: result.candidateId,
+        matchedBy: result.matchedBy,
+        matchPercentage: result.matchPercentage,
+        aiReasoning: result.aiReasoning,
+        matchCriteria: result.matchCriteria,
+        skillAnalysis,
+        criteriaScores,
+        weightedScores,
+        status: result.status,
+        createdAt: result.createdAt,
+        updatedAt: result.updatedAt,
+        job: result.job!,
+        candidate: result.candidate!,
+      };
+    });
+    
+    return mappedResults;
   }
 
   async deleteAllJobs(): Promise<void> {
