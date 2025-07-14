@@ -43,6 +43,7 @@ export async function initializeSQLiteDB() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
         domain TEXT,
+        subdomain TEXT,
         settings TEXT DEFAULT '{}',
         plan TEXT DEFAULT 'free',
         status TEXT DEFAULT 'active',
