@@ -4,7 +4,11 @@ import { z } from 'zod';
 import { getSQLiteDB } from './sqlite-db';
 import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from '@shared/schema';
 
-const db = getSQLiteDB();
+// Database connection helper
+async function getDB() {
+  const { db } = await getSQLiteDB();
+  return db;
+}
 import { generateToken, verifyPassword, hashPassword, authenticateToken, requireSuperAdmin, logAuditEvent, type AuthRequest } from './auth';
 import { organizationManager } from './organization-manager';
 
@@ -67,6 +71,7 @@ router.post('/login', async (req, res) => {
       eq(organizations.name, organizationName)
     );
 
+    const db = await getDB();
     const result = await db.select({
       user: users,
       organization: organizations,
