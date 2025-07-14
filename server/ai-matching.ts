@@ -144,7 +144,10 @@ Example for a pilot position:
       Array.isArray(result.all_critical_requirements)
     ) {
       requirements = result.all_critical_requirements;
-    } else if (result.essential_requirements && Array.isArray(result.essential_requirements)) {
+    } else if (
+      result.essential_requirements &&
+      Array.isArray(result.essential_requirements)
+    ) {
       requirements = result.essential_requirements;
     } else if (result.requirements && Array.isArray(result.requirements)) {
       requirements = result.requirements;
@@ -178,7 +181,7 @@ function extractFallbackRequirements(
   keywords: string,
 ): string[] {
   const combined = `${jobDescription} ${keywords}`.toLowerCase();
-  
+
   // Generic requirement patterns that work across all professions
   const requirementPatterns = [
     /required:?\s*([^.]+)/gi,
@@ -194,12 +197,17 @@ function extractFallbackRequirements(
   ];
 
   const foundRequirements: string[] = [];
-  
-  requirementPatterns.forEach(pattern => {
+
+  requirementPatterns.forEach((pattern) => {
     const matches = combined.match(pattern);
     if (matches) {
-      matches.forEach(match => {
-        const requirement = match.replace(/^(required|must have|essential|mandatory|minimum|qualification|license|certification|degree|experience):?\s*/i, '').trim();
+      matches.forEach((match) => {
+        const requirement = match
+          .replace(
+            /^(required|must have|essential|mandatory|minimum|qualification|license|certification|degree|experience):?\s*/i,
+            "",
+          )
+          .trim();
         if (requirement.length > 2) {
           foundRequirements.push(requirement.toUpperCase());
         }
@@ -238,13 +246,15 @@ export async function matchCandidateToJob(
         experience: weights.experience || defaultWeights.experience,
         keywords: weights.keywords || defaultWeights.keywords,
         // Map frontend names to backend names
-        professionalDepth: (weights as any).technicalDepth || defaultWeights.professionalDepth,
-        domainExperience: (weights as any).projectDomain || defaultWeights.domainExperience,
+        professionalDepth:
+          (weights as any).technicalDepth || defaultWeights.professionalDepth,
+        domainExperience:
+          (weights as any).projectDomain || defaultWeights.domainExperience,
       };
     }
-    
-    console.log('🔧 Weight mapping - Input weights:', weights);
-    console.log('🔧 Weight mapping - Final weights:', finalWeights);
+
+    console.log("🔧 Weight mapping - Input weights:", weights);
+    console.log("🔧 Weight mapping - Final weights:", finalWeights);
 
     // Generate consistent seed based on content for deterministic results
     const contentSeed = generateContentHash(
@@ -442,10 +452,10 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
 
     // Add timeout to prevent hanging
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('OpenAI API timeout')), 30000); // 30 second timeout
+      setTimeout(() => reject(new Error("OpenAI API timeout")), 30000); // 30 second timeout
     });
 
-    const response = await Promise.race([
+    const response = (await Promise.race([
       openai.chat.completions.create({
         model: "gpt-4o-mini", // Use more reliable model for consistent results
         messages: [{ role: "user", content: prompt }],
@@ -454,34 +464,52 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
         temperature: 0.0, // Set to 0 for deterministic results
         seed: contentSeed, // Use content-based seed for identical resumes to get identical results
       }),
-      timeoutPromise
-    ]) as any;
+      timeoutPromise,
+    ])) as any;
 
     // Log the raw OpenAI response for debugging
-    console.log('🤖 OpenAI Raw Response Content:', response.choices[0].message.content);
-    console.log('🤖 OpenAI Response Length:', response.choices[0].message.content?.length || 0);
-    
+    console.log(
+      "🤖 OpenAI Raw Response Content:",
+      response.choices[0].message.content,
+    );
+    console.log(
+      "🤖 OpenAI Response Length:",
+      response.choices[0].message.content?.length || 0,
+    );
+
     const result = JSON.parse(response.choices[0].message.content || "{}");
 
     // Log the parsed result structure for debugging
-    console.log('🤖 Parsed Result Keys:', Object.keys(result));
-    console.log('🤖 Has criteriaScores:', !!result.criteriaScores);
-    console.log('🤖 Has skillAnalysis:', !!result.skillAnalysis);
-    console.log('🤖 SkillAnalysis structure:', result.skillAnalysis ? Object.keys(result.skillAnalysis) : 'null');
+    console.log("🤖 Parsed Result Keys:", Object.keys(result));
+    console.log("🤖 Has criteriaScores:", !!result.criteriaScores);
+    console.log("🤖 Has skillAnalysis:", !!result.skillAnalysis);
+    console.log(
+      "🤖 SkillAnalysis structure:",
+      result.skillAnalysis ? Object.keys(result.skillAnalysis) : "null",
+    );
     if (result.skillAnalysis) {
-      console.log('🤖 SkillAnalysis detailed:', JSON.stringify(result.skillAnalysis, null, 2));
+      console.log(
+        "🤖 SkillAnalysis detailed:",
+        JSON.stringify(result.skillAnalysis, null, 2),
+      );
     }
 
     // Validate scores to catch extreme variations and AI inconsistency
     const scores = result.criteriaScores || {};
-    const allScoresZero = Object.values(scores).every(score => score === 0);
-    const allScoresHundred = Object.values(scores).every(score => score === 100);
-    
+    const allScoresZero = Object.values(scores).every((score) => score === 0);
+    const allScoresHundred = Object.values(scores).every(
+      (score) => score === 100,
+    );
+
     if (allScoresZero || allScoresHundred) {
-      console.warn('⚠️ WARNING: Extreme AI scoring detected for candidate', candidate.id, candidate.name);
-      console.warn('⚠️ All scores are', allScoresZero ? 'ZERO' : 'HUNDRED');
-      console.warn('⚠️ This may indicate AI inconsistency or poor matching');
-      console.warn('⚠️ CriteriaScores:', scores);
+      console.warn(
+        "⚠️ WARNING: Extreme AI scoring detected for candidate",
+        candidate.id,
+        candidate.name,
+      );
+      console.warn("⚠️ All scores are", allScoresZero ? "ZERO" : "HUNDRED");
+      console.warn("⚠️ This may indicate AI inconsistency or poor matching");
+      console.warn("⚠️ CriteriaScores:", scores);
     }
 
     // Calculate weighted scores with fallback values
@@ -534,10 +562,10 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
     };
 
     // Debug weighted score calculation
-    console.log('🔢 Calculating weighted scores for candidate', candidate.id);
-    console.log('🔢 CriteriaScores:', criteriaScores);
-    console.log('🔢 FinalWeights:', finalWeights);
-    
+    console.log("🔢 Calculating weighted scores for candidate", candidate.id);
+    console.log("🔢 CriteriaScores:", criteriaScores);
+    console.log("🔢 FinalWeights:", finalWeights);
+
     const weightedScores: MatchCriteria = {
       skillsMatch: (criteriaScores.skillsMatch * finalWeights.skills) / 100,
       experienceLevel:
@@ -545,12 +573,13 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       keywordRelevance:
         (criteriaScores.keywordRelevance * finalWeights.keywords) / 100,
       professionalDepth:
-        (criteriaScores.professionalDepth * finalWeights.professionalDepth) / 100,
+        (criteriaScores.professionalDepth * finalWeights.professionalDepth) /
+        100,
       domainExperience:
         (criteriaScores.domainExperience * finalWeights.domainExperience) / 100,
     };
-    
-    console.log('🔢 WeightedScores:', weightedScores);
+
+    console.log("🔢 WeightedScores:", weightedScores);
 
     // Calculate initial weighted score with NaN protection
     const weightedSum = [
@@ -558,41 +587,106 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       weightedScores.experienceLevel,
       weightedScores.keywordRelevance,
       weightedScores.professionalDepth,
-      weightedScores.domainExperience
+      weightedScores.domainExperience,
     ].reduce((sum, score) => {
       // Replace any NaN values with 0
       const safeScore = isNaN(score) ? 0 : score;
-      console.log('🔢 Adding score:', score, '-> safeScore:', safeScore, '| running sum:', sum + safeScore);
+      console.log(
+        "🔢 Adding score:",
+        score,
+        "-> safeScore:",
+        safeScore,
+        "| running sum:",
+        sum + safeScore,
+      );
       return sum + safeScore;
     }, 0);
 
     let initialMatchPercentage = Math.round(weightedSum);
-    
-    console.log('🔢 WeightedSum:', weightedSum, '| InitialMatchPercentage:', initialMatchPercentage);
-    
+
+    console.log(
+      "🔢 WeightedSum:",
+      weightedSum,
+      "| InitialMatchPercentage:",
+      initialMatchPercentage,
+    );
+
     // Ensure we have a valid numeric result
     if (isNaN(initialMatchPercentage)) {
-      console.warn('⚠️  NaN detected in match calculation for candidate', candidate.id, '- using fallback of 0');
+      console.warn(
+        "⚠️  NaN detected in match calculation for candidate",
+        candidate.id,
+        "- using fallback of 0",
+      );
       initialMatchPercentage = 0;
     }
 
     // Use purely mathematical weighted sum - ignore OpenAI's overall percentage
-    const finalMatchPercentage = Math.min(100, Math.max(0, initialMatchPercentage));
-    
+    const finalMatchPercentage = Math.min(
+      100,
+      Math.max(0, initialMatchPercentage),
+    );
+
     // DETAILED DEBUG FOR AKASH MURME CASE
-    if (candidate.name && candidate.name.includes('Akash')) {
-      console.log('🔍 AKASH MURME DETAILED CALCULATION:');
-      console.log('🔍 Skills:', criteriaScores.skillsMatch, '% × ', finalWeights.skills, '% = ', weightedScores.skillsMatch, ' points');
-      console.log('🔍 Experience:', criteriaScores.experienceLevel, '% × ', finalWeights.experience, '% = ', weightedScores.experienceLevel, ' points');
-      console.log('🔍 Keywords:', criteriaScores.keywordRelevance, '% × ', finalWeights.keywords, '% = ', weightedScores.keywordRelevance, ' points');
-      console.log('🔍 Professional Depth:', criteriaScores.professionalDepth, '% × ', finalWeights.professionalDepth, '% = ', weightedScores.professionalDepth, ' points');
-      console.log('🔍 Domain Experience:', criteriaScores.domainExperience, '% × ', finalWeights.domainExperience, '% = ', weightedScores.domainExperience, ' points');
-      console.log('🔍 TOTAL SUM:', weightedSum, 'points');
-      console.log('🔍 FINAL PERCENTAGE:', finalMatchPercentage, '%');
+    if (candidate.name && candidate.name.includes("Akash")) {
+      console.log("🔍 AKASH MURME DETAILED CALCULATION:");
+      console.log(
+        "🔍 Skills:",
+        criteriaScores.skillsMatch,
+        "% × ",
+        finalWeights.skills,
+        "% = ",
+        weightedScores.skillsMatch,
+        " points",
+      );
+      console.log(
+        "🔍 Experience:",
+        criteriaScores.experienceLevel,
+        "% × ",
+        finalWeights.experience,
+        "% = ",
+        weightedScores.experienceLevel,
+        " points",
+      );
+      console.log(
+        "🔍 Keywords:",
+        criteriaScores.keywordRelevance,
+        "% × ",
+        finalWeights.keywords,
+        "% = ",
+        weightedScores.keywordRelevance,
+        " points",
+      );
+      console.log(
+        "🔍 Professional Depth:",
+        criteriaScores.professionalDepth,
+        "% × ",
+        finalWeights.professionalDepth,
+        "% = ",
+        weightedScores.professionalDepth,
+        " points",
+      );
+      console.log(
+        "🔍 Domain Experience:",
+        criteriaScores.domainExperience,
+        "% × ",
+        finalWeights.domainExperience,
+        "% = ",
+        weightedScores.domainExperience,
+        " points",
+      );
+      console.log("🔍 TOTAL SUM:", weightedSum, "points");
+      console.log("🔍 FINAL PERCENTAGE:", finalMatchPercentage, "%");
     }
-    
-    console.log('🔢 Final calculation - Mathematical weighted sum:', finalMatchPercentage);
-    console.log('🔢 AI suggested overall percentage (ignored):', result.overallMatchPercentage);
+
+    console.log(
+      "🔢 Final calculation - Mathematical weighted sum:",
+      finalMatchPercentage,
+    );
+    console.log(
+      "🔢 AI suggested overall percentage (ignored):",
+      result.overallMatchPercentage,
+    );
 
     // Enhanced reasoning with criteria breakdown and AI explanations
     const scoreExplanations = result.scoreExplanations || {};
@@ -636,34 +730,46 @@ ${result.recommendations || "No specific recommendation provided"}
 `;
 
     // Extract skill analysis from the AI result
-    console.log('🤖 Extracting skillAnalysis from result.skillBreakdown:', result.skillBreakdown ? Object.keys(result.skillBreakdown) : 'null');
-    
+    console.log(
+      "🤖 Extracting skillAnalysis from result.skillBreakdown:",
+      result.skillBreakdown ? Object.keys(result.skillBreakdown) : "null",
+    );
+
     const skillAnalysis = {
       skillsMatch: {
         skillsHas: result.skillBreakdown?.skillsMatch?.has || [],
         skillsMissing: result.skillBreakdown?.skillsMatch?.missing || [],
-        criteriaExplanation: result.scoreExplanations?.skillsMatch || 'No explanation available'
+        criteriaExplanation:
+          result.scoreExplanations?.skillsMatch || "No explanation available",
       },
       experienceLevel: {
         skillsHas: result.skillBreakdown?.experienceLevel?.has || [],
         skillsMissing: result.skillBreakdown?.experienceLevel?.missing || [],
-        criteriaExplanation: result.scoreExplanations?.experienceLevel || 'No explanation available'
+        criteriaExplanation:
+          result.scoreExplanations?.experienceLevel ||
+          "No explanation available",
       },
       keywordRelevance: {
         skillsHas: result.skillBreakdown?.keywordRelevance?.has || [],
         skillsMissing: result.skillBreakdown?.keywordRelevance?.missing || [],
-        criteriaExplanation: result.scoreExplanations?.keywordRelevance || 'No explanation available'
+        criteriaExplanation:
+          result.scoreExplanations?.keywordRelevance ||
+          "No explanation available",
       },
       professionalDepth: {
         skillsHas: result.skillBreakdown?.professionalDepth?.has || [],
         skillsMissing: result.skillBreakdown?.professionalDepth?.missing || [],
-        criteriaExplanation: result.scoreExplanations?.professionalDepth || 'No explanation available'
+        criteriaExplanation:
+          result.scoreExplanations?.professionalDepth ||
+          "No explanation available",
       },
       domainExperience: {
         skillsHas: result.skillBreakdown?.domainExperience?.has || [],
         skillsMissing: result.skillBreakdown?.domainExperience?.missing || [],
-        criteriaExplanation: result.scoreExplanations?.domainExperience || 'No explanation available'
-      }
+        criteriaExplanation:
+          result.scoreExplanations?.domainExperience ||
+          "No explanation available",
+      },
     };
 
     const finalResult = {
@@ -674,15 +780,21 @@ ${result.recommendations || "No specific recommendation provided"}
       weightedScores,
       skillAnalysis,
     };
-    
-    console.log('🤖 Final DetailedMatchResult for candidate', candidate.id, ':', {
-      matchPercentage: finalResult.matchPercentage,
-      hasSkillAnalysis: !!finalResult.skillAnalysis,
-      skillAnalysisKeys: Object.keys(finalResult.skillAnalysis),
-      skillsMatchHas: finalResult.skillAnalysis.skillsMatch.skillsHas.length,
-      skillsMatchMissing: finalResult.skillAnalysis.skillsMatch.skillsMissing.length,
-    });
-    
+
+    console.log(
+      "🤖 Final DetailedMatchResult for candidate",
+      candidate.id,
+      ":",
+      {
+        matchPercentage: finalResult.matchPercentage,
+        hasSkillAnalysis: !!finalResult.skillAnalysis,
+        skillAnalysisKeys: Object.keys(finalResult.skillAnalysis),
+        skillsMatchHas: finalResult.skillAnalysis.skillsMatch.skillsHas.length,
+        skillsMatchMissing:
+          finalResult.skillAnalysis.skillsMatch.skillsMissing.length,
+      },
+    );
+
     return finalResult;
   } catch (error) {
     console.error(
@@ -705,11 +817,31 @@ ${result.recommendations || "No specific recommendation provided"}
       criteriaScores: defaultScores,
       weightedScores: defaultScores,
       skillAnalysis: {
-        skillsMatch: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' },
-        experienceLevel: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' },
-        keywordRelevance: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' },
-        professionalDepth: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' },
-        domainExperience: { skillsHas: [], skillsMissing: [], criteriaExplanation: 'Error occurred during analysis' }
+        skillsMatch: {
+          skillsHas: [],
+          skillsMissing: [],
+          criteriaExplanation: "Error occurred during analysis",
+        },
+        experienceLevel: {
+          skillsHas: [],
+          skillsMissing: [],
+          criteriaExplanation: "Error occurred during analysis",
+        },
+        keywordRelevance: {
+          skillsHas: [],
+          skillsMissing: [],
+          criteriaExplanation: "Error occurred during analysis",
+        },
+        professionalDepth: {
+          skillsHas: [],
+          skillsMissing: [],
+          criteriaExplanation: "Error occurred during analysis",
+        },
+        domainExperience: {
+          skillsHas: [],
+          skillsMissing: [],
+          criteriaExplanation: "Error occurred during analysis",
+        },
       },
     };
   }
@@ -720,36 +852,51 @@ export async function batchMatchCandidates(
   candidates: Candidate[],
   weights?: MatchWeights,
 ): Promise<DetailedMatchResult[]> {
-  console.log('🔄 Starting batch matching for', candidates.length, 'candidates');
-  
+  console.log(
+    "🔄 Starting batch matching for",
+    candidates.length,
+    "candidates",
+  );
+
   // Process candidates in smaller batches to prevent hanging
   const batchSize = 3;
   const results: DetailedMatchResult[] = [];
-  
+
   for (let i = 0; i < candidates.length; i += batchSize) {
     const batch = candidates.slice(i, i + batchSize);
-    console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(candidates.length/batchSize)} (${batch.length} candidates)`);
-    
+    console.log(
+      `🔄 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(candidates.length / batchSize)} (${batch.length} candidates)`,
+    );
+
     try {
       const batchResults = await Promise.all(
         batch.map((candidate) => matchCandidateToJob(job, candidate, weights)),
       );
       results.push(...batchResults);
-      
+
       // Add small delay between batches to prevent rate limiting
       if (i + batchSize < candidates.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     } catch (error) {
-      console.error(`❌ Error processing batch ${Math.floor(i/batchSize) + 1}:`, error);
+      console.error(
+        `❌ Error processing batch ${Math.floor(i / batchSize) + 1}:`,
+        error,
+      );
       // Continue with next batch instead of failing completely
     }
   }
-  
-  console.log('🔄 Batch matching complete - processed', results.length, 'candidates');
+
+  console.log(
+    "🔄 Batch matching complete - processed",
+    results.length,
+    "candidates",
+  );
   results.forEach((result, index) => {
-    console.log(`🔄 Result ${index + 1}: Candidate ${result.candidateId}, Match: ${result.matchPercentage}%, HasSkillAnalysis: ${!!result.skillAnalysis}`);
+    console.log(
+      `🔄 Result ${index + 1}: Candidate ${result.candidateId}, Match: ${result.matchPercentage}%, HasSkillAnalysis: ${!!result.skillAnalysis}`,
+    );
   });
-  
+
   return results.sort((a, b) => b.matchPercentage - a.matchPercentage);
 }
