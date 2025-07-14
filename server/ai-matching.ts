@@ -447,10 +447,10 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
 
     const response = await Promise.race([
       openai.chat.completions.create({
-        model: "gpt-3.5-turbo", // Cost-optimized model with increased token allowance
+        model: "gpt-4o-mini", // Use more reliable model for consistent results
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
-        max_tokens: 2500, // Increased tokens for detailed analysis with cheaper model
+        max_tokens: 2500, // Increased tokens for detailed analysis
         temperature: 0.0, // Set to 0 for deterministic results
         seed: contentSeed, // Use content-based seed for identical resumes to get identical results
       }),
@@ -470,6 +470,18 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
     console.log('🤖 SkillAnalysis structure:', result.skillAnalysis ? Object.keys(result.skillAnalysis) : 'null');
     if (result.skillAnalysis) {
       console.log('🤖 SkillAnalysis detailed:', JSON.stringify(result.skillAnalysis, null, 2));
+    }
+
+    // Validate scores to catch extreme variations and AI inconsistency
+    const scores = result.criteriaScores || {};
+    const allScoresZero = Object.values(scores).every(score => score === 0);
+    const allScoresHundred = Object.values(scores).every(score => score === 100);
+    
+    if (allScoresZero || allScoresHundred) {
+      console.warn('⚠️ WARNING: Extreme AI scoring detected for candidate', candidate.id, candidate.name);
+      console.warn('⚠️ All scores are', allScoresZero ? 'ZERO' : 'HUNDRED');
+      console.warn('⚠️ This may indicate AI inconsistency or poor matching');
+      console.warn('⚠️ CriteriaScores:', scores);
     }
 
     // Calculate weighted scores with fallback values
