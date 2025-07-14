@@ -148,6 +148,7 @@ router.post('/login', async (req, res) => {
 // GET /auth/me - Get current user info
 router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    const db = await getDB();
     const user = await db.select({
       user: users,
       organization: organizations,
