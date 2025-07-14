@@ -3,6 +3,8 @@ import { eq, and, ne, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { getSQLiteDB } from './sqlite-db';
 import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from '@shared/schema';
+
+const db = getSQLiteDB();
 import { generateToken, verifyPassword, hashPassword, authenticateToken, requireSuperAdmin, logAuditEvent, type AuthRequest } from './auth';
 import { organizationManager } from './organization-manager';
 
