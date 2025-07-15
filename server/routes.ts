@@ -18,6 +18,8 @@ import multer from "multer";
 import { getCurrentPinggyDomain } from "./pinggy-service";
 import { createIncomingCallTwiML, createOutboundCallTwiML, setCallContext, prepareCallContext } from "./ai-calling";
 import twilio from "twilio";
+import fs from "fs";
+import path from "path";
 
 // Simple text similarity calculation using word overlap
 function calculateSimilarity(text1: string, text2: string): number {
