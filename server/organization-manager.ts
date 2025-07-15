@@ -5,7 +5,15 @@ import { hashPassword } from './auth';
 import type { InsertOrganization, InsertUser, InsertTeam, Organization, User, Team } from '@shared/schema';
 
 // Get the database instance
-const db = getSQLiteDB();
+let dbInstance: any = null;
+
+async function getDB() {
+  if (!dbInstance) {
+    const dbConnection = await getSQLiteDB();
+    dbInstance = dbConnection.db;
+  }
+  return dbInstance;
+}
 
 export class OrganizationManager {
   
@@ -23,6 +31,7 @@ export class OrganizationManager {
 
     // CRITICAL VALIDATION: Check for existing users with this email in ANY organization
     // Email must be globally unique for user identification across organizations
+    const db = await getDB();
     const existingUser = await db.select()
       .from(users)
       .where(eq(users.email, adminEmail))
@@ -148,6 +157,7 @@ export class OrganizationManager {
 
   // Get organization with statistics
   async getOrganizationWithStats(orgId: number) {
+    const db = await getDB();
     const [org] = await db
       .select()
       .from(organizations)
