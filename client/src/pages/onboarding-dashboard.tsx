@@ -57,6 +57,8 @@ export default function OnboardingDashboard() {
   const [selectedOrg, setSelectedOrg] = useState<OrganizationData | null>(null);
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Form state for creating organization
   const [createOrgForm, setCreateOrgForm] = useState({
@@ -71,11 +73,11 @@ export default function OnboardingDashboard() {
   });
 
   // Fetch organizations with stats
-  const { data: organizationsData, isLoading } = useQuery<{ organizations: OrganizationData[] }>({
-    queryKey: ['/api/auth/organizations'],
+  const { data: organizationsData, isLoading } = useQuery<{ organizations: OrganizationData[], pagination: any }>({
+    queryKey: ['/api/auth/organizations', currentPage, pageSize],
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
-      const res = await fetch('/api/auth/organizations', {
+      const res = await fetch(`/api/auth/organizations?page=${currentPage}&limit=${pageSize}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -533,6 +535,40 @@ Please change your password after first login.`;
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {organizationsData?.pagination && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <span>
+                      Showing {((organizationsData.pagination.page - 1) * organizationsData.pagination.limit) + 1} to{' '}
+                      {Math.min(organizationsData.pagination.page * organizationsData.pagination.limit, organizationsData.pagination.total)} of{' '}
+                      {organizationsData.pagination.total} organizations
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={!organizationsData.pagination.hasPrev}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-gray-600">
+                      Page {organizationsData.pagination.page} of {organizationsData.pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                      disabled={!organizationsData.pagination.hasNext}
+                    >
+                      Next
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>

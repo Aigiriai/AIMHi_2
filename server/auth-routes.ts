@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { eq, and, ne, inArray } from 'drizzle-orm';
+import { eq, and, ne, inArray, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { getSQLiteDB } from './sqlite-db';
 import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from './sqlite-schema';
@@ -354,11 +354,17 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
   try {
     const db = await getDB();
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
+
+    // Get total count first
+    const [totalResult] = await db.select({ count: sql<number>`count(*)` })
+      .from(organizations);
+    const totalOrgs = totalResult.count;
 
     const orgs = await db.select()
       .from(organizations)
+      .orderBy(desc(organizations.id))
       .limit(limit)
       .offset(offset);
 
@@ -389,7 +395,10 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
       pagination: {
         page,
         limit,
-        total: orgs.length,
+        total: totalOrgs,
+        totalPages: Math.ceil(totalOrgs / limit),
+        hasNext: page < Math.ceil(totalOrgs / limit),
+        hasPrev: page > 1,
       },
     });
   } catch (error) {

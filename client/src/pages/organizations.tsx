@@ -45,6 +45,8 @@ export default function OrganizationsPage() {
   const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteUserData, setDeleteUserData] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [editOrgForm, setEditOrgForm] = useState({ 
     name: "", 
     domain: "", 
@@ -55,10 +57,10 @@ export default function OrganizationsPage() {
   const { toast } = useToast();
 
   const { data: organizationsData, isLoading } = useQuery({
-    queryKey: ['/api/auth/organizations'],
+    queryKey: ['/api/auth/organizations', currentPage, pageSize],
     queryFn: async () => {
       const token = authService.getToken();
-      const response = await fetch('/api/auth/organizations', {
+      const response = await fetch(`/api/auth/organizations?page=${currentPage}&limit=${pageSize}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
