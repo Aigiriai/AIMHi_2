@@ -512,54 +512,51 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       console.warn("⚠️ CriteriaScores:", scores);
     }
 
-    // Calculate weighted scores with fallback values
+    // Calculate weighted scores with proper fallback values (NO OPENAI OVERRIDE)
     const criteriaScores: MatchCriteria = {
       skillsMatch: Math.max(
         0,
         Math.min(
           100,
-          result.criteriaScores?.skillsMatch ||
-            result.overallMatchPercentage ||
-            50,
+          result.criteriaScores?.skillsMatch ?? 0, // Use 0 if missing, don't use AI overall percentage
         ),
       ),
       experienceLevel: Math.max(
         0,
         Math.min(
           100,
-          result.criteriaScores?.experienceLevel ||
-            result.overallMatchPercentage ||
-            50,
+          result.criteriaScores?.experienceLevel ?? 0, // Use 0 if missing, don't use AI overall percentage
         ),
       ),
       keywordRelevance: Math.max(
         0,
         Math.min(
           100,
-          result.criteriaScores?.keywordRelevance ||
-            result.overallMatchPercentage ||
-            50,
+          result.criteriaScores?.keywordRelevance ?? 0, // Use 0 if missing, don't use AI overall percentage
         ),
       ),
       professionalDepth: Math.max(
         0,
         Math.min(
           100,
-          result.criteriaScores?.professionalDepth ||
-            result.overallMatchPercentage ||
-            50,
+          result.criteriaScores?.professionalDepth ?? 0, // Use 0 if missing, don't use AI overall percentage
         ),
       ),
       domainExperience: Math.max(
         0,
         Math.min(
           100,
-          result.criteriaScores?.domainExperience ||
-            result.overallMatchPercentage ||
-            50,
+          result.criteriaScores?.domainExperience ?? 0, // Use 0 if missing, don't use AI overall percentage
         ),
       ),
     };
+
+    // Debug for Arpitha's specific case
+    if (candidate.name && candidate.name.includes('Arpitha')) {
+      console.log('🔍 ARPITHA DEBUG: Raw AI criteriaScores:', result.criteriaScores);
+      console.log('🔍 ARPITHA DEBUG: Raw AI overallMatchPercentage:', result.overallMatchPercentage);
+      console.log('🔍 ARPITHA DEBUG: Final criteriaScores after processing:', criteriaScores);
+    }
 
     // Debug weighted score calculation
     console.log("🔢 Calculating weighted scores for candidate", candidate.id);
