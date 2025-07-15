@@ -118,6 +118,16 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 15, 2025. **Implemented comprehensive pagination system across all admin dashboards**
+  - Fixed Super Admin Dashboard to show correct Total Organizations count (was showing 10, now shows 20)
+  - Fixed Total Users count in dashboard stats to calculate from all organizations, not just current page
+  - Added pagination controls to Super Admin Dashboard organizations table
+  - Added pagination controls to Organizations page with Previous/Next buttons
+  - Added pagination controls to Onboarding Dashboard with proper page information
+  - Set consistent 10 organizations per page limit across all dashboards
+  - Added dual data queries: paginated for display, full dataset for accurate statistics
+  - Organizations now ordered by newest first (DESC by ID) for better user experience
+  - All pagination systems working with proper total counts and navigation
 - July 15, 2025. **Fixed comprehensive SQLite database compatibility issues for organization creation**
   - Resolved SQLite data serialization problems by converting JSON objects to strings
   - Added missing database tables: organization_credentials, user_credentials, user_teams, audit_logs, usage_metrics

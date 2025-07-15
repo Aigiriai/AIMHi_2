@@ -37,13 +37,15 @@ interface Organization {
 
 export default function SuperAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  // Fetch organizations
+  // Fetch organizations with pagination
   const { data: organizationsData, isLoading: orgsLoading } = useQuery({
-    queryKey: ['/api/auth/organizations'],
+    queryKey: ['/api/auth/organizations', currentPage, pageSize],
     queryFn: async () => {
       const token = authService.getToken();
-      const response = await fetch('/api/auth/organizations', {
+      const response = await fetch(`/api/auth/organizations?page=${currentPage}&limit=${pageSize}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -59,17 +61,40 @@ export default function SuperAdminDashboard() {
     },
   });
 
+  // Fetch all organizations for stats calculation (without pagination)
+  const { data: allOrganizationsData } = useQuery({
+    queryKey: ['/api/auth/organizations-all'],
+    queryFn: async () => {
+      const token = authService.getToken();
+      const response = await fetch(`/api/auth/organizations?page=1&limit=1000`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch all organizations');
+      }
+      
+      const data = await response.json();
+      return data;
+    },
+  });
+
   const organizations = organizationsData?.organizations || [];
+  const allOrganizations = allOrganizationsData?.organizations || [];
 
   const filteredOrganizations = organizations.filter((org: Organization) =>
     org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     org.domain?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalOrganizations = organizations.length;
-  const activeOrganizations = organizations.filter((org: Organization) => org.status === 'active').length;
-  const totalUsers = organizations.reduce((sum: number, org: Organization) => sum + org.userCount, 0);
-  const totalRevenue = organizations.length * 500; // Placeholder calculation
+  // Use pagination total for accurate counts
+  const totalOrganizations = organizationsData?.pagination?.total || 0;
+  const activeOrganizations = allOrganizations.filter((org: Organization) => org.status === 'active').length;
+  const totalUsers = allOrganizations.reduce((sum: number, org: Organization) => sum + org.userCount, 0);
+  const totalRevenue = totalOrganizations * 500; // Use total organizations for revenue calculation
 
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
@@ -247,6 +272,40 @@ export default function SuperAdminDashboard() {
                     ))}
                   </TableBody>
                 </Table>
+              )}
+              
+              {/* Pagination Controls */}
+              {organizationsData?.pagination && organizationsData.pagination.totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <div className="flex items-center space-x-2 text-sm text-gray-600">
+                    <span>
+                      Showing {((organizationsData.pagination.page - 1) * organizationsData.pagination.limit) + 1} to{' '}
+                      {Math.min(organizationsData.pagination.page * organizationsData.pagination.limit, organizationsData.pagination.total)} of{' '}
+                      {organizationsData.pagination.total} organizations
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={!organizationsData.pagination.hasPrev}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-gray-600">
+                      Page {organizationsData.pagination.page} of {organizationsData.pagination.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                      disabled={!organizationsData.pagination.hasNext}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>
