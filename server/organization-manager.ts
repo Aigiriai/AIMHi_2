@@ -1,8 +1,8 @@
 import { getSQLiteDB } from './sqlite-db';
-import { organizations, users, teams, userTeams, usageMetrics } from '@shared/schema';
+import { organizations, users, teams, userTeams, usageMetrics } from './sqlite-schema';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
 import { hashPassword } from './auth';
-import type { InsertOrganization, InsertUser, InsertTeam, Organization, User, Team } from '@shared/schema';
+import type { InsertOrganization, InsertUser, InsertTeam, Organization, User, Team } from './sqlite-schema';
 
 // Get the database instance
 let dbInstance: any = null;
@@ -173,10 +173,10 @@ export class OrganizationManager {
       .where(and(
         eq(users.organizationId, orgId),
         or(
-          eq(users.role, 'organization_admin'),
+          eq(users.role, 'org_admin'),
           eq(users.role, 'super_admin')
         ),
-        eq(users.isActive, true)
+        eq(users.isActive, 1)
       ))
       .limit(1);
 
@@ -184,7 +184,7 @@ export class OrganizationManager {
     const [userCount] = await db
       .select({ count: sql`count(*)` })
       .from(users)
-      .where(and(eq(users.organizationId, orgId), eq(users.isActive, true)));
+      .where(and(eq(users.organizationId, orgId), eq(users.isActive, 1)));
 
     const [teamCount] = await db
       .select({ count: sql`count(*)` })
@@ -238,11 +238,11 @@ export class OrganizationManager {
 
   // Get hierarchical user structure
   async getOrganizationHierarchy(orgId: number) {
+    const db = await getDB();
     const allUsers = await db
       .select()
       .from(users)
-      .where(and(eq(users.organizationId, orgId), eq(users.isActive, true)))
-      .orderBy(users.firstName, users.lastName);
+      .where(and(eq(users.organizationId, orgId), eq(users.isActive, 1)));
 
     // Build hierarchy tree
     const userMap = new Map(allUsers.map(user => [user.id, { ...user, subordinates: [] as any[] }]));
@@ -268,6 +268,7 @@ export class OrganizationManager {
   // Get monthly billing summary
   async getMonthlyBilling(orgId: number, billingPeriod?: string) {
     const period = billingPeriod || new Date().toISOString().substring(0, 7);
+    const db = await getDB();
     
     const [org] = await db
       .select()

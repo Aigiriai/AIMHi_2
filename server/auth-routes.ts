@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { eq, and, ne, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { getSQLiteDB } from './sqlite-db';
-import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from '@shared/schema';
+import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from './sqlite-schema';
 
 // Database connection helper
 async function getDB() {
@@ -218,7 +218,7 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res) => {
         lastName: updateData.lastName,
         email: updateData.email,
         phone: updateData.phone,
-        updatedAt: new Date(),
+        updatedAt: new Date().toISOString(),
       })
       .where(eq(users.id, userId))
       .returning();
@@ -288,7 +288,7 @@ router.put('/change-password', authenticateToken, async (req: AuthRequest, res) 
         passwordHash: hashedNewPassword,
         hasTemporaryPassword: false,
         temporaryPassword: null,
-        updatedAt: new Date()
+        updatedAt: new Date().toISOString()
       })
       .where(eq(users.id, userId));
 
@@ -360,8 +360,7 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
     const orgs = await db.select()
       .from(organizations)
       .limit(limit)
-      .offset(offset)
-      .orderBy(organizations.createdAt);
+      .offset(offset);
 
     const orgStats = await Promise.all(
       orgs.map(async (org) => {
@@ -421,7 +420,7 @@ router.put('/organizations/:id', authenticateToken, requireSuperAdmin, async (re
         timezone: updateData.timezone,
         dateFormat: updateData.dateFormat,
         currency: updateData.currency,
-        updatedAt: new Date()
+        updatedAt: new Date().toISOString()
       })
       .where(eq(organizations.id, organizationId))
       .returning();

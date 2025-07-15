@@ -20,6 +20,66 @@ export const organizations = sqliteTable("organizations", {
   updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
+// Organization credentials table for storing temporary login credentials
+export const organizationCredentials = sqliteTable("organization_credentials", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  adminUserId: integer("admin_user_id").references(() => users.id).notNull(),
+  email: text("email").notNull(),
+  temporaryPassword: text("temporary_password").notNull(),
+  isPasswordChanged: integer("is_password_changed", { mode: "boolean" }).notNull().default(false),
+  expiresAt: text("expires_at"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// User credentials table for storing individual user temporary passwords
+export const userCredentials = sqliteTable("user_credentials", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  email: text("email").notNull(),
+  temporaryPassword: text("temporary_password").notNull(),
+  isPasswordChanged: integer("is_password_changed", { mode: "boolean" }).notNull().default(false),
+  expiresAt: text("expires_at"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// User Teams junction table
+export const userTeams = sqliteTable("user_teams", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  teamId: integer("team_id").references(() => teams.id).notNull(),
+  role: text("role").notNull().default("member"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// Audit logs table
+export const auditLogs = sqliteTable("audit_logs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  userId: integer("user_id").references(() => users.id),
+  action: text("action").notNull(),
+  entityType: text("entity_type").notNull(),
+  entityId: integer("entity_id").notNull(),
+  details: text("details").default("{}"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// Usage metrics table
+export const usageMetrics = sqliteTable("usage_metrics", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  userId: integer("user_id").references(() => users.id),
+  metricType: text("metric_type").notNull(),
+  metricValue: real("metric_value").notNull(),
+  billingPeriod: text("billing_period").notNull(),
+  metadata: text("metadata").default("{}"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
 // Teams/Departments table
 export const teams = sqliteTable("teams", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -124,6 +184,11 @@ export const interviews = sqliteTable("interviews", {
 
 // Create insert schemas for validation
 export const insertOrganizationSchema = createInsertSchema(organizations);
+export const insertOrganizationCredentialsSchema = createInsertSchema(organizationCredentials);
+export const insertUserCredentialsSchema = createInsertSchema(userCredentials);
+export const insertUserTeamsSchema = createInsertSchema(userTeams);
+export const insertAuditLogsSchema = createInsertSchema(auditLogs);
+export const insertUsageMetricsSchema = createInsertSchema(usageMetrics);
 export const insertTeamSchema = createInsertSchema(teams);
 export const insertUserSchema = createInsertSchema(users);
 export const insertJobSchema = createInsertSchema(jobs);
@@ -134,6 +199,16 @@ export const insertInterviewSchema = createInsertSchema(interviews);
 // Types
 export type Organization = typeof organizations.$inferSelect;
 export type InsertOrganization = typeof organizations.$inferInsert;
+export type OrganizationCredentials = typeof organizationCredentials.$inferSelect;
+export type InsertOrganizationCredentials = typeof organizationCredentials.$inferInsert;
+export type UserCredentials = typeof userCredentials.$inferSelect;
+export type InsertUserCredentials = typeof userCredentials.$inferInsert;
+export type UserTeams = typeof userTeams.$inferSelect;
+export type InsertUserTeams = typeof userTeams.$inferInsert;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = typeof auditLogs.$inferInsert;
+export type UsageMetric = typeof usageMetrics.$inferSelect;
+export type InsertUsageMetric = typeof usageMetrics.$inferInsert;
 export type Team = typeof teams.$inferSelect;
 export type InsertTeam = typeof teams.$inferInsert;
 export type User = typeof users.$inferSelect;

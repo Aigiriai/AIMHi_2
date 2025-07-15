@@ -136,11 +136,11 @@ export async function logAuditEvent(
       organizationId: req.user.organizationId,
       userId: req.user.id,
       action,
-      resourceType,
-      resourceId,
-      details,
-      ipAddress: req.ip,
-      userAgent: req.get('User-Agent'),
+      entityType: resourceType || 'unknown',
+      entityId: resourceId || 0,
+      details: JSON.stringify(details || {}),
+      ipAddress: req.ip || 'unknown',
+      userAgent: req.get('User-Agent') || 'unknown',
     });
   } catch (error) {
     console.error('Failed to log audit event:', error);
