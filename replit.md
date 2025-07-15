@@ -118,6 +118,15 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 15, 2025. **Resolved AI matching consistency and calculation accuracy issues**
+  - Fixed critical JavaScript bug where `finalMatchPercentage` was accessed before initialization
+  - Removed AI override fallback logic that was corrupting mathematical calculations
+  - Ensured pure mathematical weighted sum calculation (no AI percentage override)
+  - Added comprehensive debugging and validation for extreme scoring variations
+  - Fixed application hanging issues with OpenAI API timeouts and batch processing
+  - Akash Murme now correctly shows 87% (was showing 0% due to crash)
+  - System accepts 5% as minimum AI score for very poor matches (not 0%)
+  - All calculations now use deterministic mathematical formulas
 - July 14, 2025. **Fixed mathematical calculation for match percentages**
   - Changed from AI-suggested overall percentage to pure mathematical weighted sum
   - Ensures overall match percentage is always accurate weighted average of criteria scores
