@@ -130,16 +130,21 @@ export async function logAuditEvent(
 ) {
   if (!req.user) return;
 
-  await db.insert(auditLogs).values({
-    organizationId: req.user.organizationId,
-    userId: req.user.id,
-    action,
-    resourceType,
-    resourceId,
-    details,
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent'),
-  });
+  try {
+    const { db } = await getSQLiteDB();
+    await db.insert(auditLogs).values({
+      organizationId: req.user.organizationId,
+      userId: req.user.id,
+      action,
+      resourceType,
+      resourceId,
+      details,
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+  } catch (error) {
+    console.error('Failed to log audit event:', error);
+  }
 }
 
 // Super admin check
@@ -154,28 +159,35 @@ export function requireSuperAdmin(req: AuthRequest, res: Response, next: NextFun
 export async function canAccessUser(currentUserId: number, targetUserId: number): Promise<boolean> {
   if (currentUserId === targetUserId) return true;
 
-  // Check if currentUser is a manager of targetUser (direct or indirect)
-  const targetUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, targetUserId))
-    .limit(1);
-
-  if (!targetUser.length) return false;
-
-  let managerId = targetUser[0].managerId;
-  while (managerId) {
-    if (managerId === currentUserId) return true;
-
-    const manager = await db
+  try {
+    const { db } = await getSQLiteDB();
+    
+    // Check if currentUser is a manager of targetUser (direct or indirect)
+    const targetUser = await db
       .select()
       .from(users)
-      .where(eq(users.id, managerId))
+      .where(eq(users.id, targetUserId))
       .limit(1);
 
-    if (!manager.length) break;
-    managerId = manager[0].managerId;
-  }
+    if (!targetUser.length) return false;
 
-  return false;
+    let managerId = targetUser[0].managerId;
+    while (managerId) {
+      if (managerId === currentUserId) return true;
+
+      const manager = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, managerId))
+        .limit(1);
+
+      if (!manager.length) break;
+      managerId = manager[0].managerId;
+    }
+
+    return false;
+  } catch (error) {
+    console.error('Error checking user access:', error);
+    return false;
+  }
 }

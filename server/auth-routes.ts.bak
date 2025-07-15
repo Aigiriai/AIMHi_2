@@ -313,7 +313,6 @@ router.put('/change-password', authenticateToken, async (req: AuthRequest, res) 
 // POST /auth/organizations - Create new organization (Super Admin only)
 router.post('/organizations', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
     const orgData = createOrgSchema.parse(req.body);
 
     const result = await organizationManager.createOrganization(orgData);
@@ -402,7 +401,6 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
 // PUT /auth/organizations/:id - Update organization details (Super Admin only)
 router.put('/organizations/:id', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
     const organizationId = parseInt(req.params.id);
     const updateData = z.object({
       name: z.string().optional(),
@@ -448,7 +446,6 @@ router.put('/organizations/:id', authenticateToken, requireSuperAdmin, async (re
 // DELETE /auth/organizations/:id - Delete organization (Super Admin only)
 router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
     const orgId = parseInt(req.params.id);
     const { transferUsersToOrg, deleteUserData = false } = req.body;
     
@@ -619,7 +616,6 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
 // GET /auth/usage/:orgId - Get organization usage (Super Admin only)
 router.get('/usage/:orgId', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
     const orgId = parseInt(req.params.orgId);
     const billingPeriod = req.query.period as string;
 
@@ -639,7 +635,6 @@ router.get('/usage/:orgId', authenticateToken, requireSuperAdmin, async (req: Au
 // POST /auth/invite-organization-admin - Create organization and invite admin (Super Admin only)
 router.post('/invite-organization-admin', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
     const { organizationName, website, industry, size, firstName, lastName, email, phone } = req.body;
 
     // Validate required fields
@@ -707,7 +702,6 @@ router.post('/invite-organization-admin', authenticateToken, requireSuperAdmin, 
 // POST /auth/invite-user - Invite a user to organization (Hierarchical permissions)
 router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
     const { email, firstName, lastName, role } = req.body;
     const invitingUser = req.user!;
 
@@ -811,7 +805,6 @@ router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => 
 // PUT /auth/users/:id - Update user information (for admins)
 router.put('/users/:id', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
     const userId = parseInt(req.params.id);
     const updateData = updateUserSchema.parse(req.body);
     
@@ -869,7 +862,6 @@ router.put('/users/:id', authenticateToken, async (req: AuthRequest, res) => {
 // DELETE /auth/users/:id - Delete user (for admins)
 router.delete('/users/:id', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
     const userId = parseInt(req.params.id);
     
     if (!req.user?.organizationId) {
