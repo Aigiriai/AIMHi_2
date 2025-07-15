@@ -74,8 +74,56 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentMatches = matches.slice(startIndex, endIndex);
 
-  // Parse criteria scores from AI reasoning
-  const parseCriteriaScores = (reasoning: string): CriteriaScore[] => {
+  // Parse criteria scores from match_criteria data (preferred) or AI reasoning (fallback)
+  const parseCriteriaScores = (match: any, reasoning: string): CriteriaScore[] => {
+    // First try to get data from match_criteria (structured data)
+    if (match.matchCriteria) {
+      const criteria = match.matchCriteria;
+      const weights = {
+        skills: 30,
+        experience: 20,
+        keywords: 35,
+        professionalDepth: 10,
+        domainExperience: 5,
+      };
+      
+      if (criteria.criteriaScores && criteria.weightedScores) {
+        return [
+          {
+            name: 'Skills Match',
+            score: criteria.criteriaScores.skillsMatch || 0,
+            weight: weights.skills,
+            points: criteria.weightedScores.skillsMatch || 0
+          },
+          {
+            name: 'Experience Level',
+            score: criteria.criteriaScores.experienceLevel || 0,
+            weight: weights.experience,
+            points: criteria.weightedScores.experienceLevel || 0
+          },
+          {
+            name: 'Keyword Relevance',
+            score: criteria.criteriaScores.keywordRelevance || 0,
+            weight: weights.keywords,
+            points: criteria.weightedScores.keywordRelevance || 0
+          },
+          {
+            name: 'Professional Depth',
+            score: criteria.criteriaScores.professionalDepth || 0,
+            weight: weights.professionalDepth,
+            points: criteria.weightedScores.professionalDepth || 0
+          },
+          {
+            name: 'Domain Experience',
+            score: criteria.criteriaScores.domainExperience || 0,
+            weight: weights.domainExperience,
+            points: criteria.weightedScores.domainExperience || 0
+          }
+        ];
+      }
+    }
+    
+    // Fallback to parsing from AI reasoning text
     const criteriaLines = reasoning.match(/• (.+): (\d+)% \(Weight: (\d+)% = ([\d.]+) points\)/g);
     if (!criteriaLines) return [];
 
@@ -363,7 +411,7 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
             {currentMatches.map((match) => {
               const matchKey = `${match.jobId}-${match.candidateId}`;
               const isExpanded = expandedRows.has(matchKey);
-              const criteriaScores = parseCriteriaScores(match.aiReasoning || "");
+              const criteriaScores = parseCriteriaScores(match, match.aiReasoning || "");
               const hasDetailedBreakdown = criteriaScores.length > 0;
 
               return (
