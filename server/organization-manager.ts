@@ -4,6 +4,9 @@ import { eq, and, or, desc, sql } from 'drizzle-orm';
 import { hashPassword } from './auth';
 import type { InsertOrganization, InsertUser, InsertTeam, Organization, User, Team } from '@shared/schema';
 
+// Get the database instance
+const db = getSQLiteDB();
+
 export class OrganizationManager {
   
   // Create a new organization with admin user
