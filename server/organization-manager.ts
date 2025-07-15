@@ -86,30 +86,30 @@ export class OrganizationManager {
       domain: finalDomain,
       subdomain,
       plan,
-      settings: {
+      settings: JSON.stringify({
         theme: 'default',
         timezone: 'UTC',
         dateFormat: 'MM/DD/YYYY',
         currency: 'USD'
-      },
-      billingSettings: {
+      }),
+      billingSettings: JSON.stringify({
         pricingModel: 'per_user',
         pricePerUser: 50,
         pricePerResume: 2,
         pricePerInterview: 5,
         billingCycle: 'monthly'
-      },
-      complianceSettings: {
+      }),
+      complianceSettings: JSON.stringify({
         dataRetentionDays: 2555, // 7 years
         gdprCompliant: true,
         ccpaCompliant: true,
         auditLogRetentionDays: 2555
-      },
-      integrationSettings: {
+      }),
+      integrationSettings: JSON.stringify({
         allowedIntegrations: ['linkedin', 'indeed', 'greenhouse', 'workday'],
         apiRateLimit: 1000,
         webhookEnabled: true
-      }
+      })
     }).returning();
 
     // Create admin user
@@ -122,7 +122,7 @@ export class OrganizationManager {
       lastName: adminLastName,
       role: 'org_admin',
       isActive: true,
-      settings: {
+      settings: JSON.stringify({
         theme: 'default',
         notifications: {
           email: true,
@@ -135,8 +135,8 @@ export class OrganizationManager {
           defaultView: 'overview',
           refreshInterval: 30
         }
-      },
-      permissions: {
+      }),
+      permissions: JSON.stringify({
         users: ['create', 'read', 'update', 'delete'],
         teams: ['create', 'read', 'update', 'delete'],
         jobs: ['create', 'read', 'update', 'delete'],
@@ -145,7 +145,7 @@ export class OrganizationManager {
         settings: ['read', 'update'],
         billing: ['read', 'update'],
         analytics: ['read']
-      }
+      })
     }).returning();
 
     return {
