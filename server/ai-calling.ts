@@ -1026,16 +1026,27 @@ async function openTranscriptFile(
       fs.mkdirSync(transcriptsDir, { recursive: true });
     }
 
-    const filename = path.join(transcriptsDir, `${callSid}_${streamSid}.txt`);
+    // Get candidate name from call context
+    const callContext = getCallContext(callSid);
+    const candidateName = callContext?.candidateName || "Unknown_Candidate";
+    
+    // Create user-friendly filename with timestamp and candidate name
+    const timestamp = startTime.toISOString().replace(/[:.]/g, '-').slice(0, 19); // YYYY-MM-DDTHH-MM-SS
+    const sanitizedName = candidateName.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
+    const filename = path.join(transcriptsDir, `${timestamp}_${sanitizedName}_${callSid.slice(-8)}.txt`);
+    
     const writeStream = fs.createWriteStream(filename, { flags: "w" });
 
     transcriptFileHandles[streamSid] = writeStream;
 
-    // Write header
+    // Write header with more readable information
     const header = `AI-Powered Interview Call Transcript
+=====================================
+Candidate: ${candidateName}
+Job Position: ${callContext?.jobDetails?.title || "Not specified"}
+Call Date: ${startTime.toLocaleString()}
 Call SID: ${callSid}
 Stream SID: ${streamSid}
-Start Time: ${startTime.toISOString()}
 =====================================
 
 `;

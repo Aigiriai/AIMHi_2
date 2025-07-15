@@ -118,6 +118,13 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 15, 2025. **Implemented user-friendly transcript file naming system**
+  - Changed from cryptic CallSID_StreamSID format to readable timestamp format
+  - New format: `YYYY-MM-DDTHH-MM-SS_CandidateName_CallSID.txt`
+  - Example: `2025-07-15T08-39-40_Sarah_Johnson_fb802191.txt`
+  - Enhanced transcript headers with candidate name, job position, and readable timestamps
+  - Improved file organization for better user experience and file management
+  - Files now clearly identify which candidate and job position the call was for
 - July 15, 2025. **Switched from ngrok to Pinggy tunnel service with auto-refresh**
   - Replaced ngrok with Pinggy for cost-effective tunneling ($3/month vs $8/month)
   - Implemented automatic tunnel refresh every 50 minutes (before 60-minute expiry)
