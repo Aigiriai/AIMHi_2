@@ -208,7 +208,7 @@ export class OrganizationManager {
         email: adminUser.email,
         firstName: adminUser.firstName,
         lastName: adminUser.lastName,
-        lastLoginAt: adminUser.lastLoginAt?.toISOString()
+        lastLoginAt: adminUser.lastLoginAt
       } : null,
       userCount: Number(userCount.count),
       teamCount: Number(teamCount.count),
@@ -225,13 +225,14 @@ export class OrganizationManager {
     metadata: any = {}
   ) {
     const billingPeriod = new Date().toISOString().substring(0, 7); // YYYY-MM
+    const db = await getDB();
 
     await db.insert(usageMetrics).values({
       organizationId,
       userId,
       metricType,
       metricValue,
-      metadata,
+      metadata: JSON.stringify(metadata),
       billingPeriod
     });
   }
