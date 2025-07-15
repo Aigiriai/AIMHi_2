@@ -551,13 +551,6 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       ),
     };
 
-    // Debug for Arpitha's specific case
-    if (candidate.name && candidate.name.includes('Arpitha')) {
-      console.log('🔍 ARPITHA DEBUG: Raw AI criteriaScores:', result.criteriaScores);
-      console.log('🔍 ARPITHA DEBUG: Raw AI overallMatchPercentage:', result.overallMatchPercentage);
-      console.log('🔍 ARPITHA DEBUG: Final criteriaScores after processing:', criteriaScores);
-    }
-
     // Debug weighted score calculation
     console.log("🔢 Calculating weighted scores for candidate", candidate.id);
     console.log("🔢 CriteriaScores:", criteriaScores);
@@ -623,58 +616,6 @@ CRITICAL INSTRUCTIONS FOR SKILL BREAKDOWN:
       100,
       Math.max(0, initialMatchPercentage),
     );
-
-    // DETAILED DEBUG FOR AKASH MURME CASE
-    if (candidate.name && candidate.name.includes("Akash")) {
-      console.log("🔍 AKASH MURME DETAILED CALCULATION:");
-      console.log(
-        "🔍 Skills:",
-        criteriaScores.skillsMatch,
-        "% × ",
-        finalWeights.skills,
-        "% = ",
-        weightedScores.skillsMatch,
-        " points",
-      );
-      console.log(
-        "🔍 Experience:",
-        criteriaScores.experienceLevel,
-        "% × ",
-        finalWeights.experience,
-        "% = ",
-        weightedScores.experienceLevel,
-        " points",
-      );
-      console.log(
-        "🔍 Keywords:",
-        criteriaScores.keywordRelevance,
-        "% × ",
-        finalWeights.keywords,
-        "% = ",
-        weightedScores.keywordRelevance,
-        " points",
-      );
-      console.log(
-        "🔍 Professional Depth:",
-        criteriaScores.professionalDepth,
-        "% × ",
-        finalWeights.professionalDepth,
-        "% = ",
-        weightedScores.professionalDepth,
-        " points",
-      );
-      console.log(
-        "🔍 Domain Experience:",
-        criteriaScores.domainExperience,
-        "% × ",
-        finalWeights.domainExperience,
-        "% = ",
-        weightedScores.domainExperience,
-        " points",
-      );
-      console.log("🔍 TOTAL SUM:", weightedSum, "points");
-      console.log("🔍 FINAL PERCENTAGE:", finalMatchPercentage, "%");
-    }
 
     console.log(
       "🔢 Final calculation - Mathematical weighted sum:",
