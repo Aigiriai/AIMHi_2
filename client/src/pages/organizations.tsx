@@ -46,7 +46,7 @@ export default function OrganizationsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteUserData, setDeleteUserData] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [editOrgForm, setEditOrgForm] = useState({ 
     name: "", 
     domain: "", 

@@ -354,7 +354,7 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
   try {
     const db = await getDB();
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 20;
+    const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
     // Get total count first

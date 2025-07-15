@@ -58,7 +58,7 @@ export default function OnboardingDashboard() {
   const [credentialsDialogOpen, setCredentialsDialogOpen] = useState(false);
   const [createOrgOpen, setCreateOrgOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
   // Form state for creating organization
   const [createOrgForm, setCreateOrgForm] = useState({
