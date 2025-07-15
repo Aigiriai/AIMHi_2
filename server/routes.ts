@@ -919,16 +919,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the appropriate domain for WebSocket connection
       let websocketDomain = '';
       
-      // Check if we're in production environment (deployed)
-      if (process.env.NODE_ENV === 'production' || process.env.REPLIT_DOMAINS) {
-        // Use production domain for deployed environment
-        websocketDomain = 'aimhi.aigiri.ai';
-        console.log('🌐 Using production domain:', websocketDomain);
+      // Get fresh Pinggy domain for each call (handles auto-refresh)
+      const pinggyDomain = await getCurrentPinggyDomain();
+      if (pinggyDomain) {
+        websocketDomain = pinggyDomain;
+        console.log('🌐 Using Pinggy domain:', websocketDomain);
       } else {
-        // Use ngrok for development
-        const ngrokDomain = await getNgrokDomain();
-        websocketDomain = ngrokDomain || 'localhost:5000';
-        console.log('🌐 Using development domain:', websocketDomain);
+        // Fallback to production domain if Pinggy is not available
+        websocketDomain = 'aimhi.aigiri.ai';
+        console.log('🌐 Pinggy not available, using production domain:', websocketDomain);
       }
       
       console.log('📋 TwiML WebSocket URL:', `wss://${websocketDomain}/media-stream`);
