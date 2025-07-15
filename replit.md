@@ -118,6 +118,14 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 15, 2025. **Switched from ngrok to Pinggy tunnel service with auto-refresh**
+  - Replaced ngrok with Pinggy for cost-effective tunneling ($3/month vs $8/month)
+  - Implemented automatic tunnel refresh every 50 minutes (before 60-minute expiry)
+  - Added dynamic domain resolution for each AI call to handle tunnel refreshes
+  - Unified domain handling - removed separate dev/prod domain logic
+  - Added SSH-based tunnel establishment with proper domain extraction
+  - Enabled unlimited bandwidth and better stability for AI calling
+  - Maintained backward compatibility with existing AI calling system
 - July 15, 2025. **Resolved AI matching consistency and calculation accuracy issues**
   - Fixed critical JavaScript bug where `finalMatchPercentage` was accessed before initialization
   - Removed AI override fallback logic that was corrupting mathematical calculations

@@ -5,7 +5,7 @@ import { spawn, ChildProcess } from "child_process";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { handleMediaStream, initializeCallContext } from "./ai-calling";
-import { startNgrokAndGetDomain, getNgrokDomain } from "./ngrok-service";
+import { startPinggyAndGetDomain, getCurrentPinggyDomain } from "./pinggy-service";
 
 let pythonProcess: ChildProcess | null = null;
 
@@ -82,13 +82,13 @@ app.use((req, res, next) => {
   // Single Node.js backend for cost optimization - disable Python backend for AI calling
   log('Initializing consolidated Node.js backend...');
   
-  // Start ngrok tunnel for Twilio AI calling
-  log('🔗 Setting up ngrok tunnel for AI calling...');
-  const ngrokDomain = await startNgrokAndGetDomain(5000);
-  if (!ngrokDomain) {
-    log('⚠️ Warning: Ngrok failed to start. AI calling features may not work.');
+  // Start Pinggy tunnel for Twilio AI calling
+  log('🔗 Setting up Pinggy tunnel for AI calling...');
+  const pinggyDomain = await startPinggyAndGetDomain(5000);
+  if (!pinggyDomain) {
+    log('⚠️ Warning: Pinggy failed to start. AI calling features may not work.');
   } else {
-    log(`✅ Ngrok tunnel established: ${ngrokDomain}`);
+    log(`✅ Pinggy tunnel established: ${pinggyDomain}`);
   }
 
   // Create HTTP server and WebSocket server
@@ -125,8 +125,8 @@ app.use((req, res, next) => {
   const port = 5000;
   httpServer.listen(port, '0.0.0.0', async () => {
     log(`Server running on port ${port} with AI calling support`);
-    const domain = await getNgrokDomain();
-    log(`Ngrok domain: ${domain || 'Not available'}`);
+    const domain = await getCurrentPinggyDomain();
+    log(`Pinggy domain: ${domain || 'Not available'}`);
   });
 
   // Cleanup on exit

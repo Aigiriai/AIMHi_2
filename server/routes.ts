@@ -15,7 +15,7 @@ import { users, userCredentials, teams, organizations } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { initializeMultiTenantSystem } from "./seed-demo";
 import multer from "multer";
-import { getNgrokDomain } from "./ngrok-service";
+import { getCurrentPinggyDomain } from "./pinggy-service";
 import { createIncomingCallTwiML, createOutboundCallTwiML, setCallContext, prepareCallContext } from "./ai-calling";
 import twilio from "twilio";
 
@@ -1121,22 +1121,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the appropriate domain for WebSocket connection
       let websocketDomain = '';
       
-      // Check if we're in production environment (deployed)
-      if (process.env.NODE_ENV === 'production' || process.env.REPLIT_DOMAINS) {
-        // Use production domain for deployed environment
-        websocketDomain = 'aimhi.aigiri.ai';
-        console.log('🌐 Using production domain:', websocketDomain);
-      } else {
-        // Use ngrok for development
-        const ngrokDomain = await getNgrokDomain();
-        if (!ngrokDomain) {
-          return res.status(503).json({ 
-            message: "Ngrok tunnel not available. AI calling is temporarily unavailable." 
-          });
-        }
-        websocketDomain = ngrokDomain;
-        console.log('🌐 Using development domain:', websocketDomain);
+      // Get fresh Pinggy domain for each call (handles auto-refresh)
+      const pinggyDomain = await getCurrentPinggyDomain();
+      if (!pinggyDomain) {
+        return res.status(503).json({ 
+          message: "Pinggy tunnel not available. AI calling is temporarily unavailable." 
+        });
       }
+      websocketDomain = pinggyDomain;
+      console.log('🌐 Using Pinggy domain:', websocketDomain);
 
       // Check if Twilio credentials are available
       if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.PHONE_NUMBER_FROM) {
@@ -1170,13 +1163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`👤 Stored candidate name: ${candidateName}`);
       
       // Get domain for response
-      let responseDomain = '';
-      if (process.env.NODE_ENV === 'production' || process.env.REPLIT_DOMAINS) {
-        responseDomain = 'aimhi.aigiri.ai';
-      } else {
-        const ngrokDomain = await getNgrokDomain();
-        responseDomain = ngrokDomain || 'localhost:5000';
-      }
+      const responseDomain = await getCurrentPinggyDomain() || 'localhost:5000';
       
       if (jobDetails) {
         console.log(`📋 Sarah will discuss: ${jobDetails.title}`);
@@ -1201,12 +1188,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Twilio webhook for incoming calls
   app.post('/api/ai-call/incoming', async (req, res) => {
     try {
-      const ngrokDomain = await getNgrokDomain();
-      if (!ngrokDomain) {
-        return res.status(503).send('Ngrok tunnel not available');
+      const pinggyDomain = await getCurrentPinggyDomain();
+      if (!pinggyDomain) {
+        return res.status(503).send('Pinggy tunnel not available');
       }
 
-      const twiml = createIncomingCallTwiML(ngrokDomain!);
+      const twiml = createIncomingCallTwiML(pinggyDomain!);
       res.type('text/xml');
       res.send(twiml);
     } catch (error) {
@@ -1215,12 +1202,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get ngrok domain status
-  app.get('/api/ai-call/status', (req, res) => {
-    const ngrokDomain = getNgrokDomain();
+  // Get Pinggy domain status
+  app.get('/api/ai-call/status', async (req, res) => {
+    const pinggyDomain = await getCurrentPinggyDomain();
     res.json({
-      ngrokAvailable: !!ngrokDomain,
-      ngrokDomain,
+      pinggyAvailable: !!pinggyDomain,
+      pinggyDomain,
       twilioConfigured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.PHONE_NUMBER_FROM)
     });
   });
