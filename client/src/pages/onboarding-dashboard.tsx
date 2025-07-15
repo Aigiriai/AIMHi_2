@@ -539,7 +539,7 @@ Please change your password after first login.`;
               )}
 
               {/* Pagination Controls */}
-              {organizationsData?.pagination && (
+              {organizationsData?.pagination && organizationsData.pagination.totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
                     <span>
@@ -569,6 +569,13 @@ Please change your password after first login.`;
                       Next
                     </Button>
                   </div>
+                </div>
+              )}
+              
+              {/* Debug Info - Remove after testing */}
+              {organizationsData?.pagination && (
+                <div className="mt-2 text-xs text-gray-500 p-2 bg-gray-50 rounded">
+                  Debug: Total={organizationsData.pagination.total}, Pages={organizationsData.pagination.totalPages}, Current={organizationsData.pagination.page}, HasNext={organizationsData.pagination.hasNext}
                 </div>
               )}
             </CardContent>
