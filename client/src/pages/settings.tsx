@@ -66,12 +66,16 @@ export default function SettingsPage() {
     }
   });
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
+
   // Fetch users
   const { data: usersData } = useQuery<{users: any[], pagination: any}>({
-    queryKey: ['/api/users'],
+    queryKey: ['/api/users', currentPage, pageSize],
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
-      const res = await fetch('/api/users', {
+      const res = await fetch(`/api/users?page=${currentPage}&limit=${pageSize}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -85,6 +89,7 @@ export default function SettingsPage() {
   });
 
   const users = usersData?.users || [];
+  const pagination = usersData?.pagination || {};
 
   // Fetch current user data to ensure consistency
   const { data: currentUser } = useQuery({
@@ -590,6 +595,38 @@ export default function SettingsPage() {
                           </TableBody>
                         </Table>
                       </div>
+                      
+                      {/* Pagination Controls */}
+                      {pagination.totalPages > 1 && (
+                        <div className="flex items-center justify-between mt-4">
+                          <div className="text-sm text-muted-foreground">
+                            Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.totalUsers)} of {pagination.totalUsers} users
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(currentPage - 1)}
+                              disabled={!pagination.hasPrev}
+                            >
+                              Previous
+                            </Button>
+                            <div className="flex items-center space-x-1">
+                              <span className="text-sm text-muted-foreground">
+                                Page {pagination.page} of {pagination.totalPages}
+                              </span>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCurrentPage(currentPage + 1)}
+                              disabled={!pagination.hasNext}
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
