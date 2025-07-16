@@ -67,7 +67,7 @@ export default function SettingsPage() {
   });
 
   // Fetch users
-  const { data: users } = useQuery<any[]>({
+  const { data: usersData } = useQuery<{users: any[], pagination: any}>({
     queryKey: ['/api/users'],
     queryFn: async () => {
       const token = localStorage.getItem('authToken');
@@ -83,6 +83,8 @@ export default function SettingsPage() {
     staleTime: 0, // Always refetch to ensure fresh data
     gcTime: 0     // Don't cache the data (React Query v5 uses gcTime instead of cacheTime)
   });
+
+  const users = usersData?.users || [];
 
   // Fetch current user data to ensure consistency
   const { data: currentUser } = useQuery({

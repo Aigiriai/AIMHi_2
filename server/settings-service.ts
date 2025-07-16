@@ -1,9 +1,6 @@
 import { getSQLiteDB } from "./sqlite-db";
-import { organizations, users, teams } from "@shared/schema";
+import { organizations, users, teams } from "./sqlite-schema";
 import { eq } from "drizzle-orm";
-
-// Get database instance
-const db = getSQLiteDB();
 
 export interface OrganizationSettings {
   name: string;
@@ -76,6 +73,7 @@ export interface TeamSettings {
 export class SettingsService {
   // Organization Settings
   async getOrganizationSettings(organizationId: number): Promise<OrganizationSettings> {
+    const { db } = await getSQLiteDB();
     const [org] = await db
       .select()
       .from(organizations)
@@ -100,6 +98,7 @@ export class SettingsService {
   }
 
   async updateOrganizationSettings(organizationId: number, settings: Partial<OrganizationSettings>): Promise<void> {
+    const { db } = await getSQLiteDB();
     const [currentOrg] = await db
       .select()
       .from(organizations)
@@ -134,6 +133,7 @@ export class SettingsService {
 
   // User Settings
   async getUserSettings(userId: number): Promise<UserSettings> {
+    const { db } = await getSQLiteDB();
     const [user] = await db
       .select()
       .from(users)
@@ -167,6 +167,7 @@ export class SettingsService {
   }
 
   async updateUserSettings(userId: number, settings: Partial<UserSettings>): Promise<void> {
+    const { db } = await getSQLiteDB();
     const [currentUser] = await db
       .select()
       .from(users)
@@ -196,6 +197,7 @@ export class SettingsService {
 
   // Team Settings
   async getTeamSettings(teamId: number): Promise<TeamSettings> {
+    const { db } = await getSQLiteDB();
     const [team] = await db
       .select()
       .from(teams)
@@ -225,6 +227,7 @@ export class SettingsService {
   }
 
   async updateTeamSettings(teamId: number, settings: Partial<TeamSettings>): Promise<void> {
+    const { db } = await getSQLiteDB();
     const [currentTeam] = await db
       .select()
       .from(teams)
