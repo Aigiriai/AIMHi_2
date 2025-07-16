@@ -13,6 +13,17 @@ import { authenticateToken, requireOrganization, type AuthRequest } from "./auth
 import { getSQLiteDB } from "./sqlite-db";
 import { users, userCredentials, teams, organizations } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+
+// Database instance will be initialized async
+let dbInstance: any = null;
+
+// Helper function to get database instance
+async function getDB() {
+  if (!dbInstance) {
+    dbInstance = await getSQLiteDB();
+  }
+  return dbInstance;
+}
 import { initializeMultiTenantSystem } from "./seed-demo";
 import multer from "multer";
 import { getCurrentPinggyDomain } from "./pinggy-service";
@@ -116,33 +127,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const currentUser = req.user!;
       
-      // Get organization name directly from database
-      const [currentOrg] = await db.select().from(organizations).where(eq(organizations.id, currentUser.organizationId!));
-      const organizationName = currentOrg?.name || 'Unknown Organization';
+      // Get users by organization
+      const orgUsers = await storage.getUsersByOrganization(currentUser.organizationId!);
+      
+      // Get organization name
+      const organization = await storage.getOrganization(currentUser.organizationId!);
+      const organizationName = organization?.name || 'Unknown Organization';
 
-      // Get users directly from database with proper field mapping
-      const rawUsers = await db.select({
-        id: users.id,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        role: users.role,
-        createdAt: users.createdAt,
-        lastLoginAt: users.lastLoginAt,
-        hasTemporaryPassword: users.hasTemporaryPassword,
-        temporaryPassword: users.temporaryPassword
-      })
-      .from(users)
-      .where(eq(users.organizationId, currentUser.organizationId!));
-
-      const orgUsers = rawUsers.map((user: any) => ({
-        ...user,
+      // Format the response
+      const formattedUsers = orgUsers.map((user: any) => ({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+        hasTemporaryPassword: user.hasTemporaryPassword,
+        temporaryPassword: user.temporaryPassword,
         organizationName,
-        hasTemporaryPassword: Boolean(user.hasTemporaryPassword),
         status: 'active'
       }));
 
-      res.json(orgUsers);
+      res.json(formattedUsers);
     } catch (error) {
       console.error('Get users error:', error);
       res.status(500).json({ message: 'Failed to fetch users' });

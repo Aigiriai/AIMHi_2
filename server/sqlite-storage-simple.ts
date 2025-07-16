@@ -1,4 +1,6 @@
 import { getSQLiteDB } from './sqlite-db';
+import { eq, and, desc, asc } from 'drizzle-orm';
+import { jobs, candidates, jobMatches, interviews, users, organizations, jobTemplates } from './sqlite-schema';
 import type { 
   Job, Candidate, JobMatch, Interview, User, Organization, JobTemplate,
   InsertJob, InsertCandidate, InsertJobMatch, InsertInterview, InsertUser, InsertOrganization, InsertJobTemplate
@@ -51,6 +53,7 @@ export interface IStorage {
   createUser(insertUser: InsertUser): Promise<User>;
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  getUsersByOrganization(organizationId: number): Promise<User[]>;
   updateUser(id: number, updates: Partial<User>): Promise<void>;
   deleteUser(id: number): Promise<void>;
   
@@ -811,8 +814,15 @@ export class SQLiteStorage implements IStorage {
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    await this.ensureConnection();
-    return undefined;
+    const { db } = await getSQLiteDB();
+    const result = await db.select().from(users).where(eq(users.email, email));
+    return result[0];
+  }
+
+  async getUsersByOrganization(organizationId: number): Promise<User[]> {
+    const { db } = await getSQLiteDB();
+    const result = await db.select().from(users).where(eq(users.organizationId, organizationId));
+    return result;
   }
 
   async updateUser(id: number, updates: Partial<User>): Promise<void> {
@@ -830,8 +840,9 @@ export class SQLiteStorage implements IStorage {
   }
 
   async getOrganization(id: number): Promise<Organization | undefined> {
-    await this.ensureConnection();
-    return undefined;
+    const { db } = await getSQLiteDB();
+    const result = await db.select().from(organizations).where(eq(organizations.id, id));
+    return result[0];
   }
 
   async getOrganizationByName(name: string): Promise<Organization | undefined> {

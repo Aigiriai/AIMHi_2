@@ -2,6 +2,9 @@ import { getSQLiteDB } from "./sqlite-db";
 import { organizations, users, teams } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
+// Get database instance
+const db = getSQLiteDB();
+
 export interface OrganizationSettings {
   name: string;
   domain: string;

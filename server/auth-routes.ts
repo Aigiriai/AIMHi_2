@@ -754,19 +754,19 @@ router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => 
     const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase() + '123!';
     const passwordHash = await hashPassword(tempPassword);
 
-    // Create the user
+    // Create the user with proper JSON serialization for SQLite
     const [newUser] = await db.insert(users).values({
       organizationId: invitingUser.organizationId!,
-      email,
-      passwordHash,
-      firstName,
-      lastName,
-      role,
+      email: email,
+      passwordHash: passwordHash,
+      firstName: firstName,
+      lastName: lastName,
+      role: role,
       managerId: invitingUser.id,
-      isActive: true,
-      hasTemporaryPassword: true,
+      isActive: 1,
+      hasTemporaryPassword: 1,
       temporaryPassword: tempPassword,
-      settings: {
+      settings: JSON.stringify({
         theme: 'system',
         notifications: {
           email: true,
@@ -774,15 +774,17 @@ router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => 
           newCandidates: true,
           interviewReminders: true
         }
-      },
-      permissions: {
+      }),
+      permissions: JSON.stringify({
         users: role === 'manager' ? ['read', 'create'] : ['read'],
         teams: role === 'manager' ? ['read', 'create'] : ['read'],
         jobs: ['create', 'read', 'update'],
         candidates: ['create', 'read', 'update'],
         interviews: ['create', 'read', 'update'],
         settings: ['read']
-      }
+      }),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     }).returning();
 
     await logAuditEvent(req, 'user_invited', 'user', newUser.id, {

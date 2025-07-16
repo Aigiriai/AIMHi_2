@@ -118,6 +118,14 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 16, 2025. **Successfully resolved user listing functionality and database connection issues**
+  - Fixed critical SQLite database connection issue by correcting schema import paths
+  - Resolved database query failures by switching from @shared/schema to ./sqlite-schema
+  - Implemented proper getUsersByOrganization method in SQLite storage service
+  - Fixed organization name retrieval by properly destructuring database connection
+  - User listing now correctly displays organization name "Org2" instead of "Unknown Organization"
+  - All 3 users in organization 20 are now properly retrieved and displayed
+  - Database connection debugging completed and logging cleaned up
 - July 15, 2025. **Implemented comprehensive pagination system across all admin dashboards**
   - Fixed Super Admin Dashboard to show correct Total Organizations count (was showing 10, now shows 20)
   - Fixed Total Users count in dashboard stats to calculate from all organizations, not just current page
