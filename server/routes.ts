@@ -127,15 +127,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const currentUser = req.user!;
       
-      // Get users by organization
-      const orgUsers = await storage.getUsersByOrganization(currentUser.organizationId!);
+      // Parse pagination parameters
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = (page - 1) * limit;
+      
+      // Get all users by organization for total count
+      const allOrgUsers = await storage.getUsersByOrganization(currentUser.organizationId!);
+      const totalUsers = allOrgUsers.length;
+      
+      // Apply pagination
+      const paginatedUsers = allOrgUsers.slice(offset, offset + limit);
       
       // Get organization name
       const organization = await storage.getOrganization(currentUser.organizationId!);
       const organizationName = organization?.name || 'Unknown Organization';
 
       // Format the response
-      const formattedUsers = orgUsers.map((user: any) => ({
+      const formattedUsers = paginatedUsers.map((user: any) => ({
         id: user.id,
         email: user.email,
         firstName: user.firstName,
@@ -149,7 +158,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'active'
       }));
 
-      res.json(formattedUsers);
+      // Calculate pagination metadata
+      const totalPages = Math.ceil(totalUsers / limit);
+      const hasNext = page < totalPages;
+      const hasPrev = page > 1;
+
+      res.json({
+        users: formattedUsers,
+        pagination: {
+          page,
+          limit,
+          totalUsers,
+          totalPages,
+          hasNext,
+          hasPrev
+        }
+      });
     } catch (error) {
       console.error('Get users error:', error);
       res.status(500).json({ message: 'Failed to fetch users' });
