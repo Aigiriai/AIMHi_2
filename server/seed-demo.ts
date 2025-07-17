@@ -1,6 +1,5 @@
 import { organizationManager } from './organization-manager';
-import { getSQLiteDB } from './sqlite-db';
-import { organizations, users } from './sqlite-schema';
+import { getDB } from './db-connection';
 import { eq } from 'drizzle-orm';
 import { hashPassword } from './auth';
 
@@ -17,13 +16,13 @@ export async function seedDemoOrganization() {
 
 export async function createSuperAdmin() {
   try {
-    const { db } = await getSQLiteDB();
+    const { db, schema } = await getDB();
     
     // Check if super admin already exists
     const existingSuperAdmin = await db
       .select()
-      .from(users)
-      .where(eq(users.role, 'super_admin'))
+      .from(schema.users)
+      .where(eq(schema.users.role, 'super_admin'))
       .limit(1);
 
     if (existingSuperAdmin.length > 0) {
@@ -34,8 +33,8 @@ export async function createSuperAdmin() {
     // Check if super admin organization already exists
     const existingSuperAdminOrg = await db
       .select()
-      .from(organizations)
-      .where(eq(organizations.domain, 'platform.aimhi.app'))
+      .from(schema.organizations)
+      .where(eq(schema.organizations.domain, 'platform.aimhi.app'))
       .limit(1);
 
     let superAdminOrg;
@@ -43,7 +42,7 @@ export async function createSuperAdmin() {
       console.log('✓ Super admin organization already exists');
       
       // Create the super admin user in the existing organization
-      const [superAdmin] = await db.insert(users).values({
+      const [superAdmin] = await db.insert(schema.users).values({
         organizationId: existingSuperAdminOrg[0].id,
         email: 'superadmin@aimhi.app',
         firstName: 'Super',

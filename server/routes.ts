@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./sqlite-storage-simple";
-import { insertJobSchema, insertCandidateSchema, insertInterviewSchema } from "./sqlite-schema";
+import { insertJobSchema, insertCandidateSchema, insertInterviewSchema } from "@shared/schema";
 import { matchCandidateToJob, batchMatchCandidates } from "./ai-matching";
 import { extractResumeDataFromImage } from "./image-processing";
 import { JobBoardService } from "./job-board-integrations";
@@ -10,20 +10,8 @@ import { createJobTemplate } from "./jd-template-analyzer";
 import authRoutes from "./auth-routes";
 import settingsRoutes from "./settings-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
-import { getSQLiteDB } from "./sqlite-db";
-import { users, userCredentials, teams, organizations } from "./sqlite-schema";
+import { getDB } from "./db-connection";
 import { eq, and } from "drizzle-orm";
-
-// Database instance will be initialized async
-let dbInstance: any = null;
-
-// Helper function to get database instance
-async function getDB() {
-  if (!dbInstance) {
-    dbInstance = await getSQLiteDB();
-  }
-  return dbInstance;
-}
 import { initializeMultiTenantSystem } from "./seed-demo";
 import multer from "multer";
 import { getCurrentPinggyDomain } from "./pinggy-service";
@@ -192,11 +180,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if team with this name already exists in the organization
+      const { db, schema } = await getDB();
       const existingTeam = await db.select()
-        .from(teams)
+        .from(schema.teams)
         .where(and(
-          eq(teams.name, name),
-          eq(teams.organizationId, currentUser.organizationId!)
+          eq(schema.teams.name, name),
+          eq(schema.teams.organizationId, currentUser.organizationId!)
         ))
         .limit(1);
 
@@ -205,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create the team
-      const [newTeam] = await db.insert(teams).values({
+      const [newTeam] = await db.insert(schema.teams).values({
         organizationId: currentUser.organizationId!,
         name,
         description: description || '',

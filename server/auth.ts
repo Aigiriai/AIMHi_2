@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { Request, Response, NextFunction } from 'express';
-import { getSQLiteDB } from './sqlite-db';
-import { users, organizations, auditLogs } from './sqlite-schema';
+import { getDB } from './db-connection';
 import { eq, and, sql } from 'drizzle-orm';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key';
@@ -58,15 +57,15 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const { db } = await getSQLiteDB();
+    const { db, schema } = await getDB();
     
     // Fetch fresh user data
     const user = await db
       .select()
-      .from(users)
+      .from(schema.users)
       .where(and(
-        eq(users.id, decoded.userId),
-        eq(users.isActive, 1)
+        eq(schema.users.id, decoded.userId),
+        eq(schema.users.isActive, 1)
       ))
       .limit(1);
 
@@ -159,13 +158,13 @@ export async function canAccessUser(currentUserId: number, targetUserId: number)
   if (currentUserId === targetUserId) return true;
 
   try {
-    const { db } = await getSQLiteDB();
+    const { db, schema } = await getDB();
     
     // Check if currentUser is a manager of targetUser (direct or indirect)
     const targetUser = await db
       .select()
-      .from(users)
-      .where(eq(users.id, targetUserId))
+      .from(schema.users)
+      .where(eq(schema.users.id, targetUserId))
       .limit(1);
 
     if (!targetUser.length) return false;
@@ -176,8 +175,8 @@ export async function canAccessUser(currentUserId: number, targetUserId: number)
 
       const manager = await db
         .select()
-        .from(users)
-        .where(eq(users.id, managerId))
+        .from(schema.users)
+        .where(eq(schema.users.id, managerId))
         .limit(1);
 
       if (!manager.length) break;
