@@ -353,7 +353,7 @@ function RecruitmentDashboard() {
               </div>
 
               {/* Quick Actions */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 <Button onClick={() => setShowJobModal(true)} className="h-20 flex flex-col items-center justify-center space-y-2">
                   <PlusIcon size={24} />
                   <span>Post New Job</span>
@@ -366,10 +366,7 @@ function RecruitmentDashboard() {
                   <BrainIcon size={24} />
                   <span>AI Matching</span>
                 </Button>
-                <Button variant="outline" onClick={() => setShowInterviewModal(true)} className="h-20 flex flex-col items-center justify-center space-y-2">
-                  <CalendarIcon size={24} />
-                  <span>Schedule Interview</span>
-                </Button>
+                {/* Schedule Interview button hidden as requested */}
               </div>
 
               {/* Data Management */}

@@ -484,6 +484,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // If overwriting, update the existing candidate instead of creating new
       if (forceOverwrite && existingCandidate) {
+        // Store the original file in file storage
+        const { FileStorageService } = await import('./file-storage');
+        const fileStorage = new FileStorageService();
+        await fileStorage.storeResumeFile(existingCandidate.id, parsedData.resumeFileName, req.file.buffer);
+        
         await storage.updateCandidate(existingCandidate.id, {
           name: parsedData.name,
           phone: parsedData.phone,
@@ -501,6 +506,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         const candidate = await storage.createCandidate(parsedData);
+        
+        // Store the original file in file storage
+        const { FileStorageService } = await import('./file-storage');
+        const fileStorage = new FileStorageService();
+        await fileStorage.storeResumeFile(candidate.id, parsedData.resumeFileName, req.file.buffer);
+        
         res.json(candidate);
       }
     } catch (error: any) {
@@ -538,7 +549,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             filename: file.originalname,
             content,
             isResume: true,
-            extractedData: resumeDetails
+            extractedData: resumeDetails,
+            buffer: file.buffer // Store the original buffer for file storage
           });
         } catch (error) {
           console.error(`Error processing file ${file.originalname}:`, error);
@@ -581,6 +593,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 continue;
               } else {
                 // Force overwrite - update existing candidate
+                // Store the original file in file storage
+                const { FileStorageService } = await import('./file-storage');
+                const fileStorage = new FileStorageService();
+                await fileStorage.storeResumeFile(existingCandidate.id, resumeDoc.extractedData.resumeFileName, resumeDoc.buffer);
+                
                 await storage.updateCandidate(existingCandidate.id, {
                   name: resumeDoc.extractedData.name,
                   phone: resumeDoc.extractedData.phone,
@@ -617,6 +634,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const candidate = await storage.createCandidate(candidateData);
           console.log(`Created candidate:`, candidate);
+          
+          // Store the original file in file storage
+          const { FileStorageService } = await import('./file-storage');
+          const fileStorage = new FileStorageService();
+          await fileStorage.storeResumeFile(candidate.id, resumeDoc.extractedData.resumeFileName, resumeDoc.buffer);
           
           createdCandidates.push({ filename: resumeDoc.filename, candidate });
         } catch (error: any) {
@@ -670,14 +692,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/candidates/:id/resume', async (req, res) => {
     try {
       const candidate = await storage.getCandidate(parseInt(req.params.id));
-      if (!candidate || !candidate.resumeContent) {
+      if (!candidate || !candidate.resumeFileName) {
         return res.status(404).json({ message: "Resume not found" });
       }
 
-      // Return resume content as text/plain since we store text content, not binary data
-      res.setHeader('Content-Type', 'text/plain');
-      res.setHeader('Content-Disposition', `attachment; filename="${candidate.resumeFileName}"`);
-      res.send(candidate.resumeContent);
+      // Try to get the original file from file storage first
+      const { getResumeFile } = await import('./file-storage');
+      const fileStorage = new (await import('./file-storage')).FileStorageService();
+      const originalFile = await fileStorage.getResumeFile(candidate.id, candidate.resumeFileName);
+
+      if (originalFile) {
+        // Serve the original file with appropriate content type
+        const fileExtension = candidate.resumeFileName.split('.').pop()?.toLowerCase();
+        let contentType = 'application/octet-stream';
+        
+        switch (fileExtension) {
+          case 'pdf':
+            contentType = 'application/pdf';
+            break;
+          case 'doc':
+            contentType = 'application/msword';
+            break;
+          case 'docx':
+            contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            break;
+          case 'txt':
+            contentType = 'text/plain';
+            break;
+          case 'jpg':
+          case 'jpeg':
+            contentType = 'image/jpeg';
+            break;
+          case 'png':
+            contentType = 'image/png';
+            break;
+        }
+
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resumeFileName}"`);
+        res.send(originalFile);
+      } else {
+        // Fallback to text content if original file not found
+        if (!candidate.resumeContent) {
+          return res.status(404).json({ message: "Resume file not found" });
+        }
+        
+        res.setHeader('Content-Type', 'text/plain');
+        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resumeFileName}"`);
+        res.send(candidate.resumeContent);
+      }
     } catch (error) {
       console.error("Error downloading resume:", error);
       res.status(500).json({ message: "Failed to download resume" });
