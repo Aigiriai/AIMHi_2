@@ -13,10 +13,13 @@ echo "🗑️ Cleaning up old database files..."
 rm -f data/development.db
 rm -f data/development.db-shm
 rm -f data/development.db-wal
+rm -f data/production.db
+rm -f data/production.db-shm
+rm -f data/production.db-wal
 
-# Initialize SQLite database with proper schema
-echo "📦 Initializing SQLite database..."
-sqlite3 data/development.db <<EOF
+# Initialize SQLite database with proper schema for production
+echo "📦 Initializing SQLite database for production..."
+sqlite3 data/production.db <<EOF
 -- Create organizations table with all required columns
 CREATE TABLE IF NOT EXISTS organizations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,8 +127,8 @@ EOF
 echo "✅ SQLite database initialized successfully"
 echo "✅ Deployment setup complete"
 
-# Check if timezone column exists
-if sqlite3 data/development.db "PRAGMA table_info(organizations);" | grep -q timezone; then
+# Check if timezone column exists in production database
+if sqlite3 data/production.db "PRAGMA table_info(organizations);" | grep -q timezone; then
     echo "✅ Timezone column verified in organizations table"
 else
     echo "❌ Timezone column missing - manual intervention required"

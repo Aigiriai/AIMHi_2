@@ -12,7 +12,9 @@ export async function initializeSQLiteDatabase() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
 
-    const dbPath = path.join(dataDir, 'development.db');
+    // Use environment-specific database name
+    const dbName = process.env.NODE_ENV === 'production' ? 'production.db' : 'development.db';
+    const dbPath = path.join(dataDir, dbName);
     console.log(`📁 Database path: ${dbPath}`);
 
     const sqlite = new Database(dbPath);
@@ -238,7 +240,7 @@ export async function initializeSQLiteDatabase() {
     console.log('✅ SQLite database initialized successfully');
     console.log('✅ Organizations table has timezone column');
     
-    return { sqlite, db: drizzle(sqlite) };
+    return sqlite;
   } catch (error) {
     console.error('❌ Failed to initialize SQLite database:', error);
     throw error;

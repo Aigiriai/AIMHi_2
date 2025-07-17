@@ -17,7 +17,7 @@ export async function getDB() {
 
   // Always use SQLite database for both development and deployment
   console.log('🗄️ Using SQLite database');
-  const { sqlite, db } = await initializeSQLiteDatabase();
+  const sqlite = await initializeSQLiteDatabase();
   dbConnection = sqliteDrizzle(sqlite, { schema: sqliteSchema });
   dbSchema = sqliteSchema;
 

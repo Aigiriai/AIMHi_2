@@ -124,13 +124,14 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
   - **COMPREHENSIVE DATABASE INITIALIZATION**: Built init-database.ts with automatic schema setup and column verification
   - **DEPLOYMENT SETUP SCRIPT**: Created deploy-setup.sh for deployment environment database preparation
   - **RESOLVED ALL DATABASE SCHEMA ISSUES**: Fixed "no such column" errors for organizations.timezone, user_id, billing_period, and created_at
+  - **FIXED PRODUCTION DATABASE PATH**: Updated init-database.ts to use production.db in production environment instead of development.db
   - Fixed deployment authentication issue by ensuring consistent database schema across all environments
   - Added startup database initialization to server/index.ts to ensure proper schema on every boot
   - Login credentials now working reliably: superadmin@aimhi.app / SuperAdmin123!@# / "AIM Hi System"
   - Updated all database imports (auth.ts, routes.ts, seed-demo.ts) to use unified database connection
   - Eliminated dual database architecture complexity that was causing deployment issues
-  - **DEPLOYMENT READY**: All API endpoints tested and working, authentication verified, schema synchronized
-  - **CRITICAL DEPLOYMENT NOTE**: For clean deployments, delete existing database files before initialization
+  - **DEPLOYMENT READY**: Environment-specific database paths, all API endpoints tested, authentication verified, schema synchronized
+  - **CRITICAL DEPLOYMENT NOTE**: Production uses production.db, development uses development.db, deploy-setup.sh handles both
   - Hidden "Schedule Interview" button from Recruitment Overview tab as requested
   - Fixed resume download functionality to serve original uploaded files instead of text content
   - Updated both single and bulk upload processes to store original files in file storage system
