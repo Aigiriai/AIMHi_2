@@ -1,0 +1,167 @@
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import fs from 'fs';
+import path from 'path';
+
+// Initialize SQLite database with proper schema
+export async function initializeSQLiteDatabase() {
+  try {
+    // Ensure data directory exists
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+
+    const dbPath = path.join(dataDir, 'development.db');
+    console.log(`📁 Database path: ${dbPath}`);
+
+    const sqlite = new Database(dbPath);
+    
+    // Enable WAL mode for better performance
+    sqlite.pragma('journal_mode = WAL');
+    sqlite.pragma('synchronous = NORMAL');
+    sqlite.pragma('cache_size = 1000');
+    sqlite.pragma('temp_store = memory');
+    
+    // Create organizations table with all required columns
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS organizations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        domain TEXT,
+        subdomain TEXT,
+        plan TEXT NOT NULL DEFAULT 'trial',
+        status TEXT NOT NULL DEFAULT 'active',
+        timezone TEXT DEFAULT 'UTC',
+        date_format TEXT DEFAULT 'MM/DD/YYYY',
+        currency TEXT DEFAULT 'USD',
+        settings TEXT DEFAULT '{}',
+        billing_settings TEXT DEFAULT '{}',
+        compliance_settings TEXT DEFAULT '{}',
+        integration_settings TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
+      );
+    `);
+
+    // Add timezone column if it doesn't exist (for existing databases)
+    try {
+      sqlite.exec(`ALTER TABLE organizations ADD COLUMN timezone TEXT DEFAULT 'UTC';`);
+    } catch (error) {
+      // Column already exists, which is fine
+    }
+
+    // Add other missing columns if they don't exist
+    const missingColumns = [
+      'date_format TEXT DEFAULT \'MM/DD/YYYY\'',
+      'currency TEXT DEFAULT \'USD\'',
+      'billing_settings TEXT DEFAULT \'{}\'',
+      'compliance_settings TEXT DEFAULT \'{}\'',
+      'integration_settings TEXT DEFAULT \'{}\''
+    ];
+
+    for (const column of missingColumns) {
+      try {
+        sqlite.exec(`ALTER TABLE organizations ADD COLUMN ${column};`);
+      } catch (error) {
+        // Column already exists, which is fine
+      }
+    }
+
+    // Create other required tables
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        email TEXT NOT NULL,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'recruiter',
+        manager_id INTEGER,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        permissions TEXT DEFAULT '{}',
+        last_login_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (manager_id) REFERENCES users(id)
+      );
+    `);
+
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        created_by INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        requirements TEXT NOT NULL,
+        location TEXT NOT NULL,
+        salary_min INTEGER,
+        salary_max INTEGER,
+        job_type TEXT NOT NULL,
+        keywords TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        settings TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (created_by) REFERENCES users(id)
+      );
+    `);
+
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS candidates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        added_by INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        experience INTEGER NOT NULL,
+        resume_content TEXT NOT NULL,
+        resume_file_name TEXT NOT NULL,
+        source TEXT DEFAULT 'manual',
+        tags TEXT DEFAULT '[]',
+        status TEXT NOT NULL DEFAULT 'active',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (added_by) REFERENCES users(id)
+      );
+    `);
+
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS teams (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        manager_id INTEGER,
+        settings TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (manager_id) REFERENCES users(id)
+      );
+    `);
+
+    // Check if timezone column exists and is working
+    const result = sqlite.prepare("PRAGMA table_info(organizations)").all();
+    const hasTimezone = result.some((col: any) => col.name === 'timezone');
+    
+    if (!hasTimezone) {
+      console.error('❌ Timezone column still missing after schema update');
+      throw new Error('Failed to create timezone column');
+    }
+
+    console.log('✅ SQLite database initialized successfully');
+    console.log('✅ Organizations table has timezone column');
+    
+    return { sqlite, db: drizzle(sqlite) };
+  } catch (error) {
+    console.error('❌ Failed to initialize SQLite database:', error);
+    throw error;
+  }
+}

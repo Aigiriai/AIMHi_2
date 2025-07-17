@@ -4,6 +4,7 @@ import postgres from 'postgres';
 import Database from 'better-sqlite3';
 import * as postgresSchema from '@shared/schema';
 import * as sqliteSchema from './sqlite-schema';
+import { initializeSQLiteDatabase } from './init-database';
 
 // Database connection manager
 let dbConnection: any = null;
@@ -16,7 +17,7 @@ export async function getDB() {
 
   // Always use SQLite database for both development and deployment
   console.log('🗄️ Using SQLite database');
-  const sqlite = new Database('data/development.db');
+  const { sqlite, db } = await initializeSQLiteDatabase();
   dbConnection = sqliteDrizzle(sqlite, { schema: sqliteSchema });
   dbSchema = sqliteSchema;
 

@@ -118,11 +118,14 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
-- July 17, 2025. **Database unification and authentication fixes**
+- July 17, 2025. **Database unification and comprehensive deployment fix**
   - **UNIFIED DATABASE ARCHITECTURE**: Configured deployment environment to use same SQLite database as development
   - Created universal database connection layer (db-connection.ts) that always uses SQLite regardless of environment
+  - **COMPREHENSIVE DATABASE INITIALIZATION**: Built init-database.ts with automatic schema setup and column verification
+  - **DEPLOYMENT SETUP SCRIPT**: Created deploy-setup.sh for deployment environment database preparation
   - Resolved "no such column: organizations.timezone" error by eliminating PostgreSQL/SQLite schema conflicts
   - Fixed deployment authentication issue by ensuring consistent database schema across all environments
+  - Added startup database initialization to server/index.ts to ensure proper schema on every boot
   - Login credentials now working reliably: admin@aimhi.app / Admin2025!@# / "AIM Hi System"
   - Updated all database imports (auth.ts, routes.ts, seed-demo.ts) to use unified database connection
   - Eliminated dual database architecture complexity that was causing deployment issues

@@ -6,6 +6,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { handleMediaStream, initializeCallContext } from "./ai-calling";
 import { startPinggyAndGetDomain, getCurrentPinggyDomain } from "./pinggy-service";
+import { initializeSQLiteDatabase } from "./init-database";
 
 let pythonProcess: ChildProcess | null = null;
 
@@ -81,6 +82,10 @@ app.use((req, res, next) => {
 (async () => {
   // Single Node.js backend for cost optimization - disable Python backend for AI calling
   log('Initializing consolidated Node.js backend...');
+  
+  // Initialize SQLite database first
+  log('📦 Initializing SQLite database...');
+  await initializeSQLiteDatabase();
   
   // Start Pinggy tunnel for Twilio AI calling
   log('🔗 Setting up Pinggy tunnel for AI calling...');
