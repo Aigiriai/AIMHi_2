@@ -119,6 +119,8 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 ## Changelog
 
 - July 17, 2025. **UI simplification and authentication fixes**
+  - Fixed deployment database schema mismatch by updating all imports to use SQLite schema instead of PostgreSQL
+  - Resolved "no such column: organizations.timezone" error by correcting schema imports in routes.ts, auth.ts, and seed-demo.ts
   - Fixed deployment authentication issue by updating super admin password to match user expectations
   - Login credentials now working: admin@aimhi.app / Admin2025!@# / "AIM Hi System"
   - Hidden "Schedule Interview" button from Recruitment Overview tab as requested

@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { Request, Response, NextFunction } from 'express';
 import { getSQLiteDB } from './sqlite-db';
-import { users, organizations, auditLogs } from '@shared/schema';
+import { users, organizations, auditLogs } from './sqlite-schema';
 import { eq, and, sql } from 'drizzle-orm';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key';

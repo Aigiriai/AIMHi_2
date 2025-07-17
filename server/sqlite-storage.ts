@@ -1,9 +1,15 @@
 import { getSQLiteDB } from './sqlite-db';
+import { 
+  jobs, candidates, jobMatches, interviews, users, organizations,
+  teams, userTeams, auditLogs, usageMetrics
+} from './sqlite-schema';
+import { eq, desc, and, gte } from 'drizzle-orm';
+
+// Import types from SQLite schema
 import type { 
   Job, Candidate, JobMatch, Interview, User, Organization,
   InsertJob, InsertCandidate, InsertJobMatch, InsertInterview, InsertUser, InsertOrganization
-} from '@shared/schema';
-import { eq, desc, and, gte } from 'drizzle-orm';
+} from './sqlite-schema';
 
 export interface IStorage {
   // Jobs

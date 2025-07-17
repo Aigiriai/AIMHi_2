@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./sqlite-storage-simple";
-import { insertJobSchema, insertCandidateSchema, insertInterviewSchema } from "@shared/schema";
+import { insertJobSchema, insertCandidateSchema, insertInterviewSchema } from "./sqlite-schema";
 import { matchCandidateToJob, batchMatchCandidates } from "./ai-matching";
 import { extractResumeDataFromImage } from "./image-processing";
 import { JobBoardService } from "./job-board-integrations";
@@ -11,7 +11,7 @@ import authRoutes from "./auth-routes";
 import settingsRoutes from "./settings-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
 import { getSQLiteDB } from "./sqlite-db";
-import { users, userCredentials, teams, organizations } from "@shared/schema";
+import { users, userCredentials, teams, organizations } from "./sqlite-schema";
 import { eq, and } from "drizzle-orm";
 
 // Database instance will be initialized async

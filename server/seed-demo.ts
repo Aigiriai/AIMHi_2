@@ -1,6 +1,6 @@
 import { organizationManager } from './organization-manager';
 import { getSQLiteDB } from './sqlite-db';
-import { organizations, users } from '@shared/schema';
+import { organizations, users } from './sqlite-schema';
 import { eq } from 'drizzle-orm';
 import { hashPassword } from './auth';
 
