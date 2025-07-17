@@ -20,6 +20,39 @@ export const organizations = sqliteTable("organizations", {
   updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
+// Teams/Departments table
+export const teams = sqliteTable("teams", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  managerId: integer("manager_id"),
+  settings: text("settings").default("{}"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// Users table - Multi-role support (moved before other tables that reference it)
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  email: text("email").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  phone: text("phone"),
+  role: text("role").notNull(),
+  managerId: integer("manager_id"),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  lastLoginAt: text("last_login_at"),
+  hasTemporaryPassword: integer("has_temporary_password", { mode: "boolean" }).notNull().default(false),
+  temporaryPassword: text("temporary_password"),
+  settings: text("settings").default("{}"),
+  permissions: text("permissions").default("{}"),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
 // Organization credentials table for storing temporary login credentials
 export const organizationCredentials = sqliteTable("organization_credentials", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -78,39 +111,6 @@ export const usageMetrics = sqliteTable("usage_metrics", {
   billingPeriod: text("billing_period").notNull(),
   metadata: text("metadata").default("{}"),
   createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
-});
-
-// Teams/Departments table
-export const teams = sqliteTable("teams", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
-  name: text("name").notNull(),
-  description: text("description"),
-  managerId: integer("manager_id"),
-  settings: text("settings").default("{}"),
-  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
-  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
-});
-
-// Users table - Multi-role support
-export const users = sqliteTable("users", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
-  email: text("email").notNull(),
-  passwordHash: text("password_hash").notNull(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  phone: text("phone"),
-  role: text("role").notNull(),
-  managerId: integer("manager_id"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  lastLoginAt: text("last_login_at"),
-  hasTemporaryPassword: integer("has_temporary_password", { mode: "boolean" }).notNull().default(false),
-  temporaryPassword: text("temporary_password"),
-  settings: text("settings").default("{}"),
-  permissions: text("permissions").default("{}"),
-  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
-  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
 // Jobs table - Now organization-scoped

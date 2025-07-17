@@ -1,0 +1,100 @@
+2025-07-17 19:22:07.32
+afde2af8
+User
+1:52:07 PM [express] Server running on port 5000 with AI calling support
+2025-07-17 19:22:07.32
+afde2af8
+User
+1:52:07 PM [express] Pinggy domain: rnzcg-2600-1900-0-2d04--3700.a.free.pinggy.link
+2025-07-17 19:23:03.13
+afde2af8
+User
+1:53:03 PM [express] POST /api/auth/login 200 in 73ms :: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXV…
+2025-07-17 19:23:03.65
+afde2af8
+User
+1:53:03 PM [express] GET /api/auth/me 200 in 5ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-17 19:23:04.13
+afde2af8
+User
+1:53:04 PM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-17 19:23:04.41
+afde2af8
+User
+1:53:04 PM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-17 19:23:04.73
+afde2af8
+User
+1:53:04 PM [express] GET /api/auth/organizations 200 in 7ms :: {"organizations":[{"id":2,"name":"AIM…
+2025-07-17 19:23:04.74
+afde2af8
+User
+1:53:04 PM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-17 19:23:04.74
+afde2af8
+User
+1:53:04 PM [express] GET /api/auth/organizations 200 in 4ms :: {"organizations":[{"id":2,"name":"AIM…
+2025-07-17 19:23:10.26
+afde2af8
+User
+1:53:10 PM [express] GET /api/auth/me 200 in 2ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-17 19:23:10.27
+afde2af8
+User
+🔍 ROUTE: Getting matches with organization filtering
+2025-07-17 19:23:10.27
+afde2af8
+User
+🔍 ROUTE: Got matches count: 0
+2025-07-17 19:23:10.27
+afde2af8
+User
+1:53:10 PM [express] GET /api/matches 200 in 2ms :: []
+2025-07-17 19:23:10.28
+afde2af8
+User
+Fetching all jobs from database...
+2025-07-17 19:23:10.28
+afde2af8
+User
+Fetching jobs for organization: 1
+2025-07-17 19:23:10.28
+afde2af8
+User
+Retrieved organization jobs: 0
+2025-07-17 19:23:10.28
+afde2af8
+User
+1:53:10 PM [express] GET /api/stats 200 in 2ms :: {"activeJobs":0,"totalCandidates":0,"aiMatches":0,…
+2025-07-17 19:23:10.29
+afde2af8
+User
+1:53:10 PM [express] GET /api/candidates 200 in 2ms :: []
+2025-07-17 19:23:10.29
+afde2af8
+User
+1:53:10 PM [express] GET /api/interviews 200 in 1ms :: []
+2025-07-17 19:23:10.30
+afde2af8
+User
+Fetching jobs for organization: 1
+2025-07-17 19:23:10.30
+afde2af8
+User
+Retrieved organization jobs: 0
+2025-07-17 19:23:10.30
+afde2af8
+User
+1:53:10 PM [express] GET /api/jobs 200 in 2ms :: []
+2025-07-17 19:23:10.59
+afde2af8
+User
+1:53:10 PM [express] GET /api/job-boards/credentials 200 in 1ms :: {"linkedIn":false,"indeed":false}
+2025-07-17 19:23:14.84
+afde2af8
+User
+1:53:14 PM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-17 19:23:15.15
+afde2af8
+User
+1:53:15 PM [express] GET /api/auth/me 200 in 2ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
