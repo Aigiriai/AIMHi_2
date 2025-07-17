@@ -1,0 +1,11 @@
+0|id|INTEGER|0||1
+1|organization_id|INTEGER|1||0
+2|job_id|INTEGER|1||0
+3|candidate_id|INTEGER|1||0
+4|matched_by|INTEGER|1||0
+5|match_percentage|REAL|1||0
+6|ai_reasoning|TEXT|0||0
+7|match_criteria|TEXT|0|'{}'|0
+8|status|TEXT|0|'pending'|0
+9|created_at|TEXT|0|CURRENT_TIMESTAMP|0
+10|updated_at|TEXT|0|CURRENT_TIMESTAMP|0

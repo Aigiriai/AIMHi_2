@@ -1,0 +1,14 @@
+0|id|INTEGER|0||1
+1|organization_id|INTEGER|1||0
+2|name|TEXT|1||0
+3|email|TEXT|1||0
+4|phone|TEXT|1||0
+5|experience|INTEGER|0|0|0
+6|status|TEXT|0|'active'|0
+7|source|TEXT|0||0
+8|resume_content|TEXT|1||0
+9|resume_file_name|TEXT|1||0
+10|tags|TEXT|0|'[]'|0
+11|added_by|INTEGER|1||0
+12|created_at|TEXT|0|CURRENT_TIMESTAMP|0
+13|updated_at|TEXT|0|CURRENT_TIMESTAMP|0
