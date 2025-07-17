@@ -147,6 +147,85 @@ export async function initializeSQLiteDatabase() {
       );
     `);
 
+    // Create organization_credentials table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS organization_credentials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        admin_user_id INTEGER NOT NULL,
+        email TEXT NOT NULL,
+        temporary_password TEXT NOT NULL,
+        is_password_changed INTEGER NOT NULL DEFAULT 0,
+        expires_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (admin_user_id) REFERENCES users(id)
+      );
+    `);
+
+    // Create user_credentials table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS user_credentials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        email TEXT NOT NULL,
+        temporary_password TEXT NOT NULL,
+        is_password_changed INTEGER NOT NULL DEFAULT 0,
+        expires_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id)
+      );
+    `);
+
+    // Create user_teams junction table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS user_teams (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        team_id INTEGER NOT NULL,
+        role TEXT NOT NULL DEFAULT 'member',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (team_id) REFERENCES teams(id)
+      );
+    `);
+
+    // Create audit_logs table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        user_id INTEGER,
+        action TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER NOT NULL,
+        details TEXT DEFAULT '{}',
+        ip_address TEXT,
+        user_agent TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+    `);
+
+    // Create usage_metrics table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS usage_metrics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        user_id INTEGER,
+        metric_type TEXT NOT NULL,
+        metric_value REAL NOT NULL,
+        billing_period TEXT NOT NULL,
+        metadata TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+    `);
+
     // Check if timezone column exists and is working
     const result = sqlite.prepare("PRAGMA table_info(organizations)").all();
     const hasTimezone = result.some((col: any) => col.name === 'timezone');
