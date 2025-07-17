@@ -95,20 +95,23 @@ export async function initializeSQLiteDatabase() {
       CREATE TABLE IF NOT EXISTS jobs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
+        team_id INTEGER,
         created_by INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
-        requirements TEXT NOT NULL,
-        location TEXT NOT NULL,
-        salary_min INTEGER,
-        salary_max INTEGER,
+        experience_level TEXT NOT NULL,
         job_type TEXT NOT NULL,
         keywords TEXT NOT NULL,
         status TEXT NOT NULL DEFAULT 'active',
         settings TEXT DEFAULT '{}',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        requirements TEXT NOT NULL DEFAULT 'Requirements not specified',
+        location TEXT NOT NULL DEFAULT 'Location not specified',
+        salary_min INTEGER,
+        salary_max INTEGER,
         FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (team_id) REFERENCES teams(id),
         FOREIGN KEY (created_by) REFERENCES users(id)
       );
     `);

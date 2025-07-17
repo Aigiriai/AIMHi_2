@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS users (
   FOREIGN KEY (manager_id) REFERENCES users(id)
 );
 
--- Create jobs table with all required columns
+-- Create jobs table with all required columns (matching development schema)
 CREATE TABLE IF NOT EXISTS jobs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   organization_id INTEGER NOT NULL,
@@ -75,15 +75,15 @@ CREATE TABLE IF NOT EXISTS jobs (
   description TEXT NOT NULL,
   experience_level TEXT NOT NULL,
   job_type TEXT NOT NULL,
-  requirements TEXT NOT NULL,
-  location TEXT NOT NULL,
-  salary_min INTEGER,
-  salary_max INTEGER,
   keywords TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active',
   settings TEXT DEFAULT '{}',
   created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  requirements TEXT NOT NULL DEFAULT 'Requirements not specified',
+  location TEXT NOT NULL DEFAULT 'Location not specified',
+  salary_min INTEGER,
+  salary_max INTEGER,
   FOREIGN KEY (organization_id) REFERENCES organizations(id),
   FOREIGN KEY (team_id) REFERENCES teams(id),
   FOREIGN KEY (created_by) REFERENCES users(id)

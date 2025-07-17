@@ -135,8 +135,9 @@ export class SQLiteStorage implements IStorage {
       const stmt = this.sqlite.prepare(`
         INSERT INTO jobs (
           organization_id, team_id, created_by, title, description, 
-          experience_level, job_type, keywords, status, settings
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          experience_level, job_type, requirements, location, salary_min, salary_max,
+          keywords, status, settings
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       const result = stmt.run(
@@ -147,6 +148,10 @@ export class SQLiteStorage implements IStorage {
         insertJob.description,
         insertJob.experienceLevel,
         insertJob.jobType,
+        insertJob.requirements || 'Requirements not specified',
+        insertJob.location || 'Location not specified',
+        insertJob.salaryMin || null,
+        insertJob.salaryMax || null,
         insertJob.keywords,
         insertJob.status || 'active',
         '{}' // settings as JSON string

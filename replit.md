@@ -118,6 +118,17 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 17, 2025. **Fixed critical schema mismatch between development and production databases**
+  - **ROOT CAUSE IDENTIFIED**: Production database had different column ordering than development (keywords vs requirements/location positioning)
+  - **SCHEMA ALIGNMENT COMPLETED**: Recreated production database to match development schema exactly
+  - **DEPLOYMENT SCRIPT UPDATED**: Fixed deploy-setup.sh to create schema in same order as development
+  - **DATABASE INITIALIZATION CORRECTED**: Updated init-database.ts to match actual development column order
+  - **CONSISTENCY ACHIEVED**: Both databases now have identical schemas with proper default values
+  - **PRODUCTION TESTING VERIFIED**: Job creation now works correctly in production environment
+  - **SCHEMA DRIFT PREVENTED**: Future deployments will now create consistent database structures
+  - Fixed "NOT NULL constraint failed: jobs.requirements" error by providing proper defaults
+  - Both development and production databases now have requirements/location columns with defaults
+  - Production database testing successful - job creation working properly
 - July 17, 2025. **Database unification and comprehensive deployment fix**
   - **UNIFIED DATABASE ARCHITECTURE**: Configured deployment environment to use same SQLite database as development
   - Created universal database connection layer (db-connection.ts) that always uses SQLite regardless of environment
