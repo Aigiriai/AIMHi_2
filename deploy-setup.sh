@@ -8,6 +8,12 @@ echo "🚀 Starting deployment setup..."
 # Create data directory if it doesn't exist
 mkdir -p data
 
+# Remove old database files to ensure clean schema
+echo "🗑️ Cleaning up old database files..."
+rm -f data/development.db
+rm -f data/development.db-shm
+rm -f data/development.db-wal
+
 # Initialize SQLite database with proper schema
 echo "📦 Initializing SQLite database..."
 sqlite3 data/development.db <<EOF

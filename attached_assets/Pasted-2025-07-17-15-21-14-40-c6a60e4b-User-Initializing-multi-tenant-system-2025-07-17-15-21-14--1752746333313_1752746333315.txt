@@ -1,0 +1,127 @@
+2025-07-17 15:21:14.40
+c6a60e4b
+User
+🚀 Initializing multi-tenant system...
+2025-07-17 15:21:14.40
+c6a60e4b
+User
+🗄️ Using SQLite database
+2025-07-17 15:21:14.40
+c6a60e4b
+User
+📁 Database path: /home/runner/workspace/data/development.db
+2025-07-17 15:21:14.40
+c6a60e4b
+User
+✅ SQLite database initialized successfully
+2025-07-17 15:21:14.40
+c6a60e4b
+User
+✅ Organizations table has timezone column
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+✓ Super admin already exists
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+✓ Demo organization seeding skipped - clean system ready
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+✅ Multi-tenant system initialized successfully
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+=== Login Credentials ===
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+Super Admin:
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+Email: superadmin@aimhi.app
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+Password: SuperAdmin123!@#
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+Demo Organization Admin:
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+Email: admin@aimhidemo.com
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+Password: Demo123!@#
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+========================
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+9:51:14 AM [express] Server running on port 5000 with AI calling support
+2025-07-17 15:21:14.41
+c6a60e4b
+User
+9:51:14 AM [express] Pinggy domain: rnynq-2600-1900-0-2d04--3401.a.free.pinggy.link
+2025-07-17 15:25:50.97
+c49e6971
+System
+system: received signal terminated
+2025-07-17 15:27:22.20
+c6a60e4b
+System
+system: received signal terminated
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+Login error: SqliteError: no such column: organizations.timezone
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+at Database.prepare (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/wrappers.js:5:21)
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+at BetterSQLiteSession.prepareQuery (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:20:30)
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+at BetterSQLiteSession.prepareOneTimeQuery (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/session.js:65:17)
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+at SQLiteSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:572:88)
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:17)
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+at SQLiteSelectBase.execute (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:597:17)
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+at SQLiteSelectBase.then (file:///home/runner/workspace/node_modules/drizzle-orm/query-promise.js:21:17)
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+code: 'SQLITE_ERROR'
+2025-07-17 15:27:56.50
+c6a60e4b
+User
+}
