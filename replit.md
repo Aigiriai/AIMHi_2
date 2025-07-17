@@ -118,6 +118,15 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 17, 2025. **UI simplification and authentication fixes**
+  - Fixed deployment authentication issue by updating super admin password to match user expectations
+  - Login credentials now working: admin@aimhi.app / Admin2025!@# / "AIM Hi System"
+  - Hidden "Schedule Interview" button from Recruitment Overview tab as requested
+  - Fixed resume download functionality to serve original uploaded files instead of text content
+  - Updated both single and bulk upload processes to store original files in file storage system
+  - Added proper content-type headers for different file formats (PDF, DOC, DOCX, images)
+  - Improved grid layout after removing Schedule Interview button (changed from 4 to 3 columns)
+  - Resume downloads now provide original files while maintaining text content for AI processing
 - July 17, 2025. **UI simplification and navigation restructuring**
   - Removed Monthly Revenue and Platform Growth cards from Management Platform Administration
   - Removed AI Matches Today, Interviews, and Match Rate cards from Recruitment dashboard
