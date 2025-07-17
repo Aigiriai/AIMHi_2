@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Building2,
   UserPlus,
-  BarChart3,
   Settings,
 } from "lucide-react";
 
@@ -26,12 +25,6 @@ const managementTabs = [
     icon: UserPlus,
     path: "/management/onboarding",
   },
-  //{
-  //  id: "analytics",
-  //  label: "Analytics",
-  //  icon: BarChart3,
-  //  path: "/management/analytics"
-  // },
   {
     id: "settings",
     label: "Settings",

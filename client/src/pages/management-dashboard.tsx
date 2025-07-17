@@ -7,7 +7,7 @@ import ManagementNav from "@/components/navigation/management-nav";
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import OrganizationsPage from "@/pages/organizations";
 import OnboardingDashboard from "@/pages/onboarding-dashboard";
-import AnalyticsPage from "@/pages/analytics";
+
 import SettingsPage from "@/pages/settings";
 
 export default function ManagementDashboard() {
@@ -21,9 +21,7 @@ export default function ManagementDashboard() {
     if (location === "/management/onboarding" || location.startsWith("/management/onboarding/")) {
       return <OnboardingDashboard />;
     }
-    if (location === "/management/analytics" || location.startsWith("/management/analytics/")) {
-      return <AnalyticsPage />;
-    }
+    
     if (location === "/management/settings" || location.startsWith("/management/settings/")) {
       return <SettingsPage />;
     }

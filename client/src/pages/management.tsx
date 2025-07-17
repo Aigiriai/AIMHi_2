@@ -6,7 +6,6 @@ import {
   LayoutDashboard, 
   Building2, 
   UserPlus, 
-  BarChart3, 
   Settings as SettingsIcon
 } from "lucide-react";
 
@@ -14,7 +13,7 @@ import {
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import OrganizationsPage from "@/pages/organizations";
 import OnboardingDashboard from "@/pages/onboarding-dashboard";
-import AnalyticsPage from "@/pages/analytics";
+
 import SettingsPage from "@/pages/settings";
 
 // Create context to tell embedded components they're in a tab
@@ -27,7 +26,6 @@ function ManagementDashboard() {
     { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { value: "organizations", label: "Organizations", icon: Building2 },
     { value: "onboarding", label: "Onboarding", icon: UserPlus },
-    { value: "analytics", label: "Analytics", icon: BarChart3 },
     { value: "settings", label: "Settings", icon: SettingsIcon }
   ];
 
@@ -45,7 +43,7 @@ function ManagementDashboard() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 return (
@@ -93,12 +91,7 @@ function ManagementDashboard() {
               </div>
             </TabsContent>
 
-            {/* Analytics Tab */}
-            <TabsContent value="analytics" className="mt-0">
-              <div className="tab-content">
-                <AnalyticsPage />
-              </div>
-            </TabsContent>
+            
 
             {/* Settings Tab */}
             <TabsContent value="settings" className="mt-0">

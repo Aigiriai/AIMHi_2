@@ -17,10 +17,6 @@ import {
   Settings as SettingsIcon, 
   User, 
   Users, 
-  Bell,
-  Shield,
-  CreditCard,
-  Globe,
   Save,
   UserPlus,
   Send,
@@ -272,10 +268,7 @@ export default function SettingsPage() {
   const tabs = [
     { value: "profile", label: "Profile", icon: User, roles: ["super_admin", "org_admin", "manager", "team_lead", "recruiter"] },
     { value: "users", label: "Users & Teams", icon: Users, roles: ["super_admin", "org_admin", "manager"] },
-    { value: "notifications", label: "Notifications", icon: Bell, roles: ["super_admin", "org_admin", "manager", "team_lead", "recruiter"] },
-    { value: "security", label: "Security", icon: Shield, roles: ["super_admin", "org_admin"] },
-    { value: "billing", label: "Billing", icon: CreditCard, roles: ["super_admin", "org_admin"] },
-    { value: "integrations", label: "Integrations", icon: Globe, roles: ["super_admin", "org_admin"] },
+    // Hidden tabs: notifications, security, billing, integrations
   ];
 
   const availableTabs = tabs.filter(tab => tab.roles.includes(user?.role || ''));
@@ -306,7 +299,7 @@ export default function SettingsPage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-6 mb-8">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
               {availableTabs.map(tab => {
                 const Icon = tab.icon;
                 return (
@@ -634,115 +627,13 @@ export default function SettingsPage() {
               </TabsContent>
             )}
 
-            {/* Notifications */}
-            <TabsContent value="notifications">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notification Preferences</CardTitle>
-                  <CardDescription>Configure how you receive notifications</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Email Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive notifications via email
-                        </p>
-                      </div>
-                      <Switch
-                        checked={localUserSettings.notifications.email}
-                        onCheckedChange={(checked) =>
-                          handleUserSettingChange('notifications', {
-                            ...localUserSettings.notifications,
-                            email: checked
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Push Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive push notifications in browser
-                        </p>
-                      </div>
-                      <Switch
-                        checked={localUserSettings.notifications.push}
-                        onCheckedChange={(checked) =>
-                          handleUserSettingChange('notifications', {
-                            ...localUserSettings.notifications,
-                            push: checked
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>SMS Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Receive notifications via SMS
-                        </p>
-                      </div>
-                      <Switch
-                        checked={localUserSettings.notifications.sms}
-                        onCheckedChange={(checked) =>
-                          handleUserSettingChange('notifications', {
-                            ...localUserSettings.notifications,
-                            sms: checked
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            
 
-            {/* Security */}
-            {(isSuperAdmin || isOrgAdmin) && (
-              <TabsContent value="security">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Security Settings</CardTitle>
-                    <CardDescription>Manage account security and access controls</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Security settings will be available soon.</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
+            
 
-            {/* Billing */}
-            {(isSuperAdmin || isOrgAdmin) && (
-              <TabsContent value="billing">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Billing & Subscription</CardTitle>
-                    <CardDescription>Manage your subscription and billing information</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Billing settings will be available soon.</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
+            
 
-            {/* Integrations */}
-            {(isSuperAdmin || isOrgAdmin) && (
-              <TabsContent value="integrations">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Integrations</CardTitle>
-                    <CardDescription>Connect with external services and platforms</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">Integrations will be available soon.</p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            )}
+            
           </Tabs>
         </div>
       </div>
