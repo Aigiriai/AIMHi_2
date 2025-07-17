@@ -1,0 +1,144 @@
+2025-07-17 17:34:06.86
+cac172cf
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-07-17 17:34:08.54
+cac172cf
+User
+> rest-express@1.0.0 start
+2025-07-17 17:34:08.54
+cac172cf
+User
+> NODE_ENV=production node dist/index.js
+2025-07-17 17:34:10.21
+cac172cf
+User
+12:04:10 PM [express] Initializing consolidated Node.js backend...
+2025-07-17 17:34:10.21
+cac172cf
+User
+12:04:10 PM [express] 📦 Initializing SQLite database...
+2025-07-17 17:34:10.21
+cac172cf
+User
+📁 Database path: /home/runner/workspace/data/development.db
+2025-07-17 17:34:10.30
+cac172cf
+User
+✅ SQLite database initialized successfully
+2025-07-17 17:34:10.30
+cac172cf
+User
+✅ Organizations table has timezone column
+2025-07-17 17:34:10.31
+cac172cf
+User
+12:04:10 PM [express] 🔗 Setting up Pinggy tunnel for AI calling...
+2025-07-17 17:34:10.31
+cac172cf
+User
+🔗 Starting Pinggy tunnel...
+2025-07-17 17:34:10.31
+cac172cf
+User
+🔧 Creating Pinggy tunnel for port 5000...
+2025-07-17 17:34:10.34
+cac172cf
+User
+✅ SQLite database initialized successfully
+2025-07-17 17:34:10.34
+cac172cf
+User
+🌱 Seeding initial data...
+2025-07-17 17:34:10.48
+cac172cf
+User
+✓ Initial data seeded successfully
+2025-07-17 17:34:10.48
+cac172cf
+User
+=== Login Credentials ===
+2025-07-17 17:34:10.48
+cac172cf
+User
+Super Admin:
+2025-07-17 17:34:10.48
+cac172cf
+User
+Email: superadmin@aimhi.app
+2025-07-17 17:34:10.48
+cac172cf
+User
+Password: SuperAdmin123!@#
+2025-07-17 17:34:10.48
+cac172cf
+User
+Demo Organization Admin:
+2025-07-17 17:34:10.48
+cac172cf
+User
+Email: admin@aimhidemo.com
+2025-07-17 17:34:10.48
+cac172cf
+User
+Password: Demo123!@#
+2025-07-17 17:34:10.48
+cac172cf
+User
+========================
+2025-07-17 17:34:11.75
+cac172cf
+User
+Pinggy stdout: You are not authenticated.
+2025-07-17 17:34:11.75
+cac172cf
+User
+Your tunnel will expire in 60 minutes. Upgrade to Pinggy Pro to get unrestricted tunnels. https://dashboard.pinggy.io
+2025-07-17 17:34:11.75
+cac172cf
+User
+http://rnltm-2600-1900-0-2d00--300.a.free.pinggy.link
+2025-07-17 17:34:11.75
+cac172cf
+User
+https://rnltm-2600-1900-0-2d00--300.a.free.pinggy.link
+2025-07-17 17:34:11.75
+cac172cf
+User
+✅ Pinggy tunnel ready (HTTP): rnltm-2600-1900-0-2d00--300.a.free.pinggy.link
+2025-07-17 17:34:15.34
+cac172cf
+User
+✅ Pinggy tunnel established: rnltm-2600-1900-0-2d00--300.a.free.pinggy.link
+2025-07-17 17:34:15.34
+cac172cf
+User
+⏰ Pinggy tunnel refresh scheduled for 50 minutes
+2025-07-17 17:34:15.34
+cac172cf
+User
+12:04:15 PM [express] ✅ Pinggy tunnel established: rnltm-2600-1900-0-2d00--300.a.free.pinggy.link
+2025-07-17 17:34:15.34
+cac172cf
+User
+🔄 Initializing call context on app startup...
+2025-07-17 17:34:15.34
+cac172cf
+User
+📭 No previous context found
+2025-07-17 17:34:15.35
+cac172cf
+User
+📂 Multiple call contexts loaded from disk (7 candidates)
+2025-07-17 17:34:15.35
+cac172cf
+User
+📂 Loaded 7 candidate contexts for AI calling
+2025-07-17 17:34:15.35
+cac172cf
+User
+• Sudhir Bank (89%)
+2025-07-17 17:34:15.35
+cac172cf
+User
+• Akash Murme (87%)
