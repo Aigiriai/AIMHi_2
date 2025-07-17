@@ -118,6 +118,13 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Changelog
 
+- July 17, 2025. **UI simplification and navigation restructuring**
+  - Removed Monthly Revenue and Platform Growth cards from Management Platform Administration
+  - Removed AI Matches Today, Interviews, and Match Rate cards from Recruitment dashboard
+  - Removed Interviews and Analytics tabs from Recruitment navigation
+  - Added AI Matching as a new primary tab in Recruitment navigation (replacing removed tabs)
+  - Hidden Settings sub-tabs: Notifications, Security, Billing, and Integrations (already implemented)
+  - Streamlined dashboard focus on core recruitment functions: Overview, Job Postings, Candidates, AI Matching
 - July 16, 2025. **Successfully resolved user listing functionality and implemented pagination system**
   - Fixed critical SQLite database connection issue by correcting schema import paths
   - Resolved database query failures by switching from @shared/schema to ./sqlite-schema

@@ -276,8 +276,7 @@ function RecruitmentDashboard() {
     { value: "overview", label: "Overview", icon: LayoutDashboard },
     { value: "jobs", label: "Job Postings", icon: BriefcaseIcon },
     { value: "candidates", label: "Candidates", icon: Users },
-    { value: "interviews", label: "Interviews", icon: Calendar },
-    { value: "analytics", label: "Analytics", icon: BarChart3 }
+    { value: "ai-matching", label: "AI Matching", icon: BrainIcon }
   ];
 
   return (
@@ -294,7 +293,7 @@ function RecruitmentDashboard() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 return (
@@ -313,7 +312,7 @@ function RecruitmentDashboard() {
             {/* Overview Tab - Dashboard Content */}
             <TabsContent value="overview" className="mt-0">
               {/* Stats Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center">
@@ -350,59 +349,7 @@ function RecruitmentDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center">
-                      <div className="p-3 bg-accent/10 rounded-lg">
-                        <BrainIcon className="text-accent text-xl" size={24} />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">AI Matches Today</p>
-                        {statsLoading ? (
-                          <Skeleton className="h-8 w-16" />
-                        ) : (
-                          <p className="text-2xl font-bold text-gray-900">{stats?.aiMatches || 0}</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center">
-                      <div className="p-3 bg-green-100 rounded-lg">
-                        <CalendarIcon className="text-green-600 text-xl" size={24} />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">Interviews</p>
-                        {statsLoading ? (
-                          <Skeleton className="h-8 w-16" />
-                        ) : (
-                          <p className="text-2xl font-bold text-gray-900">{stats?.totalInterviews || 0}</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center">
-                      <div className="p-3 bg-orange-100 rounded-lg">
-                        <PercentIcon className="text-orange-600 text-xl" size={24} />
-                      </div>
-                      <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600">Match Rate</p>
-                        {statsLoading ? (
-                          <Skeleton className="h-8 w-16" />
-                        ) : (
-                          <p className="text-2xl font-bold text-gray-900">{stats?.avgMatchRate || 0}%</p>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* AI Matches Today, Interviews, and Match Rate cards removed */}
               </div>
 
               {/* Quick Actions */}
@@ -665,87 +612,47 @@ function RecruitmentDashboard() {
               </div>
             </TabsContent>
 
-            {/* Interviews Tab */}
-            <TabsContent value="interviews" className="mt-0">
+            {/* AI Matching Tab */}
+            <TabsContent value="ai-matching" className="mt-0">
               <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">Interviews</h2>
-                  <Button onClick={() => setShowInterviewModal(true)}>
-                    <CalendarIcon size={16} className="mr-2" />
-                    Schedule Interview
-                  </Button>
-                </div>
-                
-                <InterviewsTable 
-                  interviews={interviews} 
-                  isLoading={interviewsLoading}
-                />
-              </div>
-            </TabsContent>
-
-            {/* Analytics Tab */}
-            <TabsContent value="analytics" className="mt-0">
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Analytics</h2>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Job Fill Rate</p>
-                          <p className="text-2xl font-bold">0%</p>
+                {/* AI Matching Controls */}
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">AI Matching Results</h3>
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                          <Input
+                            placeholder="Search matches..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4"
+                          />
                         </div>
-                        <BarChart3 className="w-8 h-8 text-blue-600" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAdvancedAIModal(true)}
+                        >
+                          <BrainIcon className="w-4 h-4 mr-2" />
+                          Run AI Match
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={exportResults}
+                        >
+                          <DownloadIcon className="w-4 h-4 mr-2" />
+                          Export
+                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Time to Fill</p>
-                          <p className="text-2xl font-bold">0 days</p>
-                        </div>
-                        <Calendar className="w-8 h-8 text-green-600" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Interview Show Rate</p>
-                          <p className="text-2xl font-bold">0%</p>
-                        </div>
-                        <Users className="w-8 h-8 text-orange-600" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">Offer Acceptance</p>
-                          <p className="text-2xl font-bold">0%</p>
-                        </div>
-                        <PercentIcon className="w-8 h-8 text-purple-600" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {matches.length > 0 && (
-                  <Card>
-                    <CardContent className="p-6">
-                      <h3 className="text-lg font-semibold mb-4">Recent Matches</h3>
-                      <ResultsTable matches={matches.slice(0, 5)} isLoading={matchesLoading} />
-                    </CardContent>
-                  </Card>
-                )}
+                    </div>
+                    
+                    {/* AI Matching Results */}
+                    <ResultsTable matches={filteredMatches} isLoading={matchesLoading} />
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>
