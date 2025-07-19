@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: frappe_root
+      MYSQL_DATABASE: frappe_hrms
+      MYSQL_USER: frappe
+      MYSQL_PASSWORD: frappe_pass
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d
+    ports:
+      - "3307:3306"
+    networks:
+      - frappe_network
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6380:6379"
+    networks:
+      - frappe_network
+
+  frappe:
+    image: frappe/frappe:version-15-beta
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_ROOT_USER=root
+      - DB_ROOT_PASSWORD=frappe_root
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - FRAPPE_SITE_NAME=aimhi-hrms.local
+      - INSTALL_APPS=hrms,aimhi_hrms
+    volumes:
+      - frappe_data:/home/frappe/frappe-bench
+      - ./aimhi_hrms:/home/frappe/frappe-bench/apps/aimhi_hrms:ro
+      - ./scripts:/home/frappe/scripts
+    ports:
+      - "8001:8000"  # Different port to avoid conflict with AIM Hi
+      - "9001:9000"
+    networks:
+      - frappe_network
+    command: >
+      bash -c "
+        cd /home/frappe/frappe-bench &&
+        if [ ! -d sites/aimhi-hrms.local ]; then
+          bench new-site aimhi-hrms.local 
+            --admin-password admin123 
+            --db-name frappe_hrms 
+            --db-host db 
+            --db-port 3306 
+            --db-root-username root 
+            --db-root-password frappe_root &&
+          bench --site aimhi-hrms.local install-app hrms &&
+          bench --site aimhi-hrms.local install-app aimhi_hrms
+        fi &&
+        bench --site aimhi-hrms.local add-to-hosts &&
+        bench start
+      "
+
+volumes:
+  mariadb_data:
+  redis_data:
+  frappe_data:
+
+networks:
+  frappe_network:
+    driver: bridge
