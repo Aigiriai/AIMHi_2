@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: frappe_admin
+      MYSQL_DATABASE: frappe
+      MYSQL_USER: frappe
+      MYSQL_PASSWORD: frappe_password
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - frappe-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - frappe-network
+
+  frappe:
+    image: frappe/bench:latest
+    command: >
+      bash -c "
+        bench init --skip-redis-config-generation --frappe-branch version-15 frappe-bench &&
+        cd frappe-bench &&
+        bench get-app hrms https://github.com/frappe/hrms &&
+        bench new-site hrms.local --admin-password admin123 --mariadb-root-password frappe_admin --db-name frappe --db-host db &&
+        bench --site hrms.local install-app hrms &&
+        bench --site hrms.local add-to-hosts &&
+        bench start
+      "
+    volumes:
+      - frappe-data:/home/frappe/frappe-bench
+      - ./custom-apps:/home/frappe/frappe-bench/apps/custom
+    ports:
+      - "8000:8000"
+      - "9000:9000"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - frappe-network
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+volumes:
+  mariadb-data:
+  frappe-data:
+
+networks:
+  frappe-network:
+    driver: bridge

@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "email-validator>=2.2.0",
     "fastapi>=0.115.12",
+    "frappe-bench>=5.25.9",
     "openai>=1.82.0",
     "passlib>=1.7.4",
     "pdfplumber>=0.11.6",
