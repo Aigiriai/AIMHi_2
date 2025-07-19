@@ -1,0 +1,131 @@
+{
+    "creation": "2025-07-19 17:00:00.000000",
+    "doctype": "DocType",
+    "engine": "InnoDB",
+    "field_order": [
+        "job_opening",
+        "job_applicant",
+        "match_percentage",
+        "match_grade",
+        "reasoning",
+        "skills_match_score",
+        "experience_level_score",
+        "keyword_relevance_score",
+        "professional_depth_score",
+        "domain_experience_score",
+        "weighted_scores",
+        "skill_analysis",
+        "processed_on"
+    ],
+    "fields": [
+        {
+            "fieldname": "job_opening",
+            "fieldtype": "Link",
+            "label": "Job Opening",
+            "options": "Job Opening",
+            "reqd": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "job_applicant",
+            "fieldtype": "Link",
+            "label": "Job Applicant",
+            "options": "Job Applicant",
+            "reqd": 1,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "match_percentage",
+            "fieldtype": "Float",
+            "label": "Match Percentage",
+            "precision": 2,
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "match_grade",
+            "fieldtype": "Select",
+            "label": "Match Grade",
+            "options": "Excellent\\nGood\\nFair\\nPoor",
+            "in_list_view": 1
+        },
+        {
+            "fieldname": "reasoning",
+            "fieldtype": "Long Text",
+            "label": "Reasoning"
+        },
+        {
+            "fieldname": "skills_match_score",
+            "fieldtype": "Int",
+            "label": "Skills Match Score"
+        },
+        {
+            "fieldname": "experience_level_score",
+            "fieldtype": "Int",
+            "label": "Experience Level Score"
+        },
+        {
+            "fieldname": "keyword_relevance_score",
+            "fieldtype": "Int",
+            "label": "Keyword Relevance Score"
+        },
+        {
+            "fieldname": "professional_depth_score",
+            "fieldtype": "Int",
+            "label": "Professional Depth Score"
+        },
+        {
+            "fieldname": "domain_experience_score",
+            "fieldtype": "Int",
+            "label": "Domain Experience Score"
+        },
+        {
+            "fieldname": "weighted_scores",
+            "fieldtype": "JSON",
+            "label": "Weighted Scores"
+        },
+        {
+            "fieldname": "skill_analysis",
+            "fieldtype": "JSON",
+            "label": "Skill Analysis"
+        },
+        {
+            "fieldname": "processed_on",
+            "fieldtype": "Datetime",
+            "label": "Processed On",
+            "default": "now()"
+        }
+    ],
+    "modified": "2025-07-19 17:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "AIM Hi AI Matching",
+    "name": "AI Match Result",
+    "owner": "Administrator",
+    "permissions": [
+        {
+            "create": 1,
+            "delete": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "HR Manager",
+            "share": 1,
+            "write": 1
+        },
+        {
+            "create": 1,
+            "email": 1,
+            "export": 1,
+            "print": 1,
+            "read": 1,
+            "report": 1,
+            "role": "HR User",
+            "share": 1,
+            "write": 1
+        }
+    ],
+    "sort_field": "modified",
+    "sort_order": "DESC",
+    "track_changes": 1
+}
