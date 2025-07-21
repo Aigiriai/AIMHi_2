@@ -193,6 +193,17 @@ fi
 cp -r $CUSTOM_APP_PATH apps/
 print_status "Custom app copied"
 
+# Validate app structure
+if [ ! -f "apps/aimhi_hrms/setup.py" ]; then
+    print_error "setup.py not found in aimhi_hrms app. Please ensure you downloaded the updated app structure."
+fi
+
+if [ ! -f "apps/aimhi_hrms/aimhi_hrms/hooks.py" ]; then
+    print_error "hooks.py not found in correct location. Please ensure you downloaded the updated app structure."
+fi
+
+print_status "App structure validated"
+
 # Install custom app
 if bench --site $SITE_NAME list-apps | grep aimhi_hrms &> /dev/null; then
     print_warning "AIM Hi HRMS app already installed. Reinstalling..."

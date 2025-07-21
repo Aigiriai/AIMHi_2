@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:AI-CONFIG-{####}",
+ "creation": "2025-07-19 17:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "configuration_name",
+  "is_active",
+  "skills_weight",
+  "keywords_weight",
+  "domain_experience_weight",
+  "experience_level_weight",
+  "professional_depth_weight",
+  "minimum_match_threshold",
+  "openai_model",
+  "created_by",
+  "created_on"
+ ],
+ "fields": [
+  {
+   "fieldname": "configuration_name",
+   "fieldtype": "Data",
+   "label": "Configuration Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Is Active"
+  },
+  {
+   "default": "25",
+   "fieldname": "skills_weight",
+   "fieldtype": "Float",
+   "label": "Skills Weight (%)",
+   "precision": "2"
+  },
+  {
+   "default": "25",
+   "fieldname": "keywords_weight",
+   "fieldtype": "Float",
+   "label": "Keywords Weight (%)",
+   "precision": "2"
+  },
+  {
+   "default": "20",
+   "fieldname": "domain_experience_weight",
+   "fieldtype": "Float",
+   "label": "Domain Experience Weight (%)",
+   "precision": "2"
+  },
+  {
+   "default": "15",
+   "fieldname": "experience_level_weight",
+   "fieldtype": "Float",
+   "label": "Experience Level Weight (%)",
+   "precision": "2"
+  },
+  {
+   "default": "15",
+   "fieldname": "professional_depth_weight",
+   "fieldtype": "Float",
+   "label": "Professional Depth Weight (%)",
+   "precision": "2"
+  },
+  {
+   "default": "40",
+   "fieldname": "minimum_match_threshold",
+   "fieldtype": "Float",
+   "label": "Minimum Match Threshold (%)",
+   "precision": "2"
+  },
+  {
+   "default": "gpt-4o-mini",
+   "fieldname": "openai_model",
+   "fieldtype": "Select",
+   "label": "OpenAI Model",
+   "options": "gpt-4o-mini\ngpt-4o\ngpt-3.5-turbo"
+  },
+  {
+   "fieldname": "created_by",
+   "fieldtype": "Link",
+   "label": "Created By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "created_on",
+   "fieldtype": "Datetime",
+   "label": "Created On",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-07-19 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AIM Hi AI Matching",
+ "name": "AI Matching Configuration",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "HR Manager"
+  }
+ ],
+ "quick_entry": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

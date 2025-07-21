@@ -1,0 +1,3 @@
+# AIM Hi HRMS Requirements
+frappe
+hrms

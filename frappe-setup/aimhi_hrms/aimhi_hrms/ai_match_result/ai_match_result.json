@@ -1,0 +1,137 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:AI-MATCH-{####}",
+ "creation": "2025-07-19 17:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "job_opening",
+  "job_applicant",
+  "match_percentage",
+  "match_grade",
+  "skills_score",
+  "experience_score",
+  "keywords_score",
+  "professional_depth_score",
+  "domain_experience_score",
+  "analysis_reasoning",
+  "processed_on",
+  "processed_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "job_opening",
+   "fieldtype": "Link",
+   "label": "Job Opening",
+   "options": "Job Opening",
+   "reqd": 1
+  },
+  {
+   "fieldname": "job_applicant",
+   "fieldtype": "Link",
+   "label": "Job Applicant",
+   "options": "Job Applicant",
+   "reqd": 1
+  },
+  {
+   "fieldname": "match_percentage",
+   "fieldtype": "Float",
+   "label": "Match Percentage",
+   "precision": "2"
+  },
+  {
+   "fieldname": "match_grade",
+   "fieldtype": "Select",
+   "label": "Match Grade",
+   "options": "Excellent\nGood\nFair\nPoor"
+  },
+  {
+   "fieldname": "skills_score",
+   "fieldtype": "Float",
+   "label": "Skills Score",
+   "precision": "2"
+  },
+  {
+   "fieldname": "experience_score",
+   "fieldtype": "Float",
+   "label": "Experience Score",
+   "precision": "2"
+  },
+  {
+   "fieldname": "keywords_score",
+   "fieldtype": "Float",
+   "label": "Keywords Score",
+   "precision": "2"
+  },
+  {
+   "fieldname": "professional_depth_score",
+   "fieldtype": "Float",
+   "label": "Professional Depth Score",
+   "precision": "2"
+  },
+  {
+   "fieldname": "domain_experience_score",
+   "fieldtype": "Float",
+   "label": "Domain Experience Score",
+   "precision": "2"
+  },
+  {
+   "fieldname": "analysis_reasoning",
+   "fieldtype": "Long Text",
+   "label": "Analysis Reasoning"
+  },
+  {
+   "fieldname": "processed_on",
+   "fieldtype": "Datetime",
+   "label": "Processed On"
+  },
+  {
+   "fieldname": "processed_by",
+   "fieldtype": "Link",
+   "label": "Processed By",
+   "options": "User"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-07-19 17:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "AIM Hi AI Matching",
+ "name": "AI Match Result",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR User",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 1,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
