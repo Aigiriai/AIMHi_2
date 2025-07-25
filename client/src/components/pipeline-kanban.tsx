@@ -254,6 +254,7 @@ export function PipelineKanban() {
             }
             onNavigateToJob={(jobId: number) => {
               // Navigate to Recruitment -> Job Postings tab and highlight specific job
+              console.log(`🔗 PIPELINE: Navigating to job ${jobId}`);
               setLocation(`/recruitment?tab=jobs&jobId=${jobId}`);
             }}
           />
@@ -268,6 +269,7 @@ export function PipelineKanban() {
             }
             onNavigateToCandidate={(candidateId: number) => {
               // Navigate to Recruitment -> Candidates tab and highlight specific candidate
+              console.log(`🔗 PIPELINE: Navigating to candidate ${candidateId}`);
               setLocation(`/recruitment?tab=candidates&candidateId=${candidateId}`);
             }}
             onSelectJob={setSelectedJob}
