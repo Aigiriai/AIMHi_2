@@ -50,10 +50,14 @@ export default function LoginForm() {
         description: `Welcome back, ${response.user.firstName}!`,
       });
 
-      // Force page reload to ensure fresh authentication state
+      // Store authentication state and redirect
       const redirectPath = response.user.role === 'super_admin' ? '/management' : '/recruitment';
       console.log('Login successful, redirecting to:', redirectPath, 'for role:', response.user.role);
-      window.location.href = redirectPath;
+      
+      // Use wouter navigation instead of window.location.href to avoid page reload
+      setTimeout(() => {
+        setLocation(redirectPath);
+      }, 100);
     } catch (error) {
       toast({
         title: "Login Failed",

@@ -30,20 +30,15 @@ class AuthService {
   private user: User | null = null;
 
   constructor() {
-    // Only clear auth if it's a fresh browser session (no sessionStorage flag)
-    if (!sessionStorage.getItem('auth_session_active')) {
-      this.clearAuth();
-      sessionStorage.setItem('auth_session_active', 'true');
-    } else {
-      // Load from localStorage on initialization
-      this.token = localStorage.getItem('authToken');
-      const userData = localStorage.getItem('auth_user');
-      if (userData) {
-        try {
-          this.user = JSON.parse(userData);
-        } catch (error) {
-          this.clearAuth();
-        }
+    // Always load from localStorage on initialization
+    this.token = localStorage.getItem('authToken');
+    const userData = localStorage.getItem('auth_user');
+    if (userData) {
+      try {
+        this.user = JSON.parse(userData);
+      } catch (error) {
+        console.error('Failed to parse user data from localStorage:', error);
+        this.clearAuth();
       }
     }
   }
@@ -100,8 +95,10 @@ class AuthService {
 
   logout(): void {
     this.clearAuth();
-    sessionStorage.removeItem('auth_session_active');
-    window.location.href = '/login';
+    // Use navigation instead of window.location to avoid authentication token issues
+    setTimeout(() => {
+      window.location.href = '/login';
+    }, 100);
   }
 
   isAuthenticated(): boolean {
