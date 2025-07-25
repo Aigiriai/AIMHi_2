@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -101,13 +102,7 @@ export function PipelineKanban() {
   // Move application mutation
   const moveApplicationMutation = useMutation({
     mutationFn: async ({ applicationId, newStage, reason }: { applicationId: number; newStage: string; reason?: string }) => {
-      const response = await fetch(`/api/applications/${applicationId}/move`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newStage, reason })
-      });
-      if (!response.ok) throw new Error('Failed to move application');
-      return response.json();
+      return apiRequest(`/api/applications/${applicationId}/move`, "POST", { newStage, reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
@@ -122,13 +117,7 @@ export function PipelineKanban() {
   // Update job status mutation
   const updateJobStatusMutation = useMutation({
     mutationFn: async ({ jobId, newStatus, reason }: { jobId: number; newStatus: string; reason?: string }) => {
-      const response = await fetch(`/api/jobs/${jobId}/status`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newStatus, reason })
-      });
-      if (!response.ok) throw new Error('Failed to update job status');
-      return response.json();
+      return apiRequest(`/api/jobs/${jobId}/status`, "POST", { newStatus, reason });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
