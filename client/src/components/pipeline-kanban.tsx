@@ -438,13 +438,8 @@ function JobCard({
             <ExternalLink className="h-3 w-3 flex-shrink-0" />
           </button>
           
-          <div className="text-xs text-gray-500 mb-2">
+          <div className="text-xs text-gray-500">
             ID: {job.id}
-          </div>
-          
-          <div className="flex items-center justify-between text-xs text-gray-600">
-            <span>By {job.createdByName}</span>
-            <span>{job.applications.length} apps</span>
           </div>
           
           <div className="flex justify-center">
