@@ -112,6 +112,8 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
   - Streamlined card layouts for better scalability with many job postings
   - Simplified Application Pipeline cards to show only candidate name and ID (removed job title, match %, experience, date)
   - Implemented custom event-based navigation system for seamless tab switching
+  - Added candidate IDs to Recruitment→Candidates view for easier identification
+  - Added job IDs to both Job Pipeline view and Recruitment→Job Postings view for better tracking
 - **Navigation Integration**: Seamless routing between pipeline view and detailed job/candidate views
 - **Comprehensive Logging**: Added detailed logging throughout entire pipeline system for debugging
 - **Cache Management**: Fixed statistics caching issues with proper invalidation and real-time updates

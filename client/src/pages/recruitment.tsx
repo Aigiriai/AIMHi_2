@@ -523,6 +523,7 @@ function RecruitmentDashboard() {
                               />
                               <div className="flex-1">
                                 <h3 className="text-lg font-semibold">{job.title}</h3>
+                                <p className="text-sm text-gray-500 mb-2">ID: {job.id}</p>
                                 <p className="text-gray-600 mt-2">{job.description}</p>
                                 <div className="flex items-center justify-between mt-4">
                                   <div className="flex items-center gap-4">
@@ -609,6 +610,7 @@ function RecruitmentDashboard() {
                                   <div>
                                     <h3 className="text-lg font-semibold">{candidate.name}</h3>
                                     <p className="text-gray-600">{candidate.email}</p>
+                                    <p className="text-sm text-gray-500">ID: {candidate.id}</p>
                                     <div className="flex items-center gap-4 mt-4">
                                       <Badge variant="secondary">{candidate.experience} years experience</Badge>
                                       <span className="text-sm text-gray-500">{candidate.phone}</span>
