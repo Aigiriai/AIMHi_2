@@ -54,6 +54,8 @@ function Router() {
           console.log('Authentication successful:', user.role);
         } catch (userError) {
           console.error('Failed to get user data:', userError);
+          // Clear auth state on error
+          authService.clearAuth();
           setIsAuthenticated(false);
           setUserRole(null);
         }

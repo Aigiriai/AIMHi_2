@@ -146,7 +146,7 @@ class AuthService {
     window.dispatchEvent(new CustomEvent('auth-change'));
   }
 
-  private clearAuth(): void {
+  clearAuth(): void {
     this.token = null;
     this.user = null;
     localStorage.removeItem('authToken');
