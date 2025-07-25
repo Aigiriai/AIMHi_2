@@ -172,13 +172,17 @@ export function PipelineKanban() {
   }
 
   const jobs: Job[] = (pipelineData as any)?.jobs || [];
-  const stats: PipelineStats = (statsData as PipelineStats) || {
+  // Fix stats data extraction - backend returns {success: true, stats: {...}}
+  const stats: PipelineStats = (statsData as any)?.stats || {
     totalJobs: 0,
     activeJobs: 0,
     totalApplications: 0,
     jobsByStatus: {},
     applicationsByStatus: {}
   };
+  
+  console.log(`🎯 FRONTEND STATS: Raw statsData:`, statsData);
+  console.log(`🎯 FRONTEND STATS: Extracted stats:`, stats);
 
   return (
     <div className="space-y-6">
