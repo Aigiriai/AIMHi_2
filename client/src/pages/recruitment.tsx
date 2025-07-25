@@ -46,37 +46,26 @@ function RecruitmentDashboard() {
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Parse URL parameters to handle navigation from pipeline
+  // Listen for custom events from pipeline navigation
   useEffect(() => {
-    const urlParams = new URLSearchParams(location.split('?')[1] || '');
-    const tabParam = urlParams.get('tab');
-    const jobId = urlParams.get('jobId');
-    const candidateId = urlParams.get('candidateId');
-    
-    console.log(`🔗 RECRUITMENT NAVIGATION: URL params - tab: ${tabParam}, jobId: ${jobId}, candidateId: ${candidateId}`);
-    
-    if (tabParam) {
-      // Map URL tab parameter to actual tab names
-      const tabMapping: { [key: string]: string } = {
-        'jobs': 'jobs',
-        'candidates': 'candidates'
-      };
-      
-      const targetTab = tabMapping[tabParam];
-      if (targetTab && targetTab !== activeTab) {
-        console.log(`🔗 RECRUITMENT NAVIGATION: Switching to tab: ${targetTab}`);
-        setActiveTab(targetTab);
-      }
-      
-      // TODO: Could also scroll to specific job/candidate if needed
-      if (jobId) {
-        console.log(`🔗 RECRUITMENT NAVIGATION: Highlighting job ID: ${jobId}`);
-      }
-      if (candidateId) {
-        console.log(`🔗 RECRUITMENT NAVIGATION: Highlighting candidate ID: ${candidateId}`);
-      }
-    }
-  }, [location, activeTab]);
+    const handleSwitchToJobs = () => {
+      console.log(`🔗 RECRUITMENT: Switching to jobs tab from pipeline`);
+      setActiveTab('jobs');
+    };
+
+    const handleSwitchToCandidates = () => {
+      console.log(`🔗 RECRUITMENT: Switching to candidates tab from pipeline`);
+      setActiveTab('candidates');
+    };
+
+    window.addEventListener('switchToJobsTab', handleSwitchToJobs);
+    window.addEventListener('switchToCandidatesTab', handleSwitchToCandidates);
+
+    return () => {
+      window.removeEventListener('switchToJobsTab', handleSwitchToJobs);
+      window.removeEventListener('switchToCandidatesTab', handleSwitchToCandidates);
+    };
+  }, []);
 
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],

@@ -253,9 +253,14 @@ export function PipelineKanban() {
               updateJobStatusMutation.mutate({ jobId, newStatus, reason })
             }
             onNavigateToJob={(jobId: number) => {
-              // Navigate to Recruitment -> Job Postings tab and highlight specific job
-              console.log(`🔗 PIPELINE: Navigating to job ${jobId}`);
-              setLocation(`/recruitment?tab=jobs&jobId=${jobId}`);
+              // Navigate directly to Recruitment -> Job Postings tab
+              console.log(`🔗 PIPELINE: Navigating to recruitment job postings`);
+              setLocation('/recruitment');
+              // Set a timeout to ensure navigation completes before triggering tab change
+              setTimeout(() => {
+                // Trigger a custom event to switch tabs
+                window.dispatchEvent(new CustomEvent('switchToJobsTab'));
+              }, 100);
             }}
           />
         </TabsContent>
@@ -268,9 +273,14 @@ export function PipelineKanban() {
               moveApplicationMutation.mutate({ applicationId, newStage, reason })
             }
             onNavigateToCandidate={(candidateId: number) => {
-              // Navigate to Recruitment -> Candidates tab and highlight specific candidate
-              console.log(`🔗 PIPELINE: Navigating to candidate ${candidateId}`);
-              setLocation(`/recruitment?tab=candidates&candidateId=${candidateId}`);
+              // Navigate directly to Recruitment -> Candidates tab
+              console.log(`🔗 PIPELINE: Navigating to recruitment candidates`);
+              setLocation('/recruitment');
+              // Set a timeout to ensure navigation completes before triggering tab change
+              setTimeout(() => {
+                // Trigger a custom event to switch tabs
+                window.dispatchEvent(new CustomEvent('switchToCandidatesTab'));
+              }, 100);
             }}
             onSelectJob={setSelectedJob}
           />
