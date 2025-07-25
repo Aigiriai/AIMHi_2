@@ -63,10 +63,13 @@ export default function JobAssignmentModal({
   const [selectedRole, setSelectedRole] = useState<string>("assigned");
 
   // Fetch team members
-  const { data: users = [], isLoading: usersLoading } = useQuery<User[]>({
+  const { data: usersResponse, isLoading: usersLoading } = useQuery({
     queryKey: ["/api/users"],
     enabled: open,
   });
+
+  // Extract users array from response object
+  const users = usersResponse?.users || [];
 
   // Fetch current job assignments
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<JobAssignment[]>({
@@ -154,8 +157,8 @@ export default function JobAssignmentModal({
   };
 
   // Filter out already assigned users
-  const availableUsers = users.filter((user: User) => 
-    !assignments.some((assignment: JobAssignment) => assignment.userId === user.id)
+  const availableUsers = users.filter((user: any) => 
+    !assignments.some((assignment: any) => assignment.userId === user.id)
   );
 
   return (
@@ -192,7 +195,7 @@ export default function JobAssignmentModal({
                         <SelectValue placeholder="Choose a team member" />
                       </SelectTrigger>
                       <SelectContent>
-                        {availableUsers.map((user: User) => (
+                        {availableUsers.map((user: any) => (
                           <SelectItem key={user.id} value={user.id.toString()}>
                             <div className="flex items-center gap-2">
                               <span>{user.firstName} {user.lastName}</span>
@@ -261,7 +264,7 @@ export default function JobAssignmentModal({
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {assignments.map((assignment) => (
+                  {assignments.map((assignment: any) => (
                     <div
                       key={assignment.id}
                       className="flex items-center justify-between p-3 border rounded-lg"
@@ -269,16 +272,16 @@ export default function JobAssignmentModal({
                       <div className="flex items-center gap-3">
                         <div>
                           <p className="font-medium">
-                            {assignment.user.firstName} {assignment.user.lastName}
+                            {assignment.user?.firstName || 'Unknown'} {assignment.user?.lastName || 'User'}
                           </p>
-                          <p className="text-sm text-gray-500">{assignment.user.email}</p>
+                          <p className="text-sm text-gray-500">{assignment.user?.email || 'No email'}</p>
                         </div>
                         <div className="flex gap-2">
                           <Badge variant={getRoleBadgeVariant(assignment.role)}>
                             {assignment.role}
                           </Badge>
                           <Badge variant="outline" className="text-xs">
-                            {assignment.user.role}
+                            {assignment.user?.role || 'Unknown'}
                           </Badge>
                         </div>
                       </div>
