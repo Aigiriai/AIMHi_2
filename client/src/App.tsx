@@ -22,12 +22,18 @@ import OnboardingDashboard from "@/pages/onboarding-dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
+  console.log('Router component initializing...');
   const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isAuthenticated());
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(() => authService.getUser()?.role || null);
 
   useEffect(() => {
-    checkAuthentication();
+    checkAuthentication().catch(error => {
+      console.error('Authentication initialization failed:', error);
+      setIsAuthenticated(false);
+      setUserRole(null);
+      setIsLoading(false);
+    });
     
     // Set up a simple interval to check authentication periodically
     const interval = setInterval(() => {
@@ -148,14 +154,29 @@ function Router() {
 }
 
 function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
+  console.log('App component rendering...');
+  
+  try {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </QueryClientProvider>
+    );
+  } catch (error) {
+    console.error('App render error:', error);
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-red-50">
+        <div className="text-center">
+          <h1 className="text-xl font-bold text-red-600">Application Error</h1>
+          <p className="text-red-500 mt-2">Failed to load the application</p>
+          <p className="text-sm text-gray-600 mt-2">Check the console for details</p>
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App;

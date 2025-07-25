@@ -71,26 +71,31 @@ class AuthService {
       throw new Error('No authentication token');
     }
 
-    const response = await fetch('/api/auth/me', {
-      headers: {
-        'Authorization': `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const response = await fetch('/api/auth/me', {
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        this.clearAuth();
-        window.location.href = '/login';
-        throw new Error('Session expired');
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          this.clearAuth();
+          throw new Error('Session expired');
+        }
+        throw new Error(`Failed to get user data: ${response.status}`);
       }
-      throw new Error('Failed to get user data');
-    }
 
-    const user = await response.json();
-    this.user = user;
-    localStorage.setItem('auth_user', JSON.stringify(user));
-    return user;
+      const user = await response.json();
+      this.user = user;
+      localStorage.setItem('auth_user', JSON.stringify(user));
+      return user;
+    } catch (error) {
+      console.error('getCurrentUser error:', error);
+      // Don't redirect on network errors, just throw
+      throw error;
+    }
   }
 
   logout(): void {
