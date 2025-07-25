@@ -716,12 +716,23 @@ router.post('/invite-organization-admin', authenticateToken, requireSuperAdmin, 
 router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const db = await getDB();
-    const { email, firstName, lastName, role } = req.body;
+    const { email, firstName, lastName, role, phone } = req.body;
     const invitingUser = req.user!;
+
+    console.log('📧 Invite user request received:', { email, firstName, lastName, role, phone, invitingUserRole: invitingUser.role });
 
     // Validate required fields
     if (!email || !firstName || !lastName || !role) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      console.error('❌ Missing required fields:', { email: !!email, firstName: !!firstName, lastName: !!lastName, role: !!role });
+      return res.status(400).json({ 
+        message: 'Missing required fields',
+        details: {
+          email: !email ? 'Email is required' : null,
+          firstName: !firstName ? 'First name is required' : null,
+          lastName: !lastName ? 'Last name is required' : null,
+          role: !role ? 'Role is required' : null
+        }
+      });
     }
 
     // Check if user with this email already exists in this organization

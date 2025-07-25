@@ -265,7 +265,29 @@ export default function SettingsPage() {
   };
 
   const inviteUser = () => {
-    inviteUserMutation.mutate(newUserData);
+    console.log('Attempting to invite user with data:', newUserData);
+    
+    // Validate required fields
+    if (!newUserData.firstName || !newUserData.lastName || !newUserData.email || !newUserData.role) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields: first name, last name, email, and role.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Send only the required fields to match backend expectation
+    const inviteData = {
+      firstName: newUserData.firstName,
+      lastName: newUserData.lastName,
+      email: newUserData.email,
+      role: newUserData.role,
+      phone: newUserData.phone // optional field
+    };
+    
+    console.log('Sending invite data:', inviteData);
+    inviteUserMutation.mutate(inviteData);
   };
 
   const inviteOrgAdmin = () => {
