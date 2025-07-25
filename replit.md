@@ -100,10 +100,17 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
-### 2025-01-25: Complete ATS Pipeline Management System Implementation
-- **MILESTONE ACHIEVED**: Comprehensive ATS lifecycle management fully operational
+### 2025-01-25: Complete ATS Pipeline Management System with UI Enhancements
+- **MILESTONE ACHIEVED**: Comprehensive ATS lifecycle management fully operational with enhanced navigation
 - **Pipeline Functionality**: Both Job Pipeline and Application Pipeline with full drag-and-drop workflow stages
 - **Real-time Statistics**: Count numbers in pipeline stage boxes update immediately after status changes
+- **UI/UX Improvements**: 
+  - Removed cluttered "View Apps" button for cleaner interface
+  - Job titles now clickable links that navigate to Recruitment→Job Postings→[Job Name] view
+  - Candidate names now clickable links that navigate to Recruitment→Candidates→[Candidate Name] view
+  - Added external link icons for clear visual indication of navigation actions
+  - Streamlined card layouts for better scalability with many job postings
+- **Navigation Integration**: Seamless routing between pipeline view and detailed job/candidate views
 - **Comprehensive Logging**: Added detailed logging throughout entire pipeline system for debugging
 - **Cache Management**: Fixed statistics caching issues with proper invalidation and real-time updates
 - **Authentication & Permissions**: Role-based access control working for all pipeline operations
@@ -112,7 +119,7 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 - **API Integration**: All backend endpoints working perfectly with comprehensive error handling
 - **Frontend-Backend Sync**: Fixed parameter mismatches and implemented proper data flow
 - **Database Updates**: SQLite database properly tracking all status changes with history
-- **User Interface**: Clean, professional pipeline view with visual stage management
+- **User Interface**: Clean, professional pipeline view with visual stage management and intuitive navigation
 - **Testing Verified**: All move operations confirmed working via both API and web interface
 
 ### 2025-01-25: Deployment Fix - Removed Python Dependencies

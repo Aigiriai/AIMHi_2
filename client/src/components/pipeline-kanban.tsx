@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +21,8 @@ import {
   BarChart3,
   TrendingUp,
   UserCheck,
-  Building
+  Building,
+  ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -87,6 +89,7 @@ export function PipelineKanban() {
   const [selectedJob, setSelectedJob] = useState<number | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   // Force refresh on component mount to get latest data
   React.useEffect(() => {
@@ -181,8 +184,7 @@ export function PipelineKanban() {
     applicationsByStatus: {}
   };
   
-  console.log(`🎯 FRONTEND STATS: Raw statsData:`, statsData);
-  console.log(`🎯 FRONTEND STATS: Extracted stats:`, stats);
+  // Debug logging removed for cleaner UI
 
   return (
     <div className="space-y-6">
@@ -250,7 +252,10 @@ export function PipelineKanban() {
             onUpdateJobStatus={(jobId, newStatus, reason) => 
               updateJobStatusMutation.mutate({ jobId, newStatus, reason })
             }
-            onSelectJob={setSelectedJob}
+            onNavigateToJob={(jobId: number) => {
+              // Navigate to Recruitment -> Job Postings tab and highlight specific job
+              setLocation(`/recruitment?tab=jobs&jobId=${jobId}`);
+            }}
           />
         </TabsContent>
 
@@ -261,6 +266,10 @@ export function PipelineKanban() {
             onMoveApplication={(applicationId, newStage, reason) =>
               moveApplicationMutation.mutate({ applicationId, newStage, reason })
             }
+            onNavigateToCandidate={(candidateId: number) => {
+              // Navigate to Recruitment -> Candidates tab and highlight specific candidate
+              setLocation(`/recruitment?tab=candidates&candidateId=${candidateId}`);
+            }}
             onSelectJob={setSelectedJob}
           />
         </TabsContent>
@@ -272,11 +281,11 @@ export function PipelineKanban() {
 function JobPipelineView({ 
   jobs, 
   onUpdateJobStatus, 
-  onSelectJob 
+  onNavigateToJob 
 }: { 
   jobs: Job[]; 
   onUpdateJobStatus: (jobId: number, newStatus: string, reason?: string) => void;
-  onSelectJob: (jobId: number | null) => void;
+  onNavigateToJob: (jobId: number) => void;
 }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
@@ -298,7 +307,7 @@ function JobPipelineView({
                   key={job.id}
                   job={job}
                   onUpdateStatus={(newStatus, reason) => onUpdateJobStatus(job.id, newStatus, reason)}
-                  onSelect={() => onSelectJob(job.id)}
+                  onNavigateToJob={() => onNavigateToJob(job.id)}
                 />
               ))}
             </div>
@@ -313,11 +322,13 @@ function ApplicationPipelineView({
   jobs, 
   selectedJob, 
   onMoveApplication, 
+  onNavigateToCandidate,
   onSelectJob 
 }: { 
   jobs: Job[]; 
   selectedJob: number | null;
   onMoveApplication: (applicationId: number, newStage: string, reason?: string) => void;
+  onNavigateToCandidate: (candidateId: number) => void;
   onSelectJob: (jobId: number | null) => void;
 }) {
   const filteredJobs = selectedJob ? jobs.filter(job => job.id === selectedJob) : jobs;
@@ -367,6 +378,7 @@ function ApplicationPipelineView({
                     key={application.id}
                     application={application}
                     onMove={(newStage, reason) => onMoveApplication(application.id, newStage, reason)}
+                    onNavigateToCandidate={() => onNavigateToCandidate(application.candidateId)}
                   />
                 ))}
               </div>
@@ -381,11 +393,11 @@ function ApplicationPipelineView({
 function JobCard({ 
   job, 
   onUpdateStatus, 
-  onSelect 
+  onNavigateToJob 
 }: { 
   job: Job; 
   onUpdateStatus: (newStatus: string, reason?: string) => void;
-  onSelect: () => void;
+  onNavigateToJob: (jobId: number) => void;
 }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState(job.status);
@@ -397,30 +409,32 @@ function JobCard({
     setReason('');
   };
 
+  const handleTitleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onNavigateToJob(job.id);
+  };
+
   return (
-    <Card className="cursor-pointer hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-3">
         <div className="space-y-2">
-          <h4 className="font-medium text-sm line-clamp-2">{job.title}</h4>
+          <button 
+            onClick={handleTitleClick}
+            className="font-medium text-sm line-clamp-2 text-left text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 w-full"
+          >
+            {job.title}
+            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+          </button>
           
           <div className="flex items-center justify-between text-xs text-gray-600">
             <span>By {job.createdByName}</span>
             <span>{job.applications.length} apps</span>
           </div>
           
-          <div className="flex items-center justify-between">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onSelect}
-              className="text-xs"
-            >
-              View Apps
-            </Button>
-            
+          <div className="flex justify-center">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-xs">
+                <Button variant="outline" size="sm" className="text-xs w-full">
                   Move
                 </Button>
               </DialogTrigger>
@@ -469,10 +483,12 @@ function JobCard({
 
 function ApplicationCard({ 
   application, 
-  onMove 
+  onMove,
+  onNavigateToCandidate 
 }: { 
   application: Application & { jobTitle: string }; 
   onMove: (newStage: string, reason?: string) => void;
+  onNavigateToCandidate: (candidateId: number) => void;
 }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newStage, setNewStage] = useState(application.currentStage);
@@ -485,11 +501,22 @@ function ApplicationCard({
     setReason('');
   };
 
+  const handleCandidateClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onNavigateToCandidate(application.candidateId);
+  };
+
   return (
-    <Card className="cursor-pointer hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-3">
         <div className="space-y-2">
-          <h4 className="font-medium text-sm line-clamp-1">{application.candidateName}</h4>
+          <button 
+            onClick={handleCandidateClick}
+            className="font-medium text-sm line-clamp-1 text-left text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 w-full"
+          >
+            {application.candidateName}
+            <ExternalLink className="h-3 w-3 flex-shrink-0" />
+          </button>
           <p className="text-xs text-gray-600 line-clamp-1">{application.jobTitle}</p>
           
           {application.matchPercentage && (
