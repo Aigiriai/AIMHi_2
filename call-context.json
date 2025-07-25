@@ -1,19 +1,19 @@
 {
-  "candidateName": "Sudhir",
+  "candidateName": "Sudhir Bank",
   "jobDetails": {
-    "id": 3,
+    "id": 4,
     "organization_id": 1,
     "team_id": null,
     "created_by": 1,
-    "title": "C Programming Engineer (Embedded Systems / Firmware)",
-    "description": "We are seeking a highly skilled and passionate C Programming Engineer to join our dynamic software development team. In this role, you will be instrumental in designing, developing, testing, and maintaining robust, efficient, and reliable low-level software and firmware for our complex embedded products. The ideal candidate will possess deep expertise in C programming, a strong understanding of embedded systems principles, and a commitment to producing high-quality, performant code in resource-constrained environments. Key responsibilities include developing, implementing, and optimizing C code for microcontrollers, designing and implementing firmware modules and device drivers, contributing to architectural design, and collaborating with cross-functional teams to deliver cutting-edge solutions.",
+    "title": "Hogan Developers (ILP / IDP / ODS)",
+    "description": "Skilled Hogan Developers with specialization in ILP (Loans), IDP (Deposits), or ODS (Online Delivery Systems) modules of the Hogan core banking platform. Opportunities are open both globally and within India, with flexible work arrangements including onsite, hybrid, or remote, based on candidate preference and business needs. Key skills required include expertise in the Hogan core banking platform, strong hands-on experience with COBOL, JCL, DB2, VSAM, proven ability in maintaining, enhancing, and integrating Hogan modules, sound understanding of banking systems: loans, deposits, online delivery, and excellent communication and client interaction skills.",
     "experience_level": "Mid Level",
     "job_type": "Full Time",
-    "keywords": "C Programming, Embedded Systems, Firmware, ARM Cortex-M, RISC-V, DSPs, Device Drivers, HAL, Microcontrollers, Software Development",
+    "keywords": "Hogan core banking platform, COBOL, JCL, DB2, VSAM, banking systems, loans, deposits, online delivery, communication skills",
     "status": "active",
     "settings": "{}",
-    "created_at": "2025-07-24 05:53:24",
-    "updated_at": "2025-07-24 05:53:24",
+    "created_at": "2025-07-25 07:22:31",
+    "updated_at": "2025-07-25 07:22:31",
     "requirements": "Requirements not specified",
     "location": "Location not specified",
     "salary_min": null,
@@ -23,7 +23,7 @@
     "createdBy": 1,
     "experienceLevel": "Mid Level",
     "jobType": "Full Time",
-    "createdAt": "2025-07-24T05:53:24.000Z",
-    "updatedAt": "2025-07-24T05:53:24.000Z"
+    "createdAt": "2025-07-25T07:22:31.000Z",
+    "updatedAt": "2025-07-25T07:22:31.000Z"
   }
 }
