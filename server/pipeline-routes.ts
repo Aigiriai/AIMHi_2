@@ -7,7 +7,7 @@ import {
   insertApplicationSchema, insertStatusHistorySchema, insertJobAssignmentSchema,
   type ApplicationWithDetails, type JobWithApplications, type PipelineStats, type UserPermissions
 } from "./sqlite-schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
 
 const router = Router();
 
@@ -88,24 +88,61 @@ router.get("/pipeline", authenticateToken, async (req: AuthRequest, res: Respons
     const { db } = await getDB();
     const user = req.user!;
 
-    // Build query based on user role and permissions
-    let jobsQuery = db.select({
-      id: jobs.id,
-      title: jobs.title,
-      status: jobs.status,
-      createdAt: jobs.createdAt,
-      createdBy: jobs.createdBy,
-      organizationId: jobs.organizationId,
-      approvedBy: jobs.approvedBy,
-      approvedAt: jobs.approvedAt,
-      requiresApproval: jobs.requiresApproval,
-      // Include creator info
-      createdByName: sql`${users.firstName} || ' ' || ${users.lastName}`.as('createdByName'),
-    })
-    .from(jobs)
-    .leftJoin(users, eq(jobs.createdBy, users.id))
-    .where(eq(jobs.organizationId, user.organizationId))
-    .orderBy(desc(jobs.createdAt));
+    // Build query based on user role and permissions - implementing detailed permission matrix
+    let jobsQuery;
+    
+    if (['super_admin', 'org_admin'].includes(user.role)) {
+      // Super admin and org admin can see all jobs in their organization
+      jobsQuery = db.select({
+        id: jobs.id,
+        title: jobs.title,
+        status: jobs.status,
+        createdAt: jobs.createdAt,
+        createdBy: jobs.createdBy,
+        organizationId: jobs.organizationId,
+        approvedBy: jobs.approvedBy,
+        approvedAt: jobs.approvedAt,
+        requiresApproval: jobs.requiresApproval,
+        // Include creator info
+        createdByName: sql`${users.firstName} || ' ' || ${users.lastName}`.as('createdByName'),
+      })
+      .from(jobs)
+      .leftJoin(users, eq(jobs.createdBy, users.id))
+      .where(eq(jobs.organizationId, user.organizationId))
+      .orderBy(desc(jobs.createdAt));
+    } else {
+      // For Manager, Team Lead, and Recruiter: only see jobs they created or are assigned to
+      const assignedJobIds = await db.select({ jobId: jobAssignments.jobId })
+        .from(jobAssignments)
+        .where(eq(jobAssignments.userId, user.id));
+      
+      const assignedIds = assignedJobIds.map((a: any) => a.jobId);
+      
+      // Get jobs where user is either the creator OR has an assignment
+      jobsQuery = db.select({
+        id: jobs.id,
+        title: jobs.title,
+        status: jobs.status,
+        createdAt: jobs.createdAt,
+        createdBy: jobs.createdBy,
+        organizationId: jobs.organizationId,
+        approvedBy: jobs.approvedBy,
+        approvedAt: jobs.approvedAt,
+        requiresApproval: jobs.requiresApproval,
+        // Include creator info
+        createdByName: sql`${users.firstName} || ' ' || ${users.lastName}`.as('createdByName'),
+      })
+      .from(jobs)
+      .leftJoin(users, eq(jobs.createdBy, users.id))
+      .where(and(
+        eq(jobs.organizationId, user.organizationId),
+        or(
+          eq(jobs.createdBy, user.id), // Jobs they created
+          assignedIds.length > 0 ? inArray(jobs.id, assignedIds) : sql`0 = 1` // Jobs they're assigned to
+        )
+      ))
+      .orderBy(desc(jobs.createdAt));
+    }
 
     const jobsList = await jobsQuery.all();
 

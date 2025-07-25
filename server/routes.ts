@@ -12,7 +12,7 @@ import settingsRoutes from "./settings-routes";
 import pipelineRoutes from "./pipeline-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
 import { getDB } from "./db-connection";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
 import { initializeMultiTenantSystem } from "./seed-demo";
 import multer from "multer";
 import { getCurrentPinggyDomain } from "./pinggy-service";
@@ -345,7 +345,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/jobs', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const jobs = await storage.getJobsByOrganization(req.user!.organizationId!);
+      const currentUser = req.user!;
+      console.log(`Fetching jobs for organization: ${currentUser.organizationId}`);
+      
+      // Get database connection
+      const { db, schema } = await getDB();
+      
+      // Role-based job filtering with detailed permission matrix
+      let jobsQuery;
+      
+      if (['super_admin', 'org_admin'].includes(currentUser.role)) {
+        // Super admin and org admin can see all jobs in their organization
+        jobsQuery = db.select()
+          .from(schema.jobs)
+          .where(eq(schema.jobs.organizationId, currentUser.organizationId!))
+          .orderBy(desc(schema.jobs.createdAt));
+      } else {
+        // For Manager, Team Lead, and Recruiter: only see jobs they created or are assigned to
+        const assignedJobIds = await db.select({ jobId: schema.jobAssignments.jobId })
+          .from(schema.jobAssignments)
+          .where(eq(schema.jobAssignments.userId, currentUser.id));
+        
+        const assignedIds = assignedJobIds.map((a: any) => a.jobId);
+        
+        // Get jobs where user is either the creator OR has an assignment
+        jobsQuery = db.select()
+          .from(schema.jobs)
+          .where(and(
+            eq(schema.jobs.organizationId, currentUser.organizationId!),
+            or(
+              eq(schema.jobs.createdBy, currentUser.id), // Jobs they created
+              assignedIds.length > 0 ? inArray(schema.jobs.id, assignedIds) : sql`0 = 1` // Jobs they're assigned to
+            )
+          ))
+          .orderBy(desc(schema.jobs.createdAt));
+      }
+      
+      const jobs = await jobsQuery.all();
+      console.log(`Retrieved organization jobs: ${jobs.length}`);
+      
       res.json(jobs);
     } catch (error) {
       console.error("Error fetching jobs:", error);
