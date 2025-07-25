@@ -305,15 +305,17 @@ function JobPipelineView({
         const stageJobs = jobs.filter(job => job.status === stage.id);
         
         return (
-          <div key={stage.id} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-sm">{stage.name}</h3>
-              <Badge variant="secondary" className={stage.color}>
-                {stageJobs.length}
-              </Badge>
+          <div key={stage.id} className="border-2 border-gray-200 rounded-lg p-3 bg-white shadow-sm">
+            <div className={`p-2 rounded-md mb-3 ${stage.color}`}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">{stage.name}</h3>
+                <span className="text-xs font-medium">
+                  {stageJobs.length}
+                </span>
+              </div>
             </div>
             
-            <div className="space-y-2 min-h-[400px] p-2 bg-gray-50 rounded-lg">
+            <div className="space-y-2 min-h-[350px]">
               {stageJobs.map((job) => (
                 <JobCard 
                   key={job.id}
@@ -376,15 +378,17 @@ function ApplicationPipelineView({
           const stageApplications = allApplications.filter(app => app.currentStage === stage.id);
           
           return (
-            <div key={stage.id} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-xs">{stage.name}</h3>
-                <Badge variant="secondary" className={stage.color}>
-                  {stageApplications.length}
-                </Badge>
+            <div key={stage.id} className="border-2 border-gray-200 rounded-lg p-2 bg-white shadow-sm">
+              <div className={`p-2 rounded-md mb-3 ${stage.color}`}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-xs">{stage.name}</h3>
+                  <span className="text-xs font-medium">
+                    {stageApplications.length}
+                  </span>
+                </div>
               </div>
               
-              <div className="space-y-2 min-h-[400px] p-2 bg-gray-50 rounded-lg">
+              <div className="space-y-2 min-h-[350px]">
                 {stageApplications.map((application) => (
                   <ApplicationCard 
                     key={application.id}
