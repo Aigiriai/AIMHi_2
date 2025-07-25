@@ -168,10 +168,11 @@ export default function SettingsPage() {
       });
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Invite user error:', error);
       toast({
         title: "Error",
-        description: "Failed to invite user.",
+        description: error?.message || "Failed to invite user.",
         variant: "destructive",
       });
     }
@@ -274,16 +275,22 @@ export default function SettingsPage() {
         description: "Please fill in all required fields: first name, last name, email, and role.",
         variant: "destructive",
       });
+      console.log('Validation failed:', {
+        firstName: !!newUserData.firstName,
+        lastName: !!newUserData.lastName,
+        email: !!newUserData.email,
+        role: !!newUserData.role
+      });
       return;
     }
     
     // Send only the required fields to match backend expectation
     const inviteData = {
-      firstName: newUserData.firstName,
-      lastName: newUserData.lastName,
-      email: newUserData.email,
+      firstName: newUserData.firstName.trim(),
+      lastName: newUserData.lastName.trim(),
+      email: newUserData.email.trim(),
       role: newUserData.role,
-      phone: newUserData.phone // optional field
+      phone: newUserData.phone?.trim() || '' // optional field
     };
     
     console.log('Sending invite data:', inviteData);
@@ -565,32 +572,44 @@ export default function SettingsPage() {
                                 <div className="space-y-4">
                                   <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                      <Label htmlFor="firstName">First Name</Label>
+                                      <Label htmlFor="firstName" className="flex items-center gap-1">
+                                        First Name
+                                        <span className="text-red-500">*</span>
+                                      </Label>
                                       <Input 
                                         id="firstName" 
                                         placeholder="Jane"
                                         value={newUserData.firstName}
                                         onChange={(e) => setNewUserData({...newUserData, firstName: e.target.value})}
+                                        className={!newUserData.firstName ? "border-red-300 focus:border-red-500" : ""}
                                       />
                                     </div>
                                     <div className="space-y-2">
-                                      <Label htmlFor="lastName">Last Name</Label>
+                                      <Label htmlFor="lastName" className="flex items-center gap-1">
+                                        Last Name
+                                        <span className="text-red-500">*</span>
+                                      </Label>
                                       <Input 
                                         id="lastName" 
                                         placeholder="Doe"
                                         value={newUserData.lastName}
                                         onChange={(e) => setNewUserData({...newUserData, lastName: e.target.value})}
+                                        className={!newUserData.lastName ? "border-red-300 focus:border-red-500" : ""}
                                       />
                                     </div>
                                   </div>
                                   <div className="space-y-2">
-                                    <Label htmlFor="email">Email</Label>
+                                    <Label htmlFor="email" className="flex items-center gap-1">
+                                      Email
+                                      <span className="text-red-500">*</span>
+                                    </Label>
                                     <Input 
                                       id="email" 
                                       type="email"
                                       placeholder="jane@company.com"
                                       value={newUserData.email}
                                       onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+                                      className={!newUserData.email ? "border-red-300 focus:border-red-500" : ""}
                                     />
                                   </div>
                                   <div className="space-y-2">
@@ -603,12 +622,15 @@ export default function SettingsPage() {
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <Label htmlFor="role">Role</Label>
+                                    <Label htmlFor="role" className="flex items-center gap-1">
+                                      Role
+                                      <span className="text-red-500">*</span>
+                                    </Label>
                                     <Select
                                       value={newUserData.role}
                                       onValueChange={(value) => setNewUserData({...newUserData, role: value})}
                                     >
-                                      <SelectTrigger>
+                                      <SelectTrigger className={!newUserData.role ? "border-red-300 focus:border-red-500" : ""}>
                                         <SelectValue placeholder="Select a role" />
                                       </SelectTrigger>
                                       <SelectContent>
