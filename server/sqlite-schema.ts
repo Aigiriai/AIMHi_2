@@ -233,6 +233,16 @@ export const jobAssignments = sqliteTable("job_assignments", {
   createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
+// Candidate assignments for permissions
+export const candidateAssignments = sqliteTable("candidate_assignments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  candidateId: integer("candidate_id").references(() => candidates.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  role: text("role").notNull(), // owner, assigned, viewer
+  assignedBy: integer("assigned_by").references(() => users.id).notNull(),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
 // Status history for both jobs and applications
 export const statusHistory = sqliteTable("status_history", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -262,6 +272,7 @@ export const insertJobMatchSchema = createInsertSchema(jobMatches);
 export const insertInterviewSchema = createInsertSchema(interviews);
 export const insertApplicationSchema = createInsertSchema(applications);
 export const insertJobAssignmentSchema = createInsertSchema(jobAssignments);
+export const insertCandidateAssignmentSchema = createInsertSchema(candidateAssignments);
 export const insertStatusHistorySchema = createInsertSchema(statusHistory);
 
 // Types
@@ -293,6 +304,8 @@ export type Application = typeof applications.$inferSelect;
 export type InsertApplication = typeof applications.$inferInsert;
 export type JobAssignment = typeof jobAssignments.$inferSelect;
 export type InsertJobAssignment = typeof jobAssignments.$inferInsert;
+export type CandidateAssignment = typeof candidateAssignments.$inferSelect;
+export type InsertCandidateAssignment = typeof candidateAssignments.$inferInsert;
 export type StatusHistory = typeof statusHistory.$inferSelect;
 export type InsertStatusHistory = typeof statusHistory.$inferInsert;
 
