@@ -529,64 +529,57 @@ function ApplicationCard({
             {application.candidateName}
             <ExternalLink className="h-3 w-3 flex-shrink-0" />
           </button>
-          <p className="text-xs text-gray-600 line-clamp-1">{application.jobTitle}</p>
-          
-          {application.matchPercentage && (
-            <div className="flex items-center gap-1">
-              <div className="text-xs text-gray-600">Match:</div>
-              <Badge variant="outline" className="text-xs">
-                {application.matchPercentage}%
-              </Badge>
-            </div>
-          )}
-          
-          <div className="flex items-center justify-between text-xs text-gray-600">
-            <span>{application.candidateExperience}y exp</span>
-            <span>{new Date(application.appliedAt).toLocaleDateString()}</span>
+          <div className="text-xs text-gray-500">
+            ID: {application.candidateId}
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full text-xs">
-                Move
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Move Application</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label>New Stage</Label>
-                  <Select value={newStage} onValueChange={setNewStage}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {applicationStages.map((stage) => (
-                        <SelectItem key={stage.id} value={stage.id}>
-                          {stage.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label>Reason (Optional)</Label>
-                  <Textarea 
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    placeholder="Enter reason for moving application..."
-                  />
-                </div>
-                
-                <Button onClick={handleMove} className="w-full">
-                  Move Application
+          <div className="flex justify-center">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-xs w-full">
+                  Move
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Move Application</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label>New Stage</Label>
+                    <Select value={newStage} onValueChange={setNewStage}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {applicationStages.map((stage) => (
+                          <SelectItem key={stage.id} value={stage.id}>
+                            {stage.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Reason (Optional)</Label>
+                    <Textarea
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      placeholder="Why is this application being moved?"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleMove}>
+                      Move Application
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </CardContent>
     </Card>
