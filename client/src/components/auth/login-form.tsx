@@ -51,7 +51,9 @@ export default function LoginForm() {
       });
 
       // Force page reload to ensure fresh authentication state
-      window.location.href = response.user.role === 'super_admin' ? '/management' : '/recruitment';
+      const redirectPath = response.user.role === 'super_admin' ? '/management' : '/recruitment';
+      console.log('Login successful, redirecting to:', redirectPath, 'for role:', response.user.role);
+      window.location.href = redirectPath;
     } catch (error) {
       toast({
         title: "Login Failed",

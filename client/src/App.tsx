@@ -122,7 +122,7 @@ function Router() {
           )}
           
           {/* Organization Routes */}
-          {userRole !== 'super_admin' && (
+          {(userRole === 'org_admin' || userRole === 'manager' || userRole === 'team_lead' || userRole === 'recruiter') && (
             <>
               {/* Main Recruitment Dashboard */}
               <Route path="/recruitment" component={RecruitmentDashboard} />
@@ -137,6 +137,24 @@ function Router() {
               {/* Default authenticated route redirects to Recruitment Dashboard */}
               <Route path="/app" component={RecruitmentDashboard} />
             </>
+          )}
+          
+          {/* Fallback route for any authenticated user that doesn't match above */}
+          {isAuthenticated && userRole && (
+            <Route path="/fallback">
+              <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-gray-900">Welcome!</h1>
+                  <p className="text-gray-600 mt-2">User Role: {userRole}</p>
+                  <p className="text-gray-600">Redirecting to appropriate dashboard...</p>
+                  <script>{`
+                    setTimeout(() => {
+                      window.location.href = '${userRole === 'super_admin' ? '/management' : '/recruitment'}';
+                    }, 2000);
+                  `}</script>
+                </div>
+              </div>
+            </Route>
           )}
           
           {/* Legacy Dashboard Route (for backward compatibility) */}
