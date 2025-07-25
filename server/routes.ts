@@ -110,6 +110,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Settings routes
   app.use('/api/settings', settingsRoutes);
+  
+  // Pipeline routes
+  app.use('/api/pipeline', pipelineRoutes);
 
   // Users management routes
   app.get('/api/users', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
@@ -1295,6 +1298,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
       pinggyDomain,
       twilioConfigured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.PHONE_NUMBER_FROM)
     });
+  });
+
+  // Job assignment routes
+  app.get('/api/jobs/:jobId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { db, schema } = await getDB();
+      const jobId = parseInt(req.params.jobId);
+      const currentUser = req.user!;
+
+      // Verify user has access to this job
+      const job = await db.select()
+        .from(schema.jobs)
+        .where(and(
+          eq(schema.jobs.id, jobId),
+          eq(schema.jobs.organizationId, currentUser.organizationId!)
+        ))
+        .get();
+
+      if (!job) {
+        return res.status(404).json({ message: 'Job not found' });
+      }
+
+      // Get assignments with user details
+      const assignments = await db.select({
+        id: schema.jobAssignments.id,
+        userId: schema.jobAssignments.userId,
+        role: schema.jobAssignments.role,
+        assignedBy: schema.jobAssignments.assignedBy,
+        createdAt: schema.jobAssignments.createdAt,
+        user: {
+          firstName: schema.users.firstName,
+          lastName: schema.users.lastName,
+          email: schema.users.email,
+          role: schema.users.role,
+        }
+      })
+      .from(schema.jobAssignments)
+      .innerJoin(schema.users, eq(schema.jobAssignments.userId, schema.users.id))
+      .where(eq(schema.jobAssignments.jobId, jobId));
+
+      res.json(assignments);
+    } catch (error) {
+      console.error('Get job assignments error:', error);
+      res.status(500).json({ message: 'Failed to fetch job assignments' });
+    }
+  });
+
+  app.post('/api/jobs/:jobId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { db, schema } = await getDB();
+      const jobId = parseInt(req.params.jobId);
+      const currentUser = req.user!;
+      const { userId, role } = req.body;
+
+      // Validate input
+      if (!userId || !role) {
+        return res.status(400).json({ message: 'User ID and role are required' });
+      }
+
+      if (!['owner', 'assigned', 'viewer'].includes(role)) {
+        return res.status(400).json({ message: 'Invalid role. Must be: owner, assigned, or viewer' });
+      }
+
+      // Verify user has permission to assign (owner, org_admin, or manager)
+      if (!['super_admin', 'org_admin', 'manager'].includes(currentUser.role)) {
+        const isJobOwner = await db.select()
+          .from(schema.jobs)
+          .where(and(
+            eq(schema.jobs.id, jobId),
+            eq(schema.jobs.createdBy, currentUser.id)
+          ))
+          .get();
+
+        if (!isJobOwner) {
+          return res.status(403).json({ message: 'Insufficient permissions to assign users' });
+        }
+      }
+
+      // Verify target user exists and is in same organization
+      const targetUser = await db.select()
+        .from(schema.users)
+        .where(and(
+          eq(schema.users.id, userId),
+          eq(schema.users.organizationId, currentUser.organizationId!)
+        ))
+        .get();
+
+      if (!targetUser) {
+        return res.status(404).json({ message: 'User not found or not in same organization' });
+      }
+
+      // Check if assignment already exists
+      const existingAssignment = await db.select()
+        .from(schema.jobAssignments)
+        .where(and(
+          eq(schema.jobAssignments.jobId, jobId),
+          eq(schema.jobAssignments.userId, userId)
+        ))
+        .get();
+
+      if (existingAssignment) {
+        return res.status(400).json({ message: 'User is already assigned to this job' });
+      }
+
+      // Create assignment
+      const assignment = await db.insert(schema.jobAssignments)
+        .values({
+          jobId,
+          userId,
+          role,
+          assignedBy: currentUser.id,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      res.json({
+        message: 'User assigned successfully',
+        assignment: assignment[0]
+      });
+    } catch (error) {
+      console.error('Create job assignment error:', error);
+      res.status(500).json({ message: 'Failed to assign user' });
+    }
+  });
+
+  app.delete('/api/jobs/:jobId/assignments/:assignmentId', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { db, schema } = await getDB();
+      const jobId = parseInt(req.params.jobId);
+      const assignmentId = parseInt(req.params.assignmentId);
+      const currentUser = req.user!;
+
+      // Verify assignment exists and user has permission to remove it
+      const assignment = await db.select()
+        .from(schema.jobAssignments)
+        .where(and(
+          eq(schema.jobAssignments.id, assignmentId),
+          eq(schema.jobAssignments.jobId, jobId)
+        ))
+        .get();
+
+      if (!assignment) {
+        return res.status(404).json({ message: 'Assignment not found' });
+      }
+
+      // Check permissions (can remove if: super_admin, org_admin, manager, job creator, or the assigned user themselves)
+      const canRemove = 
+        ['super_admin', 'org_admin', 'manager'].includes(currentUser.role) ||
+        assignment.assignedBy === currentUser.id ||
+        assignment.userId === currentUser.id;
+
+      if (!canRemove) {
+        return res.status(403).json({ message: 'Insufficient permissions to remove assignment' });
+      }
+
+      // Delete assignment
+      await db.delete(schema.jobAssignments)
+        .where(eq(schema.jobAssignments.id, assignmentId));
+
+      res.json({ message: 'Assignment removed successfully' });
+    } catch (error) {
+      console.error('Delete job assignment error:', error);
+      res.status(500).json({ message: 'Failed to remove assignment' });
+    }
   });
 
   // Mount route modules

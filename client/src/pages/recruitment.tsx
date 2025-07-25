@@ -21,6 +21,7 @@ import AdvancedAIMatchingModal from "@/components/advanced-ai-matching-modal";
 import InterviewsTable from "@/components/interviews-table";
 import ResultsTable from "@/components/results-table";
 import JobTemplateViewer from "@/components/job-template-viewer";
+import JobAssignmentModal from "@/components/job-assignment-modal";
 import { PipelineKanban } from "@/components/pipeline-kanban";
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 
@@ -45,6 +46,8 @@ function RecruitmentDashboard() {
   const [selectedJobs, setSelectedJobs] = useState<number[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [selectedJobForAssignment, setSelectedJobForAssignment] = useState<{id: number, title: string} | null>(null);
 
   // Listen for custom events from pipeline navigation
   useEffect(() => {
@@ -220,6 +223,11 @@ function RecruitmentDashboard() {
     } else {
       setSelectedCandidates(candidates.map(candidate => candidate.id));
     }
+  };
+
+  const handleAssignJob = (jobId: number, jobTitle: string) => {
+    setSelectedJobForAssignment({ id: jobId, title: jobTitle });
+    setShowAssignmentModal(true);
   };
 
   // Data Management functions
@@ -533,7 +541,17 @@ function RecruitmentDashboard() {
                                       Created {new Date(job.createdAt).toLocaleDateString()}
                                     </span>
                                   </div>
-                                  <JobTemplateViewer jobId={job.id} jobTitle={job.title} />
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleAssignJob(job.id, job.title)}
+                                    >
+                                      <UsersIcon size={14} className="mr-1" />
+                                      Assign
+                                    </Button>
+                                    <JobTemplateViewer jobId={job.id} jobTitle={job.title} />
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -715,6 +733,15 @@ function RecruitmentDashboard() {
             open={showJobBoardModal}
             onOpenChange={setShowJobBoardModal}
           />
+
+          {selectedJobForAssignment && (
+            <JobAssignmentModal
+              open={showAssignmentModal}
+              onOpenChange={setShowAssignmentModal}
+              jobId={selectedJobForAssignment.id}
+              jobTitle={selectedJobForAssignment.title}
+            />
+          )}
         </div>
       </div>
     </ProtectedRoute>
