@@ -291,6 +291,21 @@ export async function initializeSQLiteDatabase() {
       );
     `);
 
+    // Create candidate assignments table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS candidate_assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        candidate_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('owner', 'assigned', 'viewer')),
+        assigned_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (assigned_by) REFERENCES users(id)
+      );
+    `);
+
     // Create status history table
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS status_history (

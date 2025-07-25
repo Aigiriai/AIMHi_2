@@ -1570,6 +1570,396 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Candidate assignment routes with comprehensive error handling and logging
+  app.get('/api/candidates/:candidateId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { db, schema } = await getDB();
+      const candidateId = parseInt(req.params.candidateId);
+      const currentUser = req.user!;
+
+      console.log(`📋 CANDIDATE ASSIGNMENT: Fetching assignments for candidate ${candidateId} by user ${currentUser.id} (${currentUser.role}) in org ${currentUser.organizationId}`);
+
+      // Input validation with detailed logging
+      if (isNaN(candidateId) || candidateId <= 0) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Invalid candidate ID provided: '${req.params.candidateId}'`);
+        return res.status(400).json({ 
+          message: 'Invalid candidate ID provided',
+          details: 'Candidate ID must be a positive integer'
+        });
+      }
+
+      // Verify candidate exists and belongs to user's organization
+      const candidate = await db.select()
+        .from(schema.candidates)
+        .where(and(
+          eq(schema.candidates.id, candidateId),
+          eq(schema.candidates.organizationId, currentUser.organizationId!)
+        ))
+        .get();
+
+      if (!candidate) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Candidate ${candidateId} not found in organization ${currentUser.organizationId} for user ${currentUser.id}`);
+        return res.status(404).json({ 
+          message: 'Candidate not found or access denied',
+          details: 'Candidate may not exist or you may not have permission to view it'
+        });
+      }
+
+      console.log(`✅ CANDIDATE ASSIGNMENT: Found candidate '${candidate.name}' (ID: ${candidateId})`);
+
+      // Fetch assignments with user details using proper LEFT JOIN syntax
+      const assignments = await db.select({
+        id: schema.candidateAssignments.id,
+        candidateId: schema.candidateAssignments.candidateId,
+        userId: schema.candidateAssignments.userId,
+        role: schema.candidateAssignments.role,
+        assignedBy: schema.candidateAssignments.assignedBy,
+        createdAt: schema.candidateAssignments.createdAt,
+        // User details
+        userFirstName: schema.users.firstName,
+        userLastName: schema.users.lastName,
+        userEmail: schema.users.email,
+        userRole: schema.users.role,
+      })
+      .from(schema.candidateAssignments)
+      .leftJoin(schema.users, eq(schema.candidateAssignments.userId, schema.users.id))
+      .where(eq(schema.candidateAssignments.candidateId, candidateId))
+      .all();
+
+      console.log(`✅ CANDIDATE ASSIGNMENT: Found ${assignments.length} assignments for candidate ${candidateId}`);
+      if (assignments.length > 0) {
+        console.log(`📋 CANDIDATE ASSIGNMENT: Assignment details:`, assignments.map((a: any) => ({
+          id: a.id,
+          user: `${a.userFirstName} ${a.userLastName}`,
+          role: a.role
+        })));
+      }
+
+      res.json({
+        success: true,
+        assignments,
+        candidateDetails: {
+          id: candidate.id,
+          name: candidate.name,
+          email: candidate.email
+        }
+      });
+    } catch (error) {
+      console.error('❌ CANDIDATE ASSIGNMENT: Error fetching assignments:', error);
+      console.error('❌ CANDIDATE ASSIGNMENT: Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ 
+        message: 'Failed to fetch candidate assignments', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post('/api/candidates/:candidateId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { db, schema } = await getDB();
+      const candidateId = parseInt(req.params.candidateId);
+      const currentUser = req.user!;
+      const { userId, role } = req.body;
+
+      console.log(`📋 CANDIDATE ASSIGNMENT: Creating assignment for candidate ${candidateId} by user ${currentUser.id} (${currentUser.role}) in org ${currentUser.organizationId}`);
+      console.log(`📋 CANDIDATE ASSIGNMENT: Request payload:`, { userId, role, candidateId });
+
+      // Comprehensive input validation
+      if (isNaN(candidateId) || candidateId <= 0) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Invalid candidate ID: '${req.params.candidateId}'`);
+        return res.status(400).json({ 
+          message: 'Invalid candidate ID provided',
+          details: 'Candidate ID must be a positive integer'
+        });
+      }
+
+      if (!userId || !role) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Missing required fields:`, { 
+          userId: !!userId, 
+          role: !!role,
+          receivedBody: req.body
+        });
+        return res.status(400).json({ 
+          message: 'User ID and role are required',
+          details: 'Both userId and role must be provided in request body'
+        });
+      }
+
+      if (typeof userId !== 'number' || userId <= 0) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Invalid user ID: '${userId}' (type: ${typeof userId})`);
+        return res.status(400).json({ 
+          message: 'Invalid user ID provided',
+          details: 'User ID must be a positive integer'
+        });
+      }
+
+      const validRoles = ['owner', 'assigned', 'viewer'];
+      if (!validRoles.includes(role)) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Invalid role: '${role}'. Valid roles: ${validRoles.join(', ')}`);
+        return res.status(400).json({ 
+          message: 'Invalid role provided',
+          details: `Role must be one of: ${validRoles.join(', ')}`
+        });
+      }
+
+      // Verify candidate exists and belongs to user's organization
+      const candidate = await db.select()
+        .from(schema.candidates)
+        .where(and(
+          eq(schema.candidates.id, candidateId),
+          eq(schema.candidates.organizationId, currentUser.organizationId!)
+        ))
+        .get();
+
+      if (!candidate) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Candidate ${candidateId} not found in organization ${currentUser.organizationId}`);
+        return res.status(404).json({ 
+          message: 'Candidate not found or access denied',
+          details: 'Candidate may not exist or you may not have permission to assign it'
+        });
+      }
+
+      console.log(`✅ CANDIDATE ASSIGNMENT: Found candidate '${candidate.name}' (ID: ${candidateId}), added by user ${candidate.addedBy}`);
+
+      // Verify target user exists and belongs to same organization
+      const targetUser = await db.select()
+        .from(schema.users)
+        .where(and(
+          eq(schema.users.id, userId),
+          eq(schema.users.organizationId, currentUser.organizationId!)
+        ))
+        .get();
+
+      if (!targetUser) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Target user ${userId} not found in organization ${currentUser.organizationId}`);
+        return res.status(404).json({ 
+          message: 'Target user not found or not in same organization',
+          details: 'User must belong to the same organization'
+        });
+      }
+
+      console.log(`✅ CANDIDATE ASSIGNMENT: Found target user '${targetUser.firstName} ${targetUser.lastName}' (${targetUser.role})`);
+
+      // Check permissions with detailed logging
+      const canAssign = 
+        ['super_admin', 'org_admin', 'manager'].includes(currentUser.role) ||
+        candidate.addedBy === currentUser.id; // Candidate creator can assign
+
+      console.log(`🔒 CANDIDATE ASSIGNMENT: Permission check:`, {
+        currentUserRole: currentUser.role,
+        candidateCreator: candidate.addedBy,
+        currentUserId: currentUser.id,
+        hasAdminRole: ['super_admin', 'org_admin', 'manager'].includes(currentUser.role),
+        isCreator: candidate.addedBy === currentUser.id,
+        canAssign
+      });
+
+      if (!canAssign) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: User ${currentUser.id} (${currentUser.role}) lacks permission to assign candidate ${candidateId}`);
+        return res.status(403).json({ 
+          message: 'Insufficient permissions to assign candidates',
+          details: 'Only admins, managers, or the candidate creator can assign candidates'
+        });
+      }
+
+      // Check if assignment already exists
+      const existingAssignment = await db.select()
+        .from(schema.candidateAssignments)
+        .where(and(
+          eq(schema.candidateAssignments.candidateId, candidateId),
+          eq(schema.candidateAssignments.userId, userId)
+        ))
+        .get();
+
+      if (existingAssignment) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Assignment already exists:`, {
+          assignmentId: existingAssignment.id,
+          candidateId,
+          userId,
+          existingRole: existingAssignment.role
+        });
+        return res.status(409).json({ 
+          message: 'User is already assigned to this candidate',
+          details: `User already has role '${existingAssignment.role}' for this candidate`
+        });
+      }
+
+      // Create assignment with error handling
+      console.log(`🔄 CANDIDATE ASSIGNMENT: Creating assignment with data:`, {
+        candidateId,
+        userId,
+        role,
+        assignedBy: currentUser.id
+      });
+
+      const [newAssignment] = await db.insert(schema.candidateAssignments).values({
+        candidateId,
+        userId,
+        role,
+        assignedBy: currentUser.id,
+      }).returning();
+
+      console.log(`✅ CANDIDATE ASSIGNMENT: Successfully created assignment ${newAssignment.id} for candidate ${candidateId}`);
+      console.log(`📋 CANDIDATE ASSIGNMENT: Assignment details:`, {
+        assignmentId: newAssignment.id,
+        candidateName: candidate.name,
+        assignedUser: `${targetUser.firstName} ${targetUser.lastName}`,
+        role: newAssignment.role,
+        assignedBy: currentUser.id
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Candidate assigned successfully',
+        assignment: newAssignment,
+        details: {
+          candidateName: candidate.name,
+          assignedUser: `${targetUser.firstName} ${targetUser.lastName}`,
+          role: newAssignment.role
+        }
+      });
+    } catch (error) {
+      console.error('❌ CANDIDATE ASSIGNMENT: Error creating assignment:', error);
+      console.error('❌ CANDIDATE ASSIGNMENT: Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ 
+        message: 'Failed to assign candidate', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.delete('/api/candidates/:candidateId/assignments/:assignmentId', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { db, schema } = await getDB();
+      const candidateId = parseInt(req.params.candidateId);
+      const assignmentId = parseInt(req.params.assignmentId);
+      const currentUser = req.user!;
+
+      console.log(`📋 CANDIDATE ASSIGNMENT: Deleting assignment ${assignmentId} for candidate ${candidateId} by user ${currentUser.id} (${currentUser.role})`);
+
+      // Input validation with detailed logging
+      if (isNaN(candidateId) || candidateId <= 0) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Invalid candidate ID: '${req.params.candidateId}'`);
+        return res.status(400).json({ 
+          message: 'Invalid candidate ID provided',
+          details: 'Candidate ID must be a positive integer'
+        });
+      }
+
+      if (isNaN(assignmentId) || assignmentId <= 0) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Invalid assignment ID: '${req.params.assignmentId}'`);
+        return res.status(400).json({ 
+          message: 'Invalid assignment ID provided',
+          details: 'Assignment ID must be a positive integer'
+        });
+      }
+
+      // Verify assignment exists and belongs to the candidate
+      const assignment = await db.select()
+        .from(schema.candidateAssignments)
+        .where(and(
+          eq(schema.candidateAssignments.id, assignmentId),
+          eq(schema.candidateAssignments.candidateId, candidateId)
+        ))
+        .get();
+
+      if (!assignment) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Assignment ${assignmentId} not found for candidate ${candidateId}`);
+        return res.status(404).json({ 
+          message: 'Assignment not found',
+          details: 'Assignment may not exist or may not belong to this candidate'
+        });
+      }
+
+      console.log(`✅ CANDIDATE ASSIGNMENT: Found assignment:`, {
+        assignmentId: assignment.id,
+        userId: assignment.userId,
+        role: assignment.role,
+        assignedBy: assignment.assignedBy
+      });
+
+      // Verify candidate belongs to user's organization
+      const candidate = await db.select()
+        .from(schema.candidates)
+        .where(and(
+          eq(schema.candidates.id, candidateId),
+          eq(schema.candidates.organizationId, currentUser.organizationId!)
+        ))
+        .get();
+
+      if (!candidate) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Candidate ${candidateId} not found in organization ${currentUser.organizationId}`);
+        return res.status(404).json({ 
+          message: 'Candidate not found or access denied',
+          details: 'Candidate may not exist or you may not have permission to modify its assignments'
+        });
+      }
+
+      console.log(`✅ CANDIDATE ASSIGNMENT: Found candidate '${candidate.name}', created by user ${candidate.addedBy}`);
+
+      // Check permissions with detailed logging
+      const canRemove = 
+        ['super_admin', 'org_admin', 'manager'].includes(currentUser.role) ||
+        assignment.assignedBy === currentUser.id ||
+        assignment.userId === currentUser.id ||
+        candidate.addedBy === currentUser.id;
+
+      console.log(`🔒 CANDIDATE ASSIGNMENT: Permission check for removal:`, {
+        currentUserRole: currentUser.role,
+        currentUserId: currentUser.id,
+        assignmentAssignedBy: assignment.assignedBy,
+        assignmentUserId: assignment.userId,
+        candidateCreator: candidate.addedBy,
+        hasAdminRole: ['super_admin', 'org_admin', 'manager'].includes(currentUser.role),
+        isAssigner: assignment.assignedBy === currentUser.id,
+        isAssignedUser: assignment.userId === currentUser.id,
+        isCandidateCreator: candidate.addedBy === currentUser.id,
+        canRemove
+      });
+
+      if (!canRemove) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: User ${currentUser.id} (${currentUser.role}) lacks permission to remove assignment ${assignmentId}`);
+        return res.status(403).json({ 
+          message: 'Insufficient permissions to remove assignment',
+          details: 'Only admins, managers, the assigner, assigned user, or candidate creator can remove assignments'
+        });
+      }
+
+      // Delete assignment
+      console.log(`🔄 CANDIDATE ASSIGNMENT: Deleting assignment ${assignmentId}`);
+      
+      const result = await db.delete(schema.candidateAssignments)
+        .where(eq(schema.candidateAssignments.id, assignmentId))
+        .returning();
+
+      if (result.length === 0) {
+        console.log(`❌ CANDIDATE ASSIGNMENT: Failed to delete assignment ${assignmentId} - no rows affected`);
+        return res.status(500).json({ 
+          message: 'Failed to remove assignment',
+          details: 'Assignment deletion did not affect any rows'
+        });
+      }
+
+      console.log(`✅ CANDIDATE ASSIGNMENT: Successfully deleted assignment ${assignmentId} for candidate ${candidateId}`);
+
+      res.json({ 
+        success: true,
+        message: 'Assignment removed successfully',
+        details: {
+          deletedAssignmentId: assignmentId,
+          candidateName: candidate.name
+        }
+      });
+    } catch (error) {
+      console.error('❌ CANDIDATE ASSIGNMENT: Error removing assignment:', error);
+      console.error('❌ CANDIDATE ASSIGNMENT: Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+      res.status(500).json({ 
+        message: 'Failed to remove assignment', 
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Mount route modules
   app.use('/api/auth', authRoutes);
   app.use('/api/settings', settingsRoutes);

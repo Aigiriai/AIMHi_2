@@ -22,6 +22,7 @@ import InterviewsTable from "@/components/interviews-table";
 import ResultsTable from "@/components/results-table";
 import JobTemplateViewer from "@/components/job-template-viewer";
 import JobAssignmentModal from "@/components/job-assignment-modal";
+import { CandidateAssignmentModal } from "@/components/candidate-assignment-modal";
 import { PipelineKanban } from "@/components/pipeline-kanban";
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 
@@ -638,6 +639,16 @@ function RecruitmentDashboard() {
                                     <Button variant="outline" size="sm">
                                       View Resume
                                     </Button>
+                                    <CandidateAssignmentModal 
+                                      candidateId={candidate.id}
+                                      candidateName={candidate.name}
+                                      trigger={
+                                        <Button variant="outline" size="sm">
+                                          <Users className="h-4 w-4 mr-1" />
+                                          Assign
+                                        </Button>
+                                      }
+                                    />
                                     <Button variant="outline" size="sm">
                                       Schedule Interview
                                     </Button>
