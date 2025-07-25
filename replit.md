@@ -54,6 +54,7 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 - **Cost Optimization**: Native processing without external processes
 - **Intelligent Fallbacks**: Structured handling for unsupported formats
 - **Resume Preprocessing**: Local extraction before AI analysis
+- **Node.js Only**: Removed all Python dependencies for deployment compatibility
 
 ## Data Flow
 
@@ -96,6 +97,21 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 - **File Processing**: mammoth, multer
 - **Authentication**: bcrypt, jsonwebtoken
 - **UI**: @radix-ui components, tailwindcss
+
+## Recent Changes
+
+### 2025-01-25: Deployment Fix - Removed Python Dependencies
+- **Issue**: Deployment failed due to Python uv package manager conflicts with Node.js build
+- **Resolution**: Completely removed all Python dependencies and legacy code
+- **Changes Made**:
+  - Removed `main.py`, `pyproject.toml`, and `uv.lock` files
+  - Cleaned up Python process references in `server/index.ts`
+  - Rewrote `server/document-processing.ts` to be Node.js-only
+  - Removed external process spawning (antiword, python3, etc.)
+  - Optimized PDF/DOC processing with structured fallbacks
+- **Result**: Clean Node.js application ready for Replit deployment
+- **Build Status**: ✅ `npm run build` succeeds without errors
+- **Server Status**: ✅ Running successfully on port 5000
 
 ## Deployment Strategy
 

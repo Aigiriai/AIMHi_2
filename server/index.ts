@@ -1,14 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
-import { spawn, ChildProcess } from "child_process";
+
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { handleMediaStream, initializeCallContext } from "./ai-calling";
 import { startPinggyAndGetDomain, getCurrentPinggyDomain } from "./pinggy-service";
 import { initializeSQLiteDatabase } from "./init-database";
 
-let pythonProcess: ChildProcess | null = null;
+
 
 const app = express();
 app.use(express.json());
@@ -36,18 +36,7 @@ async function waitForService(url: string, serviceName: string, maxRetries = 30)
   return false;
 }
 
-async function startPythonBackend(): Promise<boolean> {
-  // Disable Python backend for AI calling to prevent domain caching issues
-  log('Skipping Python FastAPI backend - using Node.js for AI calling...');
-  
-  // pythonProcess = spawn('python', ['main.py'], {
-  //   stdio: ['ignore', 'pipe', 'pipe'],
-  //   cwd: process.cwd()
-  // });
-  
-  // Return true to indicate backend is ready (Node.js only)
-  return true;
-}
+
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -137,9 +126,6 @@ app.use((req, res, next) => {
   // Cleanup on exit
   process.on('SIGINT', () => {
     log('Shutting down services...');
-    if (pythonProcess) {
-      pythonProcess.kill();
-    }
     wss.close();
     httpServer.close();
     process.exit(0);
@@ -147,9 +133,6 @@ app.use((req, res, next) => {
 
   process.on('SIGTERM', () => {
     log('Shutting down services...');
-    if (pythonProcess) {
-      pythonProcess.kill();
-    }
     wss.close();
     httpServer.close();
     process.exit(0);
