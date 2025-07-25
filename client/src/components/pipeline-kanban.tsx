@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -88,10 +88,16 @@ export function PipelineKanban() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Force refresh on component mount to get latest data
+  React.useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
+  }, [queryClient]);
+
   // Fetch pipeline data
   const { data: pipelineData, isLoading } = useQuery({
     queryKey: ['/api/pipeline'],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 5000, // Refresh every 5 seconds to see debug logs
+    staleTime: 0, // Always fetch fresh data
   });
 
   const { data: statsData } = useQuery({

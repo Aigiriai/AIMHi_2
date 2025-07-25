@@ -111,6 +111,8 @@ router.get("/pipeline", authenticateToken, async (req: AuthRequest, res: Respons
 
     // Get applications for these jobs
     const jobIds = jobsList.map((job: any) => job.id);
+    console.log(`🔍 PIPELINE: Found ${jobsList.length} jobs with IDs:`, jobIds);
+    
     const applicationsData = jobIds.length > 0 ? await db.select({
       id: applications.id,
       jobId: applications.jobId,
@@ -130,9 +132,19 @@ router.get("/pipeline", authenticateToken, async (req: AuthRequest, res: Respons
     })
     .from(applications)
     .leftJoin(candidates, eq(applications.candidateId, candidates.id))
-    .where(sql`${applications.jobId} IN (${jobIds.join(',')})`)
+    .where(eq(applications.organizationId, user.organizationId))
     .orderBy(desc(applications.appliedAt))
     .all() : [];
+    
+    console.log(`🔍 PIPELINE: Found ${applicationsData.length} applications for organization ${user.organizationId}`);
+    if (applicationsData.length > 0) {
+      console.log('🔍 PIPELINE: First application:', {
+        id: applicationsData[0].id,
+        jobId: applicationsData[0].jobId,
+        candidateName: applicationsData[0].candidateName,
+        currentStage: applicationsData[0].currentStage
+      });
+    }
 
     // Group applications by job
     const jobsWithApplications: JobWithApplications[] = jobsList.map((job: any) => ({
@@ -148,20 +160,19 @@ router.get("/pipeline", authenticateToken, async (req: AuthRequest, res: Respons
           appliedAt: app.appliedAt,
           matchPercentage: app.matchPercentage,
           notes: app.notes,
-          candidate: {
-            id: app.candidateId,
-            name: app.candidateName!,
-            email: app.candidateEmail!,
-            experience: app.candidateExperience!,
-          },
+          candidateName: app.candidateName || 'Unknown',
+          candidateEmail: app.candidateEmail || 'unknown@email.com',
+          candidateExperience: app.candidateExperience || 0,
           appliedBy: app.appliedBy,
-          lastStageChangeAt: app.lastStageChangeAt,
+          lastStageChangeAt: app.lastStageChangeAt || app.appliedAt,
+          jobTitle: job.title, // Add job title for application cards
         })) as any[],
       createdByUser: {
         name: job.createdByName,
       } as any,
     })) as any[];
 
+    console.log(`🔍 PIPELINE: Returning ${jobsWithApplications.length} jobs with applications`);
     res.json({ 
       success: true, 
       jobs: jobsWithApplications 
