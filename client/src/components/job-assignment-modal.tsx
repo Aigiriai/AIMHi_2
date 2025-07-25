@@ -69,7 +69,7 @@ export default function JobAssignmentModal({
   });
 
   // Extract users array from response object
-  const users = usersResponse?.users || [];
+  const users = (usersResponse as any)?.users || [];
 
   // Fetch current job assignments
   const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<JobAssignment[]>({
@@ -80,7 +80,7 @@ export default function JobAssignmentModal({
   // Assign user to job
   const assignUser = useMutation({
     mutationFn: async (data: { userId: number; role: string }) => {
-      return apiRequest(`/api/jobs/${jobId}/assignments`, "POST", data);
+      return apiRequest("POST", `/api/jobs/${jobId}/assignments`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "assignments"] });
@@ -103,7 +103,7 @@ export default function JobAssignmentModal({
   // Remove assignment
   const removeAssignment = useMutation({
     mutationFn: async (assignmentId: number) => {
-      return apiRequest(`/api/jobs/${jobId}/assignments/${assignmentId}`, "DELETE");
+      return apiRequest("DELETE", `/api/jobs/${jobId}/assignments/${assignmentId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "assignments"] });
