@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import ProtectedRoute from "@/components/auth/protected-route";
@@ -33,6 +34,7 @@ interface Stats {
 
 function RecruitmentDashboard() {
   const { toast } = useToast();
+  const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("overview");
   const [showJobModal, setShowJobModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
@@ -43,6 +45,38 @@ function RecruitmentDashboard() {
   const [selectedJobs, setSelectedJobs] = useState<number[]>([]);
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Parse URL parameters to handle navigation from pipeline
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.split('?')[1] || '');
+    const tabParam = urlParams.get('tab');
+    const jobId = urlParams.get('jobId');
+    const candidateId = urlParams.get('candidateId');
+    
+    console.log(`🔗 RECRUITMENT NAVIGATION: URL params - tab: ${tabParam}, jobId: ${jobId}, candidateId: ${candidateId}`);
+    
+    if (tabParam) {
+      // Map URL tab parameter to actual tab names
+      const tabMapping: { [key: string]: string } = {
+        'jobs': 'jobs',
+        'candidates': 'candidates'
+      };
+      
+      const targetTab = tabMapping[tabParam];
+      if (targetTab && targetTab !== activeTab) {
+        console.log(`🔗 RECRUITMENT NAVIGATION: Switching to tab: ${targetTab}`);
+        setActiveTab(targetTab);
+      }
+      
+      // TODO: Could also scroll to specific job/candidate if needed
+      if (jobId) {
+        console.log(`🔗 RECRUITMENT NAVIGATION: Highlighting job ID: ${jobId}`);
+      }
+      if (candidateId) {
+        console.log(`🔗 RECRUITMENT NAVIGATION: Highlighting candidate ID: ${candidateId}`);
+      }
+    }
+  }, [location, activeTab]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],
