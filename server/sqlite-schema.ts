@@ -113,7 +113,7 @@ export const usageMetrics = sqliteTable("usage_metrics", {
   createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
-// Jobs table - Now organization-scoped
+// Jobs table - Now organization-scoped with ATS Pipeline
 export const jobs = sqliteTable("jobs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   organizationId: integer("organization_id").references(() => organizations.id).notNull(),
@@ -128,7 +128,17 @@ export const jobs = sqliteTable("jobs", {
   salaryMin: integer("salary_min"),
   salaryMax: integer("salary_max"),
   keywords: text("keywords").notNull(),
-  status: text("status").notNull().default("active"),
+  
+  // ATS Pipeline fields
+  status: text("status").notNull().default("draft"), // draft, active, paused, filled, closed, archived
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedAt: text("approved_at"),
+  closedAt: text("closed_at"),
+  filledAt: text("filled_at"),
+  requiresApproval: integer("requires_approval", { mode: "boolean" }).notNull().default(true),
+  autoPublishAt: text("auto_publish_at"),
+  applicationDeadline: text("application_deadline"),
+  
   settings: text("settings").default("{}"),
   createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
   updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
@@ -186,6 +196,57 @@ export const interviews = sqliteTable("interviews", {
   updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
+// ATS Applications table - Links candidates to jobs with pipeline status
+export const applications = sqliteTable("applications", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  jobId: integer("job_id").references(() => jobs.id).notNull(),
+  candidateId: integer("candidate_id").references(() => candidates.id).notNull(),
+  appliedBy: integer("applied_by").references(() => users.id).notNull(),
+  
+  // Pipeline status
+  status: text("status").notNull().default("new"), // new, screening, interview, decided
+  substatus: text("substatus"), // phone_screen, technical_assessment, etc.
+  currentStage: text("current_stage").notNull().default("new"),
+  
+  // Application details
+  appliedAt: text("applied_at").default("CURRENT_TIMESTAMP").notNull(),
+  matchPercentage: real("match_percentage"),
+  source: text("source").default("manual"), // manual, job_board, referral
+  notes: text("notes").default(""),
+  
+  // Tracking
+  lastStageChangeAt: text("last_stage_change_at").default("CURRENT_TIMESTAMP"),
+  lastStageChangedBy: integer("last_stage_changed_by").references(() => users.id),
+  
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// Job assignments for permissions
+export const jobAssignments = sqliteTable("job_assignments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  jobId: integer("job_id").references(() => jobs.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  role: text("role").notNull(), // owner, assigned, viewer
+  assignedBy: integer("assigned_by").references(() => users.id).notNull(),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// Status history for both jobs and applications
+export const statusHistory = sqliteTable("status_history", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  entityType: text("entity_type").notNull(), // job, application
+  entityId: integer("entity_id").notNull(),
+  oldStatus: text("old_status"),
+  newStatus: text("new_status").notNull(),
+  changedBy: integer("changed_by").references(() => users.id).notNull(),
+  reason: text("reason"),
+  notes: text("notes"),
+  changedAt: text("changed_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
 // Create insert schemas for validation
 export const insertOrganizationSchema = createInsertSchema(organizations);
 export const insertOrganizationCredentialsSchema = createInsertSchema(organizationCredentials);
@@ -199,6 +260,9 @@ export const insertJobSchema = createInsertSchema(jobs);
 export const insertCandidateSchema = createInsertSchema(candidates);
 export const insertJobMatchSchema = createInsertSchema(jobMatches);
 export const insertInterviewSchema = createInsertSchema(interviews);
+export const insertApplicationSchema = createInsertSchema(applications);
+export const insertJobAssignmentSchema = createInsertSchema(jobAssignments);
+export const insertStatusHistorySchema = createInsertSchema(statusHistory);
 
 // Types
 export type Organization = typeof organizations.$inferSelect;
@@ -225,6 +289,12 @@ export type JobMatch = typeof jobMatches.$inferSelect;
 export type InsertJobMatch = typeof jobMatches.$inferInsert;
 export type Interview = typeof interviews.$inferSelect;
 export type InsertInterview = typeof interviews.$inferInsert;
+export type Application = typeof applications.$inferSelect;
+export type InsertApplication = typeof applications.$inferInsert;
+export type JobAssignment = typeof jobAssignments.$inferSelect;
+export type InsertJobAssignment = typeof jobAssignments.$inferInsert;
+export type StatusHistory = typeof statusHistory.$inferSelect;
+export type InsertStatusHistory = typeof statusHistory.$inferInsert;
 
 // Result types for joined queries
 export interface JobMatchResult extends JobMatch {
@@ -236,4 +306,36 @@ export interface InterviewWithDetails extends Interview {
   job: Job;
   candidate: Candidate;
   interviewer: User;
+}
+
+// ATS Pipeline types
+export interface ApplicationWithDetails extends Application {
+  job: Job;
+  candidate: Candidate;
+  appliedByUser: User;
+  lastChangedByUser?: User;
+}
+
+export interface JobWithApplications extends Job {
+  applications: ApplicationWithDetails[];
+  createdByUser: User;
+  approvedByUser?: User;
+}
+
+export interface PipelineStats {
+  totalJobs: number;
+  activeJobs: number;
+  totalApplications: number;
+  applicationsByStatus: Record<string, number>;
+  jobsByStatus: Record<string, number>;
+}
+
+// Permission types
+export interface UserPermissions {
+  canViewJob: boolean;
+  canEditJob: boolean;
+  canMoveCandidates: boolean;
+  canScheduleInterviews: boolean;
+  canMakeDecisions: boolean;
+  canViewAnalytics: boolean;
 }

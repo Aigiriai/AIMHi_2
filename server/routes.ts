@@ -9,6 +9,7 @@ import { processDocuments, extractTextFromDocument, extractResumeDetails } from 
 import { createJobTemplate } from "./jd-template-analyzer";
 import authRoutes from "./auth-routes";
 import settingsRoutes from "./settings-routes";
+import pipelineRoutes from "./pipeline-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
 import { getDB } from "./db-connection";
 import { eq, and } from "drizzle-orm";
@@ -1295,6 +1296,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       twilioConfigured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.PHONE_NUMBER_FROM)
     });
   });
+
+  // Mount route modules
+  app.use('/api/auth', authRoutes);
+  app.use('/api/settings', settingsRoutes);
+  app.use('/api', pipelineRoutes);
 
   // Return a placeholder server object since the actual server is created in index.ts
   return createServer();

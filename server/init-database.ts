@@ -102,17 +102,28 @@ export async function initializeSQLiteDatabase() {
         experience_level TEXT NOT NULL,
         job_type TEXT NOT NULL,
         keywords TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'active',
-        settings TEXT DEFAULT '{}',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         requirements TEXT NOT NULL DEFAULT 'Requirements not specified',
         location TEXT NOT NULL DEFAULT 'Location not specified',
         salary_min INTEGER,
         salary_max INTEGER,
+        
+        -- ATS Pipeline fields
+        status TEXT NOT NULL DEFAULT 'draft',
+        approved_by INTEGER,
+        approved_at TEXT,
+        closed_at TEXT,
+        filled_at TEXT,
+        requires_approval INTEGER NOT NULL DEFAULT 1,
+        auto_publish_at TEXT,
+        application_deadline TEXT,
+        
+        settings TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (organization_id) REFERENCES organizations(id),
         FOREIGN KEY (team_id) REFERENCES teams(id),
-        FOREIGN KEY (created_by) REFERENCES users(id)
+        FOREIGN KEY (created_by) REFERENCES users(id),
+        FOREIGN KEY (approved_by) REFERENCES users(id)
       );
     `);
 
@@ -230,6 +241,92 @@ export async function initializeSQLiteDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id)
       );
     `);
+
+    // Create ATS applications table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS applications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        job_id INTEGER NOT NULL,
+        candidate_id INTEGER NOT NULL,
+        applied_by INTEGER NOT NULL,
+        
+        -- Pipeline status
+        status TEXT NOT NULL DEFAULT 'new',
+        substatus TEXT,
+        current_stage TEXT NOT NULL DEFAULT 'new',
+        
+        -- Application details
+        applied_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        match_percentage REAL,
+        source TEXT DEFAULT 'manual',
+        notes TEXT DEFAULT '',
+        
+        -- Tracking
+        last_stage_change_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        last_stage_changed_by INTEGER,
+        
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (applied_by) REFERENCES users(id),
+        FOREIGN KEY (last_stage_changed_by) REFERENCES users(id)
+      );
+    `);
+
+    // Create job assignments table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS job_assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        assigned_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (assigned_by) REFERENCES users(id)
+      );
+    `);
+
+    // Create status history table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS status_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER NOT NULL,
+        old_status TEXT,
+        new_status TEXT NOT NULL,
+        changed_by INTEGER NOT NULL,
+        reason TEXT,
+        notes TEXT,
+        changed_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (changed_by) REFERENCES users(id)
+      );
+    `);
+
+    // Add ATS columns to existing jobs table if they don't exist
+    const jobsColumns = [
+      'approved_by INTEGER',
+      'approved_at TEXT',
+      'closed_at TEXT',
+      'filled_at TEXT',
+      'requires_approval INTEGER NOT NULL DEFAULT 1',
+      'auto_publish_at TEXT',
+      'application_deadline TEXT'
+    ];
+
+    for (const column of jobsColumns) {
+      try {
+        sqlite.exec(`ALTER TABLE jobs ADD COLUMN ${column};`);
+      } catch (error) {
+        // Column already exists, which is fine
+      }
+    }
 
     // Check if timezone column exists and is working
     const result = sqlite.prepare("PRAGMA table_info(organizations)").all();

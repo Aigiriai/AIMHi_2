@@ -20,6 +20,7 @@ import AdvancedAIMatchingModal from "@/components/advanced-ai-matching-modal";
 import InterviewsTable from "@/components/interviews-table";
 import ResultsTable from "@/components/results-table";
 import JobTemplateViewer from "@/components/job-template-viewer";
+import { PipelineKanban } from "@/components/pipeline-kanban";
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 
 interface Stats {
@@ -276,7 +277,8 @@ function RecruitmentDashboard() {
     { value: "overview", label: "Overview", icon: LayoutDashboard },
     { value: "jobs", label: "Job Postings", icon: BriefcaseIcon },
     { value: "candidates", label: "Candidates", icon: Users },
-    { value: "ai-matching", label: "AI Matching", icon: BrainIcon }
+    { value: "ai-matching", label: "AI Matching", icon: BrainIcon },
+    { value: "pipeline", label: "Pipeline", icon: BarChart3 }
   ];
 
   return (
@@ -293,7 +295,7 @@ function RecruitmentDashboard() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsList className="grid w-full grid-cols-5 mb-8">
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 return (
@@ -651,6 +653,11 @@ function RecruitmentDashboard() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* Pipeline Tab - Kanban Board */}
+            <TabsContent value="pipeline" className="mt-0">
+              <PipelineKanban />
             </TabsContent>
           </Tabs>
 
