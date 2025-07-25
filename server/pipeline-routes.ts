@@ -186,6 +186,7 @@ router.get("/pipeline", authenticateToken, async (req: AuthRequest, res: Respons
 // Get pipeline statistics
 router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
+    console.log(`📊 PIPELINE STATS: Calculating fresh statistics for organization ${req.user?.organizationId}`);
     const { db } = await getDB();
     const user = req.user!;
 
@@ -198,6 +199,8 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
     .where(eq(jobs.organizationId, user.organizationId))
     .groupBy(jobs.status)
     .all();
+    
+    console.log(`📊 PIPELINE STATS: Job statistics:`, jobStats);
 
     // Get application statistics
     const appStats = await db.select({
@@ -209,6 +212,8 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
     .where(eq(jobs.organizationId, user.organizationId))
     .groupBy(applications.status)
     .all();
+    
+    console.log(`📊 PIPELINE STATS: Application statistics:`, appStats);
 
     // Get total counts
     const totalJobs = await db.select({ count: sql<number>`count(*)`.as('count') })
@@ -242,7 +247,23 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
       ),
     };
 
-    res.json({ success: true, stats });
+    console.log(`📊 PIPELINE STATS: Final statistics:`, stats);
+    
+    // Ensure fresh data by setting cache headers and adding timestamp
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString()
+    });
+    
+    res.json({ 
+      success: true, 
+      stats: {
+        ...stats,
+        timestamp: Date.now() // Add timestamp to force fresh data
+      }
+    });
   } catch (error) {
     console.error("Failed to fetch pipeline stats:", error);
     res.status(500).json({ success: false, error: "Failed to fetch pipeline statistics" });

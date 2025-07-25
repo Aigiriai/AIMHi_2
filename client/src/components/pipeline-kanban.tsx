@@ -102,7 +102,9 @@ export function PipelineKanban() {
 
   const { data: statsData } = useQuery({
     queryKey: ['/api/pipeline/stats'],
-    refetchInterval: 60000, // Refresh every minute
+    refetchInterval: 3000, // Refresh every 3 seconds for real-time updates
+    staleTime: 0, // Always treat data as stale to force fresh fetches
+    gcTime: 0, // TanStack Query v5 property (replaces cacheTime)
   });
 
   // Move application mutation
@@ -121,8 +123,10 @@ export function PipelineKanban() {
     },
     onSuccess: (data, variables) => {
       console.log(`✅ FRONTEND: Move mutation success for application ${variables.applicationId}`);
+      // Force fresh data fetch by invalidating all pipeline queries
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
+      queryClient.refetchQueries({ queryKey: ['/api/pipeline/stats'] });
       toast({ title: "Application moved successfully" });
     },
     onError: (error, variables) => {
@@ -147,8 +151,10 @@ export function PipelineKanban() {
     },
     onSuccess: (data, variables) => {
       console.log(`✅ FRONTEND: Job status mutation success for job ${variables.jobId}`);
+      // Force fresh data fetch by invalidating all pipeline queries
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
+      queryClient.refetchQueries({ queryKey: ['/api/pipeline/stats'] });
       toast({ title: "Job status updated successfully" });
     },
     onError: (error, variables) => {
