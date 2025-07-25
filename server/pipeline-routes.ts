@@ -220,55 +220,128 @@ router.get("/pipeline", authenticateToken, async (req: AuthRequest, res: Respons
   }
 });
 
-// Get pipeline statistics
+// Get pipeline statistics with permission-based filtering
 router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    console.log(`📊 PIPELINE STATS: Calculating fresh statistics for organization ${req.user?.organizationId}`);
+    console.log(`📊 PIPELINE STATS: Calculating user-specific statistics for user ${req.user?.id} (${req.user?.role}) in organization ${req.user?.organizationId}`);
     const { db } = await getDB();
     const user = req.user!;
 
-    // Get job statistics
+    // Get user's accessible job IDs based on role and assignments
+    let accessibleJobIds: number[] = [];
+    
+    if (['super_admin', 'org_admin'].includes(user.role)) {
+      // Super admin and org admin can see all jobs in their organization
+      const allJobs = await db.select({ id: jobs.id })
+        .from(jobs)
+        .where(eq(jobs.organizationId, user.organizationId))
+        .all();
+      accessibleJobIds = allJobs.map((job: any) => job.id);
+    } else {
+      // For Manager, Team Lead, and Recruiter: only jobs they created or are assigned to
+      const assignedJobIds = await db.select({ jobId: jobAssignments.jobId })
+        .from(jobAssignments)
+        .where(eq(jobAssignments.userId, user.id))
+        .all();
+      
+      const createdJobs = await db.select({ id: jobs.id })
+        .from(jobs)
+        .where(and(
+          eq(jobs.organizationId, user.organizationId),
+          eq(jobs.createdBy, user.id)
+        ))
+        .all();
+      
+      const assignedIds = assignedJobIds.map((a: any) => a.jobId);
+      const createdIds = createdJobs.map((j: any) => j.id);
+      accessibleJobIds = Array.from(new Set([...assignedIds, ...createdIds]));
+    }
+
+    console.log(`📊 PIPELINE STATS: User has access to ${accessibleJobIds.length} jobs:`, accessibleJobIds);
+
+    if (accessibleJobIds.length === 0) {
+      // User has no accessible jobs
+      const emptyStats: PipelineStats = {
+        totalJobs: 0,
+        activeJobs: 0,
+        totalApplications: 0,
+        jobsByStatus: {},
+        applicationsByStatus: {},
+      };
+      
+      console.log(`📊 PIPELINE STATS: User has no accessible jobs, returning empty stats`);
+      
+      res.set({
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Last-Modified': new Date().toUTCString()
+      });
+      
+      return res.json({ 
+        success: true, 
+        stats: {
+          ...emptyStats,
+          timestamp: Date.now()
+        }
+      });
+    }
+
+    // Get job statistics for accessible jobs only
     const jobStats = await db.select({
       status: jobs.status,
       count: sql<number>`count(*)`.as('count')
     })
     .from(jobs)
-    .where(eq(jobs.organizationId, user.organizationId))
+    .where(and(
+      eq(jobs.organizationId, user.organizationId),
+      inArray(jobs.id, accessibleJobIds)
+    ))
     .groupBy(jobs.status)
     .all();
     
-    console.log(`📊 PIPELINE STATS: Job statistics:`, jobStats);
+    console.log(`📊 PIPELINE STATS: Job statistics for accessible jobs:`, jobStats);
 
-    // Get application statistics
+    // Get application statistics for accessible jobs only
     const appStats = await db.select({
       status: applications.status,
       count: sql<number>`count(*)`.as('count')
     })
     .from(applications)
     .leftJoin(jobs, eq(applications.jobId, jobs.id))
-    .where(eq(jobs.organizationId, user.organizationId))
+    .where(and(
+      eq(jobs.organizationId, user.organizationId),
+      inArray(jobs.id, accessibleJobIds)
+    ))
     .groupBy(applications.status)
     .all();
     
-    console.log(`📊 PIPELINE STATS: Application statistics:`, appStats);
+    console.log(`📊 PIPELINE STATS: Application statistics for accessible jobs:`, appStats);
 
-    // Get total counts
+    // Get total counts for accessible jobs only
     const totalJobs = await db.select({ count: sql<number>`count(*)`.as('count') })
       .from(jobs)
-      .where(eq(jobs.organizationId, user.organizationId))
+      .where(and(
+        eq(jobs.organizationId, user.organizationId),
+        inArray(jobs.id, accessibleJobIds)
+      ))
       .get();
 
     const totalApplications = await db.select({ count: sql<number>`count(*)`.as('count') })
       .from(applications)
       .leftJoin(jobs, eq(applications.jobId, jobs.id))
-      .where(eq(jobs.organizationId, user.organizationId))
+      .where(and(
+        eq(jobs.organizationId, user.organizationId),
+        inArray(jobs.id, accessibleJobIds)
+      ))
       .get();
 
     const activeJobs = await db.select({ count: sql<number>`count(*)`.as('count') })
       .from(jobs)
       .where(and(
         eq(jobs.organizationId, user.organizationId),
-        eq(jobs.status, 'active')
+        eq(jobs.status, 'active'),
+        inArray(jobs.id, accessibleJobIds)
       ))
       .get();
 
@@ -284,7 +357,7 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
       ),
     };
 
-    console.log(`📊 PIPELINE STATS: Final statistics:`, stats);
+    console.log(`📊 PIPELINE STATS: Final user-specific statistics for ${user.role}:`, stats);
     
     // Ensure fresh data by setting cache headers and adding timestamp
     res.set({
