@@ -1194,28 +1194,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stats route
+  // Stats route with permission-based filtering
   app.get('/api/stats', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      console.log('Fetching all jobs from database...');
-      const [jobs, candidates, matches, interviews] = await Promise.all([
-        storage.getJobsByOrganization(req.user!.organizationId!),
-        storage.getCandidatesByOrganization(req.user!.organizationId!),
-        storage.getJobMatchesByOrganization(req.user!.organizationId!),
-        storage.getInterviewsByOrganization(req.user!.organizationId!)
+      const currentUser = req.user!;
+      console.log(`📊 STATS: Calculating user-specific stats for user ${currentUser.id} (${currentUser.role}) in organization ${currentUser.organizationId}`);
+      
+      // Get database connection for permission-based filtering
+      const { db, schema } = await getDB();
+      
+      // Get user's accessible job IDs based on role and assignments
+      let accessibleJobIds: number[] = [];
+      
+      if (['super_admin', 'org_admin'].includes(currentUser.role)) {
+        // Super admin and org admin can see all jobs in their organization
+        const allJobs = await db.select({ id: schema.jobs.id })
+          .from(schema.jobs)
+          .where(eq(schema.jobs.organizationId, currentUser.organizationId!))
+          .all();
+        accessibleJobIds = allJobs.map((job: any) => job.id);
+      } else {
+        // For Manager, Team Lead, and Recruiter: only jobs they created or are assigned to
+        const assignedJobIds = await db.select({ jobId: schema.jobAssignments.jobId })
+          .from(schema.jobAssignments)
+          .where(eq(schema.jobAssignments.userId, currentUser.id))
+          .all();
+        
+        const createdJobs = await db.select({ id: schema.jobs.id })
+          .from(schema.jobs)
+          .where(and(
+            eq(schema.jobs.organizationId, currentUser.organizationId!),
+            eq(schema.jobs.createdBy, currentUser.id)
+          ))
+          .all();
+        
+        const assignedIds = assignedJobIds.map((a: any) => a.jobId);
+        const createdIds = createdJobs.map((j: any) => j.id);
+        accessibleJobIds = Array.from(new Set([...assignedIds, ...createdIds]));
+      }
+
+      console.log(`📊 STATS: User has access to ${accessibleJobIds.length} jobs:`, accessibleJobIds);
+
+      if (accessibleJobIds.length === 0) {
+        // User has no accessible jobs
+        console.log(`📊 STATS: User has no accessible jobs, returning empty stats`);
+        
+        return res.json({
+          activeJobs: 0,
+          totalCandidates: 0,
+          aiMatches: 0,
+          totalInterviews: 0,
+          avgMatchRate: 0
+        });
+      }
+
+      // Get user-specific data based on accessible jobs
+      const userJobs = await db.select()
+        .from(schema.jobs)
+        .where(and(
+          eq(schema.jobs.organizationId, currentUser.organizationId!),
+          inArray(schema.jobs.id, accessibleJobIds)
+        ))
+        .all();
+
+      // For candidates and matches, we still use organization-level data since they're not job-specific
+      const [candidates, matches, interviews] = await Promise.all([
+        storage.getCandidatesByOrganization(currentUser.organizationId!),
+        storage.getJobMatchesByOrganization(currentUser.organizationId!),
+        storage.getInterviewsByOrganization(currentUser.organizationId!)
       ]);
 
-      const avgMatchRate = matches.length > 0 
-        ? Math.round(matches.reduce((sum: number, match: any) => sum + match.matchPercentage, 0) / matches.length)
+      // Filter matches to only include those for accessible jobs
+      const accessibleMatches = matches.filter((match: any) => 
+        accessibleJobIds.includes(match.jobId)
+      );
+
+      const avgMatchRate = accessibleMatches.length > 0 
+        ? Math.round(accessibleMatches.reduce((sum: number, match: any) => sum + match.matchPercentage, 0) / accessibleMatches.length)
         : 0;
 
-      res.json({
-        activeJobs: jobs.length,
+      const stats = {
+        activeJobs: userJobs.length,
         totalCandidates: candidates.length,
-        aiMatches: matches.length,
+        aiMatches: accessibleMatches.length,
         totalInterviews: interviews.length,
         avgMatchRate
-      });
+      };
+
+      console.log(`📊 STATS: Final user-specific stats for ${currentUser.role}:`, stats);
+
+      res.json(stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
       res.status(500).json({ message: "Failed to fetch stats" });
