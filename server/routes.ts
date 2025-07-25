@@ -699,7 +699,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/candidates', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const candidates = await storage.getCandidatesByOrganization(req.user!.organizationId!);
+      const currentUser = req.user!;
+      const organizationId = currentUser.organizationId!;
+      
+      console.log(`🔍 CANDIDATES: Fetching candidates for user ${currentUser.id} (${currentUser.role}) in org ${organizationId}`);
+      
+      let candidates;
+      
+      // Super admins and org admins see all candidates in the organization
+      if (currentUser.role === 'super_admin' || currentUser.role === 'org_admin') {
+        console.log(`👑 CANDIDATES: User has ${currentUser.role} role - showing all candidates`);
+        candidates = await storage.getCandidatesByOrganization(organizationId);
+      } else {
+        // Other users see only candidates they created or are assigned to
+        console.log(`👤 CANDIDATES: User has ${currentUser.role} role - filtering by assignments`);
+        
+        // Get candidates created by this user
+        const allCandidates = await storage.getCandidatesByOrganization(organizationId);
+        const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
+        
+        // Get candidate assignments for this user
+        const { db, schema } = await getDB();
+        const assignedCandidateResults = await db
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
+        
+        const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
+        const assignedCandidates = allCandidates.filter(candidate => 
+          assignedCandidateIds.includes(candidate.id)
+        );
+        
+        // Combine and deduplicate
+        const candidateMap = new Map();
+        [...createdCandidates, ...assignedCandidates].forEach(candidate => {
+          candidateMap.set(candidate.id, candidate);
+        });
+        
+        candidates = Array.from(candidateMap.values());
+        
+        console.log(`🔍 CANDIDATES: User has access to ${candidates.length} candidates (${createdCandidates.length} created, ${assignedCandidates.length} assigned)`);
+      }
+      
       res.json(candidates);
     } catch (error) {
       console.error("Error fetching candidates:", error);
@@ -816,9 +858,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Job not found" });
       }
 
-      const candidates = await storage.getCandidatesByOrganization(req.user!.organizationId!);
+      // Get user-specific candidates based on role and assignments (same logic as /api/candidates)
+      const currentUser = req.user!;
+      let candidates;
+      
+      if (['super_admin', 'org_admin'].includes(currentUser.role)) {
+        // Super admin and org admin can see all candidates in their organization
+        candidates = await storage.getCandidatesByOrganization(currentUser.organizationId!);
+      } else {
+        // Other users see only candidates they created or are assigned to
+        const allCandidates = await storage.getCandidatesByOrganization(currentUser.organizationId!);
+        const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
+        
+        // Get candidate assignments for this user
+        const { db: dbConn, schema } = await getDB();
+        const assignedCandidateResults = await dbConn
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
+        
+        const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
+        const assignedCandidates = allCandidates.filter(candidate => 
+          assignedCandidateIds.includes(candidate.id)
+        );
+        
+        // Combine and deduplicate
+        const candidateMap = new Map();
+        [...createdCandidates, ...assignedCandidates].forEach(candidate => {
+          candidateMap.set(candidate.id, candidate);
+        });
+        
+        candidates = Array.from(candidateMap.values());
+      }
+      
       if (candidates.length === 0) {
-        return res.json({ matches: [], message: "No candidates found", totalCandidates: 0, filteredCount: 0 });
+        return res.json({ matches: [], message: "No accessible candidates found", totalCandidates: 0, filteredCount: 0 });
       }
 
       // Clear existing matches for this job
@@ -1257,9 +1332,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ))
         .all();
 
-      // For candidates and matches, we still use organization-level data since they're not job-specific
-      const [candidates, matches, interviews] = await Promise.all([
-        storage.getCandidatesByOrganization(currentUser.organizationId!),
+      // Get user-specific candidate data based on role and assignments (same logic as /api/candidates)
+      let candidates;
+      
+      if (['super_admin', 'org_admin'].includes(currentUser.role)) {
+        // Super admin and org admin can see all candidates in their organization
+        candidates = await storage.getCandidatesByOrganization(currentUser.organizationId!);
+      } else {
+        // Other users see only candidates they created or are assigned to
+        const allCandidates = await storage.getCandidatesByOrganization(currentUser.organizationId!);
+        const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
+        
+        // Get candidate assignments for this user
+        const assignedCandidateResults = await db
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
+        
+        const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
+        const assignedCandidates = allCandidates.filter(candidate => 
+          assignedCandidateIds.includes(candidate.id)
+        );
+        
+        // Combine and deduplicate
+        const candidateMap = new Map();
+        [...createdCandidates, ...assignedCandidates].forEach(candidate => {
+          candidateMap.set(candidate.id, candidate);
+        });
+        
+        candidates = Array.from(candidateMap.values());
+      }
+      
+      const [matches, interviews] = await Promise.all([
         storage.getJobMatchesByOrganization(currentUser.organizationId!),
         storage.getInterviewsByOrganization(currentUser.organizationId!)
       ]);
