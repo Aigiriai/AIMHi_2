@@ -13,21 +13,41 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  console.log(`🌐 API REQUEST: ${method} ${url}`, data ? { data } : '');
+  
   // Temporarily use Node.js backend until Python server is properly configured
   const backendUrl = url;
   
-  const res = await fetch(backendUrl, {
-    method,
-    headers: {
-      ...getAuthHeaders(),
-      ...(data ? { "Content-Type": "application/json" } : {}),
-    },
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  const requestBody = data ? JSON.stringify(data) : undefined;
+  if (requestBody) {
+    console.log(`🌐 API REQUEST: Body:`, requestBody);
+  }
+  
+  try {
+    const res = await fetch(backendUrl, {
+      method,
+      headers: {
+        ...getAuthHeaders(),
+        ...(data ? { "Content-Type": "application/json" } : {}),
+      },
+      body: requestBody,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    console.log(`🌐 API RESPONSE: ${res.status} ${res.statusText}`);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`❌ API ERROR: ${res.status}`, errorText);
+      await throwIfResNotOk(res);
+    }
+    
+    console.log(`✅ API SUCCESS: ${method} ${url}`);
+    return res;
+  } catch (error) {
+    console.error(`❌ API REQUEST FAILED: ${method} ${url}`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

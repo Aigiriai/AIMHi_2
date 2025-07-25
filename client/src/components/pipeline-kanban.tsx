@@ -108,14 +108,25 @@ export function PipelineKanban() {
   // Move application mutation
   const moveApplicationMutation = useMutation({
     mutationFn: async ({ applicationId, newStage, reason }: { applicationId: number; newStage: string; reason?: string }) => {
-      return apiRequest(`/api/applications/${applicationId}/move`, "POST", { newStage, reason });
+      console.log(`🔄 FRONTEND: Starting application move - ID: ${applicationId}, Stage: ${newStage}, Reason: ${reason}`);
+      try {
+        const response = await apiRequest("POST", `/api/applications/${applicationId}/move`, { newStage, reason });
+        const result = await response.json();
+        console.log(`✅ FRONTEND: Application move successful:`, result);
+        return result;
+      } catch (error) {
+        console.error(`❌ FRONTEND: Application move failed:`, error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      console.log(`✅ FRONTEND: Move mutation success for application ${variables.applicationId}`);
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
       toast({ title: "Application moved successfully" });
     },
-    onError: () => {
+    onError: (error, variables) => {
+      console.error(`❌ FRONTEND: Move mutation error for application ${variables.applicationId}:`, error);
       toast({ title: "Failed to move application", variant: "destructive" });
     }
   });
@@ -123,14 +134,25 @@ export function PipelineKanban() {
   // Update job status mutation
   const updateJobStatusMutation = useMutation({
     mutationFn: async ({ jobId, newStatus, reason }: { jobId: number; newStatus: string; reason?: string }) => {
-      return apiRequest(`/api/jobs/${jobId}/status`, "POST", { newStatus, reason });
+      console.log(`🔄 FRONTEND: Starting job status update - ID: ${jobId}, Status: ${newStatus}, Reason: ${reason}`);
+      try {
+        const response = await apiRequest("POST", `/api/jobs/${jobId}/status`, { newStatus, reason });
+        const result = await response.json();
+        console.log(`✅ FRONTEND: Job status update successful:`, result);
+        return result;
+      } catch (error) {
+        console.error(`❌ FRONTEND: Job status update failed:`, error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      console.log(`✅ FRONTEND: Job status mutation success for job ${variables.jobId}`);
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
       toast({ title: "Job status updated successfully" });
     },
-    onError: () => {
+    onError: (error, variables) => {
+      console.error(`❌ FRONTEND: Job status mutation error for job ${variables.jobId}:`, error);
       toast({ title: "Failed to update job status", variant: "destructive" });
     }
   });
@@ -447,6 +469,7 @@ function ApplicationCard({
   const [reason, setReason] = useState('');
 
   const handleMove = () => {
+    console.log(`🔄 FRONTEND: ApplicationCard handleMove triggered - ID: ${application.id}, NewStage: ${newStage}, Reason: ${reason}`);
     onMove(newStage, reason);
     setIsDialogOpen(false);
     setReason('');
