@@ -147,6 +147,16 @@ function Router() {
         <Route path="/app/*" component={WelcomePage} />
       )}
       
+      {/* Unauthorized Route */}
+      <Route path="/unauthorized">
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-600">Unauthorized</h1>
+            <p className="text-gray-600 mt-2">You don't have permission to access this page</p>
+          </div>
+        </div>
+      </Route>
+      
       {/* 404 Route */}
       <Route component={NotFound} />
     </Switch>

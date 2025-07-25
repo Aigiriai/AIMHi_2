@@ -27,15 +27,18 @@ export default function ProtectedRoute({
   const checkAuth = async () => {
     try {
       if (!authService.isAuthenticated()) {
+        console.log('ProtectedRoute: No auth token, redirecting to login');
         setLocation('/login');
         return;
       }
 
       const currentUser = await authService.getCurrentUser();
       setUser(currentUser);
+      console.log('ProtectedRoute: User authenticated:', currentUser.role);
 
       // Check role requirements
       if (requiredRoles.length > 0 && !authService.hasAnyRole(requiredRoles)) {
+        console.log('ProtectedRoute: User lacks required roles:', requiredRoles, 'User role:', currentUser.role);
         setLocation('/unauthorized');
         return;
       }
