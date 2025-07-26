@@ -677,7 +677,7 @@ function RecruitmentDashboard() {
                     )}
                     <Button onClick={() => setShowResumeModal(true)}>
                       <UploadIcon size={16} className="mr-2" />
-                      Upload Resume
+                      {['team_lead', 'recruiter'].includes(currentUser?.role || '') ? 'Submit Candidate' : 'Upload Resume'}
                     </Button>
                   </div>
                 </div>
@@ -691,8 +691,15 @@ function RecruitmentDashboard() {
                     <CardContent className="p-8 text-center">
                       <UsersIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No candidates yet</h3>
-                      <p className="text-gray-500 mb-4">Upload resumes to start building your candidate pool.</p>
-                      <Button onClick={() => setShowResumeModal(true)}>Upload First Resume</Button>
+                      <p className="text-gray-500 mb-4">
+                        {['team_lead', 'recruiter'].includes(currentUser?.role || '') 
+                          ? "You can only see candidates assigned to your pipeline. Submit candidate recommendations for manager review."
+                          : "Upload resumes to start building your candidate pool."
+                        }
+                      </p>
+                      <Button onClick={() => setShowResumeModal(true)}>
+                        {['team_lead', 'recruiter'].includes(currentUser?.role || '') ? 'Submit First Candidate' : 'Upload First Resume'}
+                      </Button>
                     </CardContent>
                   </Card>
                 ) : (

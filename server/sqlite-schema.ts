@@ -243,6 +243,28 @@ export const candidateAssignments = sqliteTable("candidate_assignments", {
   createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
+// Candidate submissions from Team Leads and Recruiters
+export const candidateSubmissions = sqliteTable("candidate_submissions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  submittedBy: integer("submitted_by").references(() => users.id).notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  experience: integer("experience").notNull(),
+  resumeContent: text("resume_content").notNull(),
+  resumeFileName: text("resume_file_name").notNull(),
+  source: text("source").default("manual"),
+  tags: text("tags").default("[]"),
+  status: text("status").notNull().default("pending"), // pending, approved, rejected
+  submissionNotes: text("submission_notes"), // Optional notes from submitter
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewedAt: text("reviewed_at"),
+  reviewNotes: text("review_notes"), // Optional notes from reviewer
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
 // Status history for both jobs and applications
 export const statusHistory = sqliteTable("status_history", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -273,6 +295,7 @@ export const insertInterviewSchema = createInsertSchema(interviews);
 export const insertApplicationSchema = createInsertSchema(applications);
 export const insertJobAssignmentSchema = createInsertSchema(jobAssignments);
 export const insertCandidateAssignmentSchema = createInsertSchema(candidateAssignments);
+export const insertCandidateSubmissionSchema = createInsertSchema(candidateSubmissions);
 export const insertStatusHistorySchema = createInsertSchema(statusHistory);
 
 // Types

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +43,7 @@ const resumeFormSchema = z.object({
   phone: z.string().optional(),
   experience: z.number().min(0).max(50).optional(),
   resume: z.instanceof(File, { message: "Please select a resume file" }),
+  submissionNotes: z.string().optional(),
 });
 
 type ResumeFormData = z.infer<typeof resumeFormSchema>;
@@ -60,6 +62,19 @@ export default function ResumeUploadModal({ open, onOpenChange, onSuccess }: Res
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const [pendingFormData, setPendingFormData] = useState<ResumeFormData | null>(null);
   const [isBulkUploading, setIsBulkUploading] = useState(false);
+  
+  // Get current user to determine workflow
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
+  
+  const isLowerRole = ['team_lead', 'recruiter'].includes(currentUser?.role || '');
+  const isSubmissionMode = isLowerRole;
 
   const form = useForm<ResumeFormData>({
     resolver: zodResolver(resumeFormSchema),
@@ -69,6 +84,7 @@ export default function ResumeUploadModal({ open, onOpenChange, onSuccess }: Res
       phone: "",
       experience: 0,
       resume: undefined,
+      submissionNotes: "",
     },
   });
 
@@ -90,13 +106,21 @@ export default function ResumeUploadModal({ open, onOpenChange, onSuccess }: Res
         formData.append("resume", data.resume);
       }
 
-      // Add forceOverwrite flag if provided
-      if (data.forceOverwrite) {
+      // Add submission notes for Team Lead/Recruiter
+      if (isSubmissionMode && data.submissionNotes) {
+        formData.append("submissionNotes", data.submissionNotes);
+      }
+
+      // Add forceOverwrite flag if provided (only for direct uploads)
+      if (data.forceOverwrite && !isSubmissionMode) {
         formData.append("forceOverwrite", "true");
       }
 
       const token = localStorage.getItem('authToken');
-      const response = await fetch("/api/candidates", {
+      // Use different endpoints based on role
+      const endpoint = isSubmissionMode ? "/api/candidate-submissions" : "/api/candidates";
+      
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           'Authorization': `Bearer ${token}`,

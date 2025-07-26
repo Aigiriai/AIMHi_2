@@ -548,6 +548,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Candidate routes
   app.post('/api/candidates', authenticateToken, requireOrganization, upload.single('resume'), async (req: AuthRequest, res) => {
     try {
+      const currentUser = req.user!;
+      
+      // Check if user has permission to add candidates directly (only Super Admin, Org Admin, Hiring Manager)
+      if (!['super_admin', 'org_admin', 'hiring_manager'].includes(currentUser.role)) {
+        return res.status(403).json({ 
+          message: "You don't have permission to add candidates directly. Please use the candidate submission feature instead." 
+        });
+      }
+      
       if (!req.file) {
         return res.status(400).json({ message: "Resume file is required" });
       }
@@ -657,6 +666,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bulk candidate upload from files
   app.post('/api/candidates/bulk-upload', authenticateToken, requireOrganization, upload.array('files', 50), async (req: AuthRequest, res) => {
     try {
+      const currentUser = req.user!;
+      
+      // Check if user has permission to add candidates directly (only Super Admin, Org Admin, Hiring Manager)
+      if (!['super_admin', 'org_admin', 'hiring_manager'].includes(currentUser.role)) {
+        return res.status(403).json({ 
+          message: "You don't have permission to add candidates directly. Please use the candidate submission feature instead." 
+        });
+      }
+      
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
         return res.status(400).json({ message: "No files uploaded" });
@@ -797,6 +815,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error in bulk candidate upload:", error);
       res.status(500).json({ message: error.message || "Failed to process files" });
+    }
+  });
+
+  // Candidate submission routes for Team Lead and Recruiter
+  app.post('/api/candidate-submissions', authenticateToken, requireOrganization, upload.single('resume'), async (req: AuthRequest, res) => {
+    try {
+      const currentUser = req.user!;
+      
+      // Check if user has permission to submit candidates (Team Lead and Recruiter only)
+      if (!['team_lead', 'recruiter'].includes(currentUser.role)) {
+        return res.status(403).json({ 
+          message: "Only Team Leads and Recruiters can submit candidate recommendations." 
+        });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "Resume file is required" });
+      }
+
+      let candidateData;
+      
+      // Handle various document types (same as regular candidate upload)
+      if (['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'].includes(req.file.mimetype)) {
+        const content = await extractTextFromDocument(req.file.buffer, req.file.originalname, req.file.mimetype);
+        
+        if (content.trim().length < 50) {
+          return res.status(400).json({ message: "File content is too short to be a valid resume" });
+        }
+
+        const resumeDetails = await extractResumeDetails(content, req.file.originalname, req.file.buffer);
+        candidateData = resumeDetails;
+      } else {
+        // For image files, extract data using OpenAI
+        const extractedData = await extractResumeDataFromImage(req.file.buffer);
+        candidateData = {
+          name: req.body.name || extractedData.name,
+          email: req.body.email || extractedData.email,
+          phone: req.body.phone || extractedData.phone,
+          experience: parseInt(req.body.experience) || extractedData.experience,
+          resumeContent: extractedData.resumeContent,
+          resumeFileName: req.file.originalname
+        };
+      }
+
+      // Prepare submission data
+      const submissionData = {
+        organizationId: currentUser.organizationId,
+        submittedBy: currentUser.id,
+        name: candidateData.name,
+        email: candidateData.email,
+        phone: candidateData.phone,
+        experience: candidateData.experience,
+        resumeContent: candidateData.resumeContent,
+        resumeFileName: candidateData.resumeFileName,
+        source: candidateData.source || "manual",
+        tags: candidateData.tags || "[]",
+        submissionNotes: req.body.submissionNotes || ""
+      };
+
+      const { db, schema } = await getDB();
+      
+      // Create submission directly without schema validation for now (since import is complex)
+      const submissionResult = await db.insert(schema.candidateSubmissions).values({
+        organizationId: submissionData.organizationId,
+        submittedBy: submissionData.submittedBy,
+        name: submissionData.name,
+        email: submissionData.email,
+        phone: submissionData.phone,
+        experience: submissionData.experience,
+        resumeContent: submissionData.resumeContent,
+        resumeFileName: submissionData.resumeFileName,
+        source: submissionData.source,
+        tags: submissionData.tags,
+        submissionNotes: submissionData.submissionNotes
+      }).returning();
+      
+      const submission = submissionResult.get();
+      
+      res.json({
+        ...submission,
+        message: "Candidate submitted successfully for review by managers"
+      });
+    } catch (error: any) {
+      console.error("Error submitting candidate:", error);
+      res.status(400).json({ message: error.message || "Failed to submit candidate" });
+    }
+  });
+
+  // Get candidate submissions for managers to review
+  app.get('/api/candidate-submissions', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const currentUser = req.user!;
+      
+      // Only Super Admin, Org Admin, and Hiring Manager can view submissions
+      if (!['super_admin', 'org_admin', 'hiring_manager'].includes(currentUser.role)) {
+        return res.status(403).json({ 
+          message: "You don't have permission to view candidate submissions." 
+        });
+      }
+      
+      const { db, schema } = await getDB();
+      
+      const submissions = await db
+        .select({
+          id: schema.candidateSubmissions.id,
+          organizationId: schema.candidateSubmissions.organizationId,
+          submittedBy: schema.candidateSubmissions.submittedBy,
+          name: schema.candidateSubmissions.name,
+          email: schema.candidateSubmissions.email,
+          phone: schema.candidateSubmissions.phone,
+          experience: schema.candidateSubmissions.experience,
+          resumeFileName: schema.candidateSubmissions.resumeFileName,
+          source: schema.candidateSubmissions.source,
+          status: schema.candidateSubmissions.status,
+          submissionNotes: schema.candidateSubmissions.submissionNotes,
+          reviewedBy: schema.candidateSubmissions.reviewedBy,
+          reviewedAt: schema.candidateSubmissions.reviewedAt,
+          reviewNotes: schema.candidateSubmissions.reviewNotes,
+          createdAt: schema.candidateSubmissions.createdAt,
+          // Include submitter info
+          submitterName: sql`${schema.users.firstName} || ' ' || ${schema.users.lastName}`.as('submitterName'),
+          submitterRole: schema.users.role
+        })
+        .from(schema.candidateSubmissions)
+        .leftJoin(schema.users, eq(schema.candidateSubmissions.submittedBy, schema.users.id))
+        .where(eq(schema.candidateSubmissions.organizationId, currentUser.organizationId!))
+        .orderBy(desc(schema.candidateSubmissions.createdAt))
+        .all();
+      
+      res.json(submissions);
+    } catch (error) {
+      console.error("Error fetching candidate submissions:", error);
+      res.status(500).json({ message: "Failed to fetch candidate submissions" });
     }
   });
 

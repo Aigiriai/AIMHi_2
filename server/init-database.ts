@@ -306,6 +306,33 @@ export async function initializeSQLiteDatabase() {
       );
     `);
 
+    // Create candidate submissions table for Team Lead and Recruiter submissions
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS candidate_submissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        submitted_by INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        experience INTEGER NOT NULL,
+        resume_content TEXT NOT NULL,
+        resume_file_name TEXT NOT NULL,
+        source TEXT DEFAULT 'manual',
+        tags TEXT DEFAULT '[]',
+        status TEXT NOT NULL DEFAULT 'pending',
+        submission_notes TEXT,
+        reviewed_by INTEGER,
+        reviewed_at TEXT,
+        review_notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (submitted_by) REFERENCES users(id),
+        FOREIGN KEY (reviewed_by) REFERENCES users(id)
+      );
+    `);
+
     // Create status history table
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS status_history (
