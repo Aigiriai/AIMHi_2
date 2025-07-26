@@ -70,9 +70,12 @@ export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploa
       }
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       
+      // Use the custom message from backend if available, otherwise use default
+      const message = result.message || `Successfully processed ${result.created} ${uploadType}, ignored ${result.ignored} files`;
+      
       toast({
         title: "Upload Complete",
-        description: `Successfully processed ${result.created} ${uploadType}, ignored ${result.ignored} files`,
+        description: message,
       });
       
       onSuccess?.();
