@@ -1,37 +1,38 @@
-# Updated Detailed Permission Matrix (January 2025)
+# Detailed Permission Matrix
 
-## Overview
-This document reflects the current implementation of role-based permissions after the January 2025 updates that simplified candidate upload workflows and implemented proper visibility restrictions.
+| Action | Super Admin | Org Admin | Hiring Manager | Recruiter |
+|--------|-------------|-----------|----------------|-----------|
+| **Job Management** | | | | |
+| Create Jobs | 🟢 All Orgs | 🟢 Own Org | 🟢 Own Jobs | ❌ |
+| Edit Job Details | 🟢 All | 🟢 Own Org | 🟢 Own Jobs | ❌ |
+| Change Job Status | 🟢 All | 🟢 Own Org | 🟢 Own Jobs | ❌ |
+| Delete Jobs | 🟢 All | 🟢 Own Org | 🟢 Own Jobs | ❌ |
+| **Candidate Management** | | | | |
+| Add Candidates | 🟢 All | 🟢 Own Org | 🟢 Assigned Jobs | 🟢 Assigned Jobs |
+| Move to Screening | 🟢 All | 🟢 Own Org | 🟢 Assigned Jobs | 🟢 Assigned Jobs |
+| Move to Interview | 🟢 All | 🟢 Own Org | 🟢 Assigned Jobs | 🔵 Requires Approval |
+| Final Hiring Decision | 🟢 All | 🟢 Own Org | 🟢 Assigned Jobs | ❌ |
+| **Pipeline Visibility** | | | | |
+| View All Jobs | 🟢 System | 🟢 Own Org | ❌ Assigned Only | ❌ Assigned Only |
+| Cross-Job Analytics | 🟢 System | 🟢 Own Org | ❌ Own Jobs Only | ❌ Assigned Only |
+| **Configuration** | | | | |
+| Pipeline Stages | 🟢 System | 🔵 Org-specific | ❌ | ❌ |
+| Automation Rules | 🟢 System | 🔵 Org-specific | ❌ | ❌ |
 
-## Job Management Permissions
-
-| Role | Create Jobs | View Jobs | Edit Jobs | Delete Jobs | Assign Jobs | View Assignments |
-|------|-------------|-----------|-----------|-------------|-------------|------------------|
-| **Super Admin** | ✅ All orgs | ✅ All orgs | ✅ All orgs | ✅ All orgs | ✅ All orgs | ✅ All orgs |
-| **Org Admin** | ✅ Own org | ✅ All in org | ✅ All in org | ✅ All in org | ✅ All in org | ✅ All in org |
-| **Manager** | ✅ Own org | ✅ Created + Assigned | ✅ Created + Assigned | ✅ Created only | ✅ All in org | ✅ Created + Assigned |
-| **Team Lead** | ❌ No | ✅ Assigned only | ❌ No | ❌ No | ❌ No | ✅ Assigned only |
-| **Recruiter** | ❌ No | ✅ Assigned only | ❌ No | ❌ No | ❌ No | ✅ Assigned only |
-
-## Candidate Management Permissions (UPDATED)
-
-| Role | Upload Candidates | View Candidates | Edit Candidates | Delete Candidates | Assign Candidates | Schedule Interviews |
-|------|-------------------|-----------------|-----------------|-------------------|-------------------|-------------------|
-| **Super Admin** | ✅ All orgs | ✅ All orgs | ✅ All orgs | ✅ All orgs | ✅ All orgs | ✅ All orgs |
-| **Org Admin** | ✅ Own org | ✅ All in org | ✅ All in org | ✅ All in org | ✅ All in org | ✅ All in org |
-| **Manager** | ✅ Own org | ✅ Created + Assigned | ✅ Created + Assigned | ✅ Created only | ✅ All in org | ✅ Created + Assigned |
-| **Team Lead** | ✅ Own org¹ | ✅ Assigned only² | ✅ Assigned only | ❌ No | ❌ No | ✅ Assigned only |
-| **Recruiter** | ✅ Own org¹ | ✅ Assigned only² | ✅ Assigned only | ❌ No | ❌ No | ✅ Assigned only |
+## Legend
+- 🟢 **Full Access** - Complete permissions for specified scope
+- 🔵 **Limited Access** - Restricted permissions or requires approval
+- ❌ **No Access** - Action not permitted for this role
 
 ## Key Implementation Details
 
-### ¹ Upload Process for Team Lead/Recruiter:
+### Upload Process for Team Lead/Recruiter:
 - **Single Workflow**: Same "Upload Resume" button for all roles (no separate submission workflows)
 - **Special Messaging**: Success message includes: "Your submissions will be reviewed by managers for assignment to jobs. Please follow up with your HR manager for status updates."
 - **Database Storage**: Candidates uploaded successfully to main candidates table immediately
 - **No Dual Tables**: No separate submission tables - all candidates go to same database table
 
-### ² Visibility Restrictions (Critical Change):
+### Visibility Restrictions (Critical Change):
 - **Team Lead/Recruiter**: Can ONLY see candidates assigned to them by managers (NOT their own uploads)
 - **Manager**: Can see candidates they uploaded + candidates assigned to them
 - **Org Admin**: Can see all candidates in organization regardless of who uploaded them
