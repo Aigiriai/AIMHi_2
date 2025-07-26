@@ -100,6 +100,20 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
+### 2025-01-26: Simplified Candidate Upload Workflow with Role-based Visibility
+- **MILESTONE ACHIEVED**: Simplified candidate upload system with proper role-based visibility controls
+- **Single Upload Interface**: Removed single upload tab, simplified modal to only use bulk upload for all users
+- **Role-based Messaging**: Team Lead/Recruiter receive special success message about manager review process
+- **Visibility Restrictions Implemented**: Team Lead/Recruiter can ONLY see candidates assigned to them (not their own uploads)
+- **Hierarchical Access Control**: 
+  - Org Admin sees all candidates in organization
+  - Manager sees candidates they created + assigned to them
+  - Team Lead/Recruiter see only candidates assigned to them by managers
+- **Upload Workflow**: Team Lead/Recruiter uploads → visible to Org Admin → Manager assigns → visible to Team Lead/Recruiter
+- **Database Structure**: Single candidates table (no separate submission tables), all uploads stored immediately
+- **Assignment System**: Existing candidate assignment interface controls Team Lead/Recruiter visibility
+- **Testing Verified**: All role behaviors confirmed working correctly through comprehensive testing
+
 ### 2025-01-25: Complete ATS Pipeline Management System with UI Enhancements
 - **MILESTONE ACHIEVED**: Comprehensive ATS lifecycle management fully operational with enhanced navigation
 - **Pipeline Functionality**: Both Job Pipeline and Application Pipeline with full drag-and-drop workflow stages
