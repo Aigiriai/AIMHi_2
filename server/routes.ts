@@ -2065,6 +2065,326 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Application creation endpoints
+  
+  // Create a new application (candidate applying to job)
+  app.post('/api/applications', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { candidateId, jobId, notes = '', source = 'manual' } = req.body;
+      const currentUser = req.user!;
+      const organizationId = currentUser.organizationId!;
+
+      // Validate required fields
+      if (!candidateId || !jobId) {
+        return res.status(400).json({ message: "candidateId and jobId are required" });
+      }
+
+      // Check if user has permission to access both candidate and job
+      const { db, schema } = await getDB();
+      
+      // Check job assignment
+      const jobAssignment = await db
+        .select()
+        .from(schema.jobAssignments)
+        .where(and(
+          eq(schema.jobAssignments.jobId, jobId),
+          eq(schema.jobAssignments.userId, currentUser.id)
+        ))
+        .get();
+
+      // Check candidate assignment  
+      const candidateAssignment = await db
+        .select()
+        .from(schema.candidateAssignments)
+        .where(and(
+          eq(schema.candidateAssignments.candidateId, candidateId),
+          eq(schema.candidateAssignments.userId, currentUser.id)
+        ))
+        .get();
+
+      // Super admin and org admin can create applications without assignments
+      const hasPermission = currentUser.role === 'super_admin' || 
+                           currentUser.role === 'org_admin' ||
+                           (jobAssignment && candidateAssignment);
+
+      if (!hasPermission) {
+        return res.status(403).json({ 
+          message: "You need assignments to both the candidate and job to create an application" 
+        });
+      }
+
+      // Check if application already exists
+      const existingApplication = await db
+        .select()
+        .from(schema.applications)
+        .where(and(
+          eq(schema.applications.candidateId, candidateId),
+          eq(schema.applications.jobId, jobId),
+          eq(schema.applications.organizationId, organizationId)
+        ))
+        .get();
+
+      if (existingApplication) {
+        return res.status(409).json({ 
+          message: "Application already exists for this candidate-job combination" 
+        });
+      }
+
+      // Get AI match score if available
+      let matchPercentage = null;
+      const existingMatch = await db
+        .select()
+        .from(schema.jobMatches)
+        .where(and(
+          eq(schema.jobMatches.candidateId, candidateId),
+          eq(schema.jobMatches.jobId, jobId)
+        ))
+        .get();
+
+      if (existingMatch) {
+        matchPercentage = existingMatch.overallScore;
+      }
+
+      // Create the application
+      const newApplication = await db
+        .insert(schema.applications)
+        .values({
+          organizationId,
+          jobId,
+          candidateId,
+          appliedBy: currentUser.id,
+          status: 'new',
+          currentStage: 'new',
+          appliedAt: new Date().toISOString(),
+          matchPercentage,
+          source,
+          notes,
+          lastStageChangeAt: new Date().toISOString(),
+          lastStageChangedBy: currentUser.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        })
+        .returning()
+        .get();
+
+      console.log(`✅ APPLICATION: Created application ${newApplication.id} for candidate ${candidateId} → job ${jobId} by user ${currentUser.id}`);
+
+      res.json({ 
+        success: true, 
+        application: newApplication,
+        message: "Application created successfully"
+      });
+
+    } catch (error) {
+      console.error('❌ APPLICATION ERROR:', error);
+      res.status(500).json({ message: "Failed to create application" });
+    }
+  });
+
+  // Get application creation suggestions (AI matching integration)
+  app.get('/api/applications/suggestions', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const currentUser = req.user!;
+      const organizationId = currentUser.organizationId!;
+      const minScore = parseInt(req.query.minScore as string) || 70;
+
+      console.log(`🔍 SUGGESTIONS: Getting application suggestions for user ${currentUser.id} with min score ${minScore}%`);
+
+      // Get user's assigned jobs and candidates
+      const { db, schema } = await getDB();
+      
+      let accessibleJobIds: number[] = [];
+      let accessibleCandidateIds: number[] = [];
+
+      if (currentUser.role === 'super_admin' || currentUser.role === 'org_admin') {
+        // Get all jobs and candidates in organization
+        const allJobs = await storage.getJobsByOrganization(organizationId);
+        const allCandidates = await storage.getCandidatesByOrganization(organizationId);
+        accessibleJobIds = allJobs.map(j => j.id);
+        accessibleCandidateIds = allCandidates.map(c => c.id);
+      } else {
+        // Get assigned jobs and candidates
+        const jobAssignments = await db
+          .select({ jobId: schema.jobAssignments.jobId })
+          .from(schema.jobAssignments)
+          .where(eq(schema.jobAssignments.userId, currentUser.id))
+          .all();
+        
+        const candidateAssignments = await db
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
+
+        accessibleJobIds = jobAssignments.map(ja => ja.jobId);
+        accessibleCandidateIds = candidateAssignments.map(ca => ca.candidateId);
+      }
+
+      if (accessibleJobIds.length === 0 || accessibleCandidateIds.length === 0) {
+        return res.json({ suggestions: [] });
+      }
+
+      // Get high-scoring matches for accessible candidate-job combinations
+      const suggestions = await db
+        .select({
+          matchId: schema.jobMatches.id,
+          jobId: schema.jobMatches.jobId,
+          candidateId: schema.jobMatches.candidateId,
+          overallScore: schema.jobMatches.overallScore,
+          jobTitle: schema.jobs.title,
+          candidateName: schema.candidates.name,
+          candidateEmail: schema.candidates.email
+        })
+        .from(schema.jobMatches)
+        .innerJoin(schema.jobs, eq(schema.jobMatches.jobId, schema.jobs.id))
+        .innerJoin(schema.candidates, eq(schema.jobMatches.candidateId, schema.candidates.id))
+        .where(and(
+          inArray(schema.jobMatches.jobId, accessibleJobIds),
+          inArray(schema.jobMatches.candidateId, accessibleCandidateIds),
+          sql`${schema.jobMatches.overallScore} >= ${minScore}`
+        ))
+        .orderBy(desc(schema.jobMatches.overallScore))
+        .limit(20)
+        .all();
+
+      // Filter out existing applications
+      const existingApplications = await db
+        .select({
+          candidateId: schema.applications.candidateId,
+          jobId: schema.applications.jobId
+        })
+        .from(schema.applications)
+        .where(eq(schema.applications.organizationId, organizationId))
+        .all();
+
+      const existingSet = new Set(
+        existingApplications.map(app => `${app.candidateId}-${app.jobId}`)
+      );
+
+      const filteredSuggestions = suggestions.filter(
+        suggestion => !existingSet.has(`${suggestion.candidateId}-${suggestion.jobId}`)
+      );
+
+      console.log(`✅ SUGGESTIONS: Found ${filteredSuggestions.length} application suggestions`);
+
+      res.json({ suggestions: filteredSuggestions });
+
+    } catch (error) {
+      console.error('❌ SUGGESTIONS ERROR:', error);
+      res.status(500).json({ message: "Failed to get application suggestions" });
+    }
+  });
+
+  // Get available jobs for a candidate (for dropdown)
+  app.get('/api/candidates/:candidateId/available-jobs', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { candidateId } = req.params;
+      const currentUser = req.user!;
+      const organizationId = currentUser.organizationId!;
+
+      // Get user's accessible jobs
+      const { db, schema } = await getDB();
+      
+      let accessibleJobs: any[] = [];
+
+      if (currentUser.role === 'super_admin' || currentUser.role === 'org_admin') {
+        accessibleJobs = await storage.getJobsByOrganization(organizationId);
+      } else {
+        const jobAssignments = await db
+          .select({ jobId: schema.jobAssignments.jobId })
+          .from(schema.jobAssignments)
+          .where(eq(schema.jobAssignments.userId, currentUser.id))
+          .all();
+        
+        const jobIds = jobAssignments.map(ja => ja.jobId);
+        if (jobIds.length > 0) {
+          accessibleJobs = await db
+            .select()
+            .from(schema.jobs)
+            .where(and(
+              inArray(schema.jobs.id, jobIds),
+              eq(schema.jobs.organizationId, organizationId)
+            ))
+            .all();
+        }
+      }
+
+      // Filter out jobs that already have applications for this candidate
+      const existingApplications = await db
+        .select({ jobId: schema.applications.jobId })
+        .from(schema.applications)
+        .where(and(
+          eq(schema.applications.candidateId, parseInt(candidateId)),
+          eq(schema.applications.organizationId, organizationId)
+        ))
+        .all();
+
+      const existingJobIds = new Set(existingApplications.map(app => app.jobId));
+      const availableJobs = accessibleJobs.filter(job => !existingJobIds.has(job.id));
+
+      res.json({ jobs: availableJobs });
+
+    } catch (error) {
+      console.error('❌ AVAILABLE JOBS ERROR:', error);
+      res.status(500).json({ message: "Failed to get available jobs" });
+    }
+  });
+
+  // Get available candidates for a job (for dropdown)
+  app.get('/api/jobs/:jobId/available-candidates', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const { jobId } = req.params;
+      const currentUser = req.user!;
+      const organizationId = currentUser.organizationId!;
+
+      // Get user's accessible candidates
+      const { db, schema } = await getDB();
+      
+      let accessibleCandidates: any[] = [];
+
+      if (currentUser.role === 'super_admin' || currentUser.role === 'org_admin') {
+        accessibleCandidates = await storage.getCandidatesByOrganization(organizationId);
+      } else {
+        const candidateAssignments = await db
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
+        
+        const candidateIds = candidateAssignments.map(ca => ca.candidateId);
+        if (candidateIds.length > 0) {
+          accessibleCandidates = await db
+            .select()
+            .from(schema.candidates)
+            .where(and(
+              inArray(schema.candidates.id, candidateIds),
+              eq(schema.candidates.organizationId, organizationId)
+            ))
+            .all();
+        }
+      }
+
+      // Filter out candidates that already have applications for this job
+      const existingApplications = await db
+        .select({ candidateId: schema.applications.candidateId })
+        .from(schema.applications)
+        .where(and(
+          eq(schema.applications.jobId, parseInt(jobId)),
+          eq(schema.applications.organizationId, organizationId)
+        ))
+        .all();
+
+      const existingCandidateIds = new Set(existingApplications.map(app => app.candidateId));
+      const availableCandidates = accessibleCandidates.filter(candidate => !existingCandidateIds.has(candidate.id));
+
+      res.json({ candidates: availableCandidates });
+
+    } catch (error) {
+      console.error('❌ AVAILABLE CANDIDATES ERROR:', error);
+      res.status(500).json({ message: "Failed to get available candidates" });
+    }
+  });
+
   // Mount route modules
   app.use('/api/auth', authRoutes);
   app.use('/api/settings', settingsRoutes);

@@ -24,6 +24,9 @@ import JobTemplateViewer from "@/components/job-template-viewer";
 import JobAssignmentModal from "@/components/job-assignment-modal";
 import { CandidateAssignmentModal } from "@/components/candidate-assignment-modal";
 import { PipelineKanban } from "@/components/pipeline-kanban";
+import { ApplyToJobDropdown } from "@/components/apply-to-job-dropdown";
+import { AddCandidateDropdown } from "@/components/add-candidate-dropdown";
+import { AiMatchingSuggestions } from "@/components/ai-matching-suggestions";
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 
 interface Stats {
@@ -543,6 +546,14 @@ function RecruitmentDashboard() {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
+                                    <AddCandidateDropdown 
+                                      jobId={job.id} 
+                                      jobTitle={job.title}
+                                      onApplicationCreated={() => {
+                                        queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
+                                      }}
+                                    />
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -636,6 +647,14 @@ function RecruitmentDashboard() {
                                     </div>
                                   </div>
                                   <div className="flex space-x-2">
+                                    <ApplyToJobDropdown 
+                                      candidateId={candidate.id} 
+                                      candidateName={candidate.name}
+                                      onApplicationCreated={() => {
+                                        queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
+                                        queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
+                                      }}
+                                    />
                                     <Button variant="outline" size="sm">
                                       View Resume
                                     </Button>
@@ -668,6 +687,16 @@ function RecruitmentDashboard() {
             {/* AI Matching Tab */}
             <TabsContent value="ai-matching" className="mt-0">
               <div className="space-y-6">
+                {/* AI Matching Suggestions */}
+                <AiMatchingSuggestions 
+                  minScore={70}
+                  maxResults={15}
+                  onApplicationCreated={() => {
+                    queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
+                    queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
+                  }}
+                />
+
                 {/* AI Matching Controls */}
                 <Card>
                   <CardContent className="p-6">
