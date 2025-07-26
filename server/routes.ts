@@ -2225,27 +2225,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get high-scoring matches for accessible candidate-job combinations
-      const suggestions = await db
-        .select({
-          matchId: schema.jobMatches.id,
-          jobId: schema.jobMatches.jobId,
-          candidateId: schema.jobMatches.candidateId,
-          overallScore: schema.jobMatches.overallScore,
-          jobTitle: schema.jobs.title,
-          candidateName: schema.candidates.name,
-          candidateEmail: schema.candidates.email
-        })
+      const rawSuggestions = await db
+        .select()
         .from(schema.jobMatches)
         .innerJoin(schema.jobs, eq(schema.jobMatches.jobId, schema.jobs.id))
         .innerJoin(schema.candidates, eq(schema.jobMatches.candidateId, schema.candidates.id))
         .where(and(
           inArray(schema.jobMatches.jobId, accessibleJobIds),
           inArray(schema.jobMatches.candidateId, accessibleCandidateIds),
-          sql`${schema.jobMatches.overallScore} >= ${minScore}`
+          sql`${schema.jobMatches.match_percentage} >= ${minScore}`
         ))
-        .orderBy(desc(schema.jobMatches.overallScore))
+        .orderBy(desc(schema.jobMatches.matchPercentage))
         .limit(20)
         .all();
+
+      // Format suggestions data
+      const suggestions = rawSuggestions.map((row: any) => ({
+        matchId: row.job_matches.id,
+        jobId: row.job_matches.jobId,
+        candidateId: row.job_matches.candidateId,
+        overallScore: row.job_matches.matchPercentage,
+        jobTitle: row.jobs.title,
+        candidateName: row.candidates.name,
+        candidateEmail: row.candidates.email
+      }));
 
       // Filter out existing applications
       const existingApplications = await db
@@ -2258,11 +2261,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .all();
 
       const existingSet = new Set(
-        existingApplications.map(app => `${app.candidateId}-${app.jobId}`)
+        existingApplications.map((app: any) => `${app.candidateId}-${app.jobId}`)
       );
 
       const filteredSuggestions = suggestions.filter(
-        suggestion => !existingSet.has(`${suggestion.candidateId}-${suggestion.jobId}`)
+        (suggestion: any) => !existingSet.has(`${suggestion.candidateId}-${suggestion.jobId}`)
       );
 
       console.log(`✅ SUGGESTIONS: Found ${filteredSuggestions.length} application suggestions`);

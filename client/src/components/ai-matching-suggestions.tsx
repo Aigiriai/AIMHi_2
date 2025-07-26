@@ -33,7 +33,7 @@ export function AiMatchingSuggestions({
   const queryClient = useQueryClient();
 
   // Get AI matching suggestions
-  const { data: suggestions = [], isLoading, refetch } = useQuery({
+  const { data: suggestionsData, isLoading, refetch } = useQuery({
     queryKey: [`/api/applications/suggestions`, { minScore: currentMinScore }],
     queryFn: () => 
       fetch(`/api/applications/suggestions?minScore=${currentMinScore}`, {
@@ -42,6 +42,8 @@ export function AiMatchingSuggestions({
         },
       }).then((res) => res.json()),
   });
+
+  const suggestions = Array.isArray(suggestionsData) ? suggestionsData : (suggestionsData?.suggestions || []);
 
   // Create application mutation
   const createApplicationMutation = useMutation({
