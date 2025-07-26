@@ -51,7 +51,7 @@ export function AiMatchingSuggestions({
       candidateName: string;
       jobTitle: string;
     }) => {
-      return apiRequest(`/api/applications`, 'POST', {
+      return apiRequest('POST', `/api/applications`, {
         candidateId,
         jobId,
         source: 'ai_suggestion',

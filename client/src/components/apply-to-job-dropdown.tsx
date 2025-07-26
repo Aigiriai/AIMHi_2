@@ -39,7 +39,7 @@ export function ApplyToJobDropdown({ candidateId, candidateName, onApplicationCr
   // Create application mutation
   const createApplicationMutation = useMutation({
     mutationFn: async ({ jobId, candidateId }: { jobId: number; candidateId: number }) => {
-      return apiRequest(`/api/applications`, 'POST', {
+      return apiRequest('POST', `/api/applications`, {
         candidateId,
         jobId,
         source: 'manual',
