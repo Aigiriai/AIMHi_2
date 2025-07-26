@@ -123,9 +123,13 @@ export default function ResumeUploadModal({ open, onOpenChange, onSuccess }: Res
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/candidates"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      
+      // Use the message from the backend response if available
+      const message = data.message || (data.wasUpdated ? "Candidate profile updated successfully!" : "Resume uploaded successfully!");
+      
       toast({
         title: "Success",
-        description: data.wasUpdated ? "Candidate profile updated successfully!" : "Resume uploaded successfully!",
+        description: message,
       });
       form.reset();
       setDuplicateInfo(null);

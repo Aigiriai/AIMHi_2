@@ -793,8 +793,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Different messaging based on user role
+      const baseMessage = `Processed ${files.length} files`;
+      const roleSpecificMessage = ['team_lead', 'recruiter'].includes(currentUser.role) 
+        ? `${baseMessage}. Your submissions will be reviewed by managers for assignment to jobs. Please follow up with your HR manager for status updates.`
+        : baseMessage;
+
       res.json({
-        message: `Processed ${files.length} files`,
+        message: roleSpecificMessage,
         created: createdCandidates.length,
         ignored: ignored.length,
         skipped: skippedDuplicates.length,
