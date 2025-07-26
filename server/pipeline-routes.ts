@@ -401,11 +401,14 @@ router.post("/jobs/:id/status", authenticateToken, async (req: AuthRequest, res:
 
     const { db } = await getDB();
 
-    // Check permissions (simplified for super_admin)
+    // Check permissions - only super_admin, org_admin, and hiring_manager can change job status
     console.log(`🔄 JOB STATUS: Checking permissions for user role: ${user.role}`);
-    if (user.role !== 'super_admin' && user.role !== 'org_admin') {
-      console.log(`❌ JOB STATUS: Permission denied for role: ${user.role}`);
-      return res.status(403).json({ success: false, error: "Not authorized to change job status" });
+    if (!['super_admin', 'org_admin', 'hiring_manager'].includes(user.role)) {
+      console.log(`❌ JOB STATUS: Permission denied for role: ${user.role}. Only Super Admin, Org Admin, and Hiring Manager can change job status.`);
+      return res.status(403).json({ 
+        success: false, 
+        error: "You don't have permission to change job status. Only Super Admin, Org Admin, and Hiring Manager can change job status." 
+      });
     }
     console.log(`✅ JOB STATUS: Permission granted for role: ${user.role}`);
 

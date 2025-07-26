@@ -100,11 +100,24 @@ function RecruitmentDashboard() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Check if user has permission to delete jobs (only super_admin, org_admin, and hiring_manager can delete)
-  const canDeleteJobs = currentUser?.role && ['super_admin', 'org_admin', 'hiring_manager'].includes(currentUser.role);
+  // Comprehensive permission checks based on the Detailed Permission Matrix
+  const userRole = currentUser?.role;
   
-  // Check if user has permission to delete candidates (varies by role)
-  const canDeleteCandidates = currentUser?.role && ['super_admin', 'org_admin', 'hiring_manager'].includes(currentUser.role);
+  // Job Management Permissions
+  const canCreateJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
+  const canEditJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
+  const canChangeJobStatus = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
+  const canDeleteJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
+  
+  // Candidate Management Permissions
+  const canDeleteCandidates = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
+  
+  // Pipeline Visibility Permissions
+  const canViewAllJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
+  
+  // Configuration Permissions
+  const canManagePipelineStages = userRole && ['super_admin', 'org_admin'].includes(userRole);
+  const canManageAutomationRules = userRole && ['super_admin', 'org_admin'].includes(userRole);
 
   const filteredMatches = matches.filter(match =>
     searchTerm === "" ||
@@ -554,10 +567,12 @@ function RecruitmentDashboard() {
                         Delete Selected ({selectedJobs.length})
                       </Button>
                     )}
-                    <Button onClick={() => setShowJobModal(true)}>
-                      <PlusIcon size={16} className="mr-2" />
-                      Post New Job
-                    </Button>
+                    {canCreateJobs && (
+                      <Button onClick={() => setShowJobModal(true)}>
+                        <PlusIcon size={16} className="mr-2" />
+                        Post New Job
+                      </Button>
+                    )}
                   </div>
                 </div>
                 {jobsLoading ? (
@@ -570,8 +585,12 @@ function RecruitmentDashboard() {
                     <CardContent className="p-8 text-center">
                       <BriefcaseIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                       <h3 className="text-lg font-medium text-gray-900 mb-2">No job postings yet</h3>
-                      <p className="text-gray-500 mb-4">Start by posting your first job opening.</p>
-                      <Button onClick={() => setShowJobModal(true)}>Post Your First Job</Button>
+                      <p className="text-gray-500 mb-4">
+                        {canCreateJobs ? "Start by posting your first job opening." : "No job postings available for your role."}
+                      </p>
+                      {canCreateJobs && (
+                        <Button onClick={() => setShowJobModal(true)}>Post Your First Job</Button>
+                      )}
                     </CardContent>
                   </Card>
                 ) : (

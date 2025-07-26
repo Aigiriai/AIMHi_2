@@ -313,11 +313,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job routes
   app.post('/api/jobs', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
+      const currentUser = req.user!;
+      
+      // Check if user has permission to create jobs (recruiters cannot create jobs)
+      if (currentUser.role === 'recruiter') {
+        return res.status(403).json({ 
+          message: "You don't have permission to create jobs. Only Super Admin, Org Admin, and Hiring Manager can create jobs." 
+        });
+      }
+      
       // Add organization context from authenticated user
       const completeData = {
         ...req.body,
-        organizationId: req.user!.organizationId,
-        createdBy: req.user!.id
+        organizationId: currentUser.organizationId,
+        createdBy: currentUser.id
       };
       
       const jobData = insertJobSchema.parse(completeData);
@@ -507,7 +516,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/jobs/:id', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
+      const currentUser = req.user!;
       const jobId = parseInt(req.params.id);
+      
+      // Check if user has permission to delete jobs (recruiters cannot delete jobs)
+      if (currentUser.role === 'recruiter') {
+        return res.status(403).json({ 
+          message: "You don't have permission to delete jobs. Only Super Admin, Org Admin, and Hiring Manager can delete jobs." 
+        });
+      }
+      
       const job = await storage.getJob(jobId);
       
       if (!job) {
