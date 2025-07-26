@@ -348,7 +348,8 @@ function RecruitmentDashboard() {
 
             {/* Overview Tab - Dashboard Content */}
             <TabsContent value="overview" className="mt-0">
-              {/* Stats Overview */}
+              {/* HIDDEN: Stats Overview - commented out for ATS dashboard space */}
+              {/* 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <Card>
                   <CardContent className="p-6">
@@ -385,11 +386,11 @@ function RecruitmentDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* AI Matches Today, Interviews, and Match Rate cards removed */}
               </div>
+              */}
 
-              {/* Quick Actions */}
+              {/* HIDDEN: Quick Actions - commented out for ATS dashboard space */}
+              {/*
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                 <Button onClick={() => setShowJobModal(true)} className="h-20 flex flex-col items-center justify-center space-y-2">
                   <PlusIcon size={24} />
@@ -403,10 +404,11 @@ function RecruitmentDashboard() {
                   <BrainIcon size={24} />
                   <span>AI Matching</span>
                 </Button>
-                {/* Schedule Interview button hidden as requested */}
               </div>
+              */}
 
-              {/* Data Management */}
+              {/* HIDDEN: Data Management - commented out for ATS dashboard space */}
+              {/*
               <Card className="mb-8">
                 <CardContent className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Data Management</h3>
@@ -443,8 +445,10 @@ function RecruitmentDashboard() {
                   </div>
                 </CardContent>
               </Card>
+              */}
 
-              {/* Recent Activity */}
+              {/* HIDDEN: Recent AI Matches - commented out for ATS dashboard space */}
+              {/*
               <Card>
                 <CardContent className="p-6">
                   <div className="flex justify-between items-center mb-4">
@@ -472,6 +476,33 @@ function RecruitmentDashboard() {
                   />
                 </CardContent>
               </Card>
+              */}
+
+              {/* ATS DASHBOARD SPACE - Ready for high-level statistics, KPIs, charts, and graphs */}
+              <div className="space-y-6">
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">ATS Dashboard</h2>
+                    <p className="text-gray-600 mb-4">
+                      This space is ready for high-level ATS dashboard components including:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="font-semibold text-gray-900 mb-2">📊 Statistics & KPIs</h3>
+                        <p className="text-sm text-gray-600">Pipeline metrics, conversion rates, time-to-hire</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="font-semibold text-gray-900 mb-2">📈 Interactive Charts</h3>
+                        <p className="text-sm text-gray-600">Line charts, bar graphs, trend analysis</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <h3 className="font-semibold text-gray-900 mb-2">🥧 Pie Charts</h3>
+                        <p className="text-sm text-gray-600">Application status distribution, job categories</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             {/* Job Postings Tab */}
