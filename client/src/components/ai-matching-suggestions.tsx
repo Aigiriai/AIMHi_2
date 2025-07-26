@@ -45,6 +45,30 @@ export function AiMatchingSuggestions({
 
   const suggestions = Array.isArray(suggestionsData) ? suggestionsData : (suggestionsData?.suggestions || []);
 
+  // Generate more matches mutation
+  const generateMatchesMutation = useMutation({
+    mutationFn: async () => {
+      console.log('🎯 AI MATCHING: Starting batch matching generation...');
+      return apiRequest('POST', '/api/matches/batch-generate', {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "✨ AI Matching Complete",
+        description: "Generated new job-candidate matches. Refreshing suggestions...",
+      });
+      // Refresh suggestions after generating matches
+      refetch();
+    },
+    onError: (error: any) => {
+      console.error('❌ Batch matching error:', error);
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate new matches. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create application mutation
   const createApplicationMutation = useMutation({
     mutationFn: async ({ jobId, candidateId, candidateName, jobTitle }: { 
@@ -147,9 +171,27 @@ export function AiMatchingSuggestions({
           </div>
         ) : displayedSuggestions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <Sparkles className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-            <p>No high-scoring matches found above {currentMinScore}%</p>
-            <p className="text-sm">Try lowering the minimum score threshold</p>
+            <Sparkles className="h-8 w-8 mx-auto mb-4 text-gray-400" />
+            <p className="mb-2">No high-scoring matches found above {currentMinScore}%</p>
+            <p className="text-sm mb-4">Try lowering the minimum score threshold or generate more matches</p>
+            <Button
+              onClick={() => generateMatchesMutation.mutate()}
+              disabled={generateMatchesMutation.isPending}
+              variant="outline"
+              size="sm"
+            >
+              {generateMatchesMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Generating Matches...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate More Matches
+                </>
+              )}
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">

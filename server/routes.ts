@@ -105,6 +105,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate batch AI matches for organization
+  app.post('/api/matches/batch-generate', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const currentUser = req.user!;
+      const organizationId = currentUser.organizationId!;
+
+      console.log(`🎯 BATCH GENERATE: Starting batch matching for organization ${organizationId}`);
+
+      // Get all jobs and candidates for the organization
+      const jobs = await storage.getJobsByOrganization(organizationId);
+      const candidates = await storage.getCandidatesByOrganization(organizationId);
+
+      console.log(`🎯 BATCH GENERATE: Found ${jobs.length} jobs and ${candidates.length} candidates`);
+
+      if (jobs.length === 0 || candidates.length === 0) {
+        return res.json({
+          success: true,
+          message: "No jobs or candidates found to match",
+          generated: 0
+        });
+      }
+
+      let generatedCount = 0;
+      let errors = [];
+
+      // Generate matches for each job-candidate combination
+      for (const job of jobs) {
+        for (const candidate of candidates) {
+          try {
+            // Check if match already exists
+            const { db, schema } = await getDB();
+            const existingMatch = await db
+              .select()
+              .from(schema.jobMatches)
+              .where(and(
+                eq(schema.jobMatches.jobId, job.id),
+                eq(schema.jobMatches.candidateId, candidate.id)
+              ))
+              .get();
+
+            if (existingMatch) {
+              console.log(`⏭️ BATCH GENERATE: Match already exists for job ${job.id} + candidate ${candidate.id}`);
+              continue;
+            }
+
+            // Generate new match
+            console.log(`🎯 BATCH GENERATE: Creating match for job ${job.id} (${job.title}) + candidate ${candidate.id} (${candidate.name})`);
+            
+            const matchResult = await matchCandidateToJob(
+              candidate.id,
+              job.id,
+              organizationId
+            );
+
+            if (matchResult) {
+              generatedCount++;
+              console.log(`✅ BATCH GENERATE: Generated match with ${matchResult.overall_match_percentage}% score`);
+            }
+
+          } catch (error) {
+            console.error(`❌ BATCH GENERATE: Error matching job ${job.id} + candidate ${candidate.id}:`, error);
+            errors.push(`Job ${job.title} + ${candidate.name}: ${error.message}`);
+          }
+        }
+      }
+
+      console.log(`🎯 BATCH GENERATE: Completed. Generated ${generatedCount} new matches`);
+
+      res.json({
+        success: true,
+        message: `Generated ${generatedCount} new AI matches`,
+        generated: generatedCount,
+        errors: errors.length > 0 ? errors : undefined
+      });
+
+    } catch (error) {
+      console.error('❌ BATCH GENERATE ERROR:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to generate batch matches",
+        error: error.message 
+      });
+    }
+  });
+
   // Authentication routes
   app.use('/api/auth', authRoutes);
   
@@ -2267,6 +2352,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filteredSuggestions = suggestions.filter(
         (suggestion: any) => !existingSet.has(`${suggestion.candidateId}-${suggestion.jobId}`)
       );
+
+      console.log(`🔍 SUGGESTIONS: Total matches found: ${rawSuggestions.length}`);
+      console.log(`🔍 SUGGESTIONS: After formatting: ${suggestions.length}`);
+      console.log(`🔍 SUGGESTIONS: Existing applications: ${existingApplications.length}`);
+      console.log(`🔍 SUGGESTIONS: Final filtered suggestions: ${filteredSuggestions.length}`);
+      
+      if (suggestions.length > 0) {
+        console.log(`🔍 SUGGESTIONS: Sample suggestion:`, {
+          matchId: suggestions[0].matchId,
+          jobId: suggestions[0].jobId,
+          candidateId: suggestions[0].candidateId,
+          score: suggestions[0].overallScore,
+          jobTitle: suggestions[0].jobTitle,
+          candidateName: suggestions[0].candidateName
+        });
+      }
 
       console.log(`✅ SUGGESTIONS: Found ${filteredSuggestions.length} application suggestions`);
 
