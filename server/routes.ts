@@ -12,7 +12,7 @@ import settingsRoutes from "./settings-routes";
 import pipelineRoutes from "./pipeline-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
 import { getDB } from "./db-connection";
-import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, or, desc, inArray, sql, gte } from "drizzle-orm";
 import { initializeMultiTenantSystem } from "./seed-demo";
 import multer from "multer";
 import { getCurrentPinggyDomain } from "./pinggy-service";
@@ -2233,7 +2233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(and(
           inArray(schema.jobMatches.jobId, accessibleJobIds),
           inArray(schema.jobMatches.candidateId, accessibleCandidateIds),
-          sql`${schema.jobMatches.match_percentage} >= ${minScore}`
+          gte(schema.jobMatches.matchPercentage, minScore)
         ))
         .orderBy(desc(schema.jobMatches.matchPercentage))
         .limit(20)
@@ -2241,13 +2241,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Format suggestions data
       const suggestions = rawSuggestions.map((row: any) => ({
-        matchId: row.job_matches.id,
-        jobId: row.job_matches.jobId,
-        candidateId: row.job_matches.candidateId,
-        overallScore: row.job_matches.matchPercentage,
-        jobTitle: row.jobs.title,
-        candidateName: row.candidates.name,
-        candidateEmail: row.candidates.email
+        matchId: row.job_matches?.id || row.jobMatches?.id,
+        jobId: row.job_matches?.jobId || row.jobMatches?.jobId,
+        candidateId: row.job_matches?.candidateId || row.jobMatches?.candidateId,
+        overallScore: row.job_matches?.matchPercentage || row.jobMatches?.matchPercentage,
+        jobTitle: row.jobs?.title,
+        candidateName: row.candidates?.name,
+        candidateEmail: row.candidates?.email
       }));
 
       // Filter out existing applications
