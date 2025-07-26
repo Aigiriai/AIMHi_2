@@ -94,6 +94,18 @@ function RecruitmentDashboard() {
     queryKey: ["/api/interviews"],
   });
 
+  // Get current user info for permission checking
+  const { data: currentUser } = useQuery({
+    queryKey: ["/api/auth/me"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Check if user has permission to delete jobs (only super_admin, org_admin, and hiring_manager can delete)
+  const canDeleteJobs = currentUser?.role && ['super_admin', 'org_admin', 'hiring_manager'].includes(currentUser.role);
+  
+  // Check if user has permission to delete candidates (varies by role)
+  const canDeleteCandidates = currentUser?.role && ['super_admin', 'org_admin', 'hiring_manager'].includes(currentUser.role);
+
   const filteredMatches = matches.filter(match =>
     searchTerm === "" ||
     match.job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -128,14 +140,25 @@ function RecruitmentDashboard() {
     
     setIsDeleting(true);
     try {
-      const deletePromises = selectedJobs.map(jobId =>
-        fetch(`/api/jobs/${jobId}`, { 
+      const deletePromises = selectedJobs.map(async (jobId) => {
+        const response = await fetch(`/api/jobs/${jobId}`, { 
           method: "DELETE",
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           }
-        })
-      );
+        });
+        
+        if (!response.ok) {
+          if (response.status === 403) {
+            throw new Error("You don't have permission to delete jobs");
+          } else if (response.status === 500) {
+            throw new Error("Cannot delete job with existing applications");
+          }
+          throw new Error(`Failed to delete job: ${response.statusText}`);
+        }
+        
+        return response;
+      });
       
       await Promise.all(deletePromises);
       
@@ -152,7 +175,7 @@ function RecruitmentDashboard() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete job postings",
+        description: error instanceof Error ? error.message : "Failed to delete job postings",
         variant: "destructive",
       });
     } finally {
@@ -165,14 +188,23 @@ function RecruitmentDashboard() {
     
     setIsDeleting(true);
     try {
-      const deletePromises = selectedCandidates.map(candidateId =>
-        fetch(`/api/candidates/${candidateId}`, { 
+      const deletePromises = selectedCandidates.map(async (candidateId) => {
+        const response = await fetch(`/api/candidates/${candidateId}`, { 
           method: "DELETE",
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
           }
-        })
-      );
+        });
+        
+        if (!response.ok) {
+          if (response.status === 403) {
+            throw new Error("You don't have permission to delete candidates");
+          }
+          throw new Error(`Failed to delete candidate: ${response.statusText}`);
+        }
+        
+        return response;
+      });
       
       await Promise.all(deletePromises);
       
@@ -189,7 +221,7 @@ function RecruitmentDashboard() {
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete candidates",
+        description: error instanceof Error ? error.message : "Failed to delete candidates",
         variant: "destructive",
       });
     } finally {
@@ -511,7 +543,7 @@ function RecruitmentDashboard() {
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold">Job Postings</h2>
                   <div className="flex items-center gap-3">
-                    {selectedJobs.length > 0 && (
+                    {selectedJobs.length > 0 && canDeleteJobs && (
                       <Button
                         variant="destructive"
                         size="sm"
@@ -613,7 +645,7 @@ function RecruitmentDashboard() {
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold">Candidates</h2>
                   <div className="flex items-center gap-3">
-                    {selectedCandidates.length > 0 && (
+                    {selectedCandidates.length > 0 && canDeleteCandidates && (
                       <Button
                         variant="destructive"
                         size="sm"
