@@ -26,7 +26,7 @@ import { CandidateAssignmentModal } from "@/components/candidate-assignment-moda
 import { PipelineKanban } from "@/components/pipeline-kanban";
 import { ApplyToJobDropdown } from "@/components/apply-to-job-dropdown";
 import { AddCandidateDropdown } from "@/components/add-candidate-dropdown";
-import { AiMatchingSuggestions } from "@/components/ai-matching-suggestions";
+
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 
 interface Stats {
@@ -687,16 +687,6 @@ function RecruitmentDashboard() {
             {/* AI Matching Tab */}
             <TabsContent value="ai-matching" className="mt-0">
               <div className="space-y-6">
-                {/* AI Matching Suggestions */}
-                <AiMatchingSuggestions 
-                  minScore={70}
-                  maxResults={15}
-                  onApplicationCreated={() => {
-                    queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
-                    queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
-                  }}
-                />
-
                 {/* AI Matching Controls */}
                 <Card>
                   <CardContent className="p-6">

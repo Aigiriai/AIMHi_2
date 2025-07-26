@@ -289,6 +289,76 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
     });
   };
 
+  // Batch application creation functionality
+  const [isBatchApplying, setIsBatchApplying] = useState(false);
+
+  const initiateBatchApplications = async () => {
+    if (selectedCandidates.size === 0) {
+      toast({
+        title: "No Candidates Selected",
+        description: "Please select candidates to apply to jobs.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsBatchApplying(true);
+    const selectedMatches = currentMatches.filter(match => selectedCandidates.has(match.candidate.id));
+    
+    toast({
+      title: "Batch Applications Started",
+      description: `Creating applications for ${selectedCandidates.size} selected candidates...`,
+    });
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const match of selectedMatches) {
+      try {
+        const response = await fetch("/api/applications", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify({
+            candidateId: match.candidate.id,
+            jobId: match.job.id,
+            source: 'ai_matching',
+            notes: `Application created from AI matching (${match.matchPercentage}% match): ${match.candidate.name} → ${match.job.title}`
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to create application");
+        }
+        
+        successCount++;
+        
+      } catch (error) {
+        console.error(`Application creation failed for ${match.candidate.name}:`, error);
+        errorCount++;
+      }
+    }
+
+    setIsBatchApplying(false);
+    setSelectedCandidates(new Set());
+    
+    if (successCount > 0) {
+      toast({
+        title: "Applications Created",
+        description: `Successfully created ${successCount} application${successCount !== 1 ? 's' : ''}${errorCount > 0 ? `, ${errorCount} failed` : ''}.`,
+      });
+    } else {
+      toast({
+        title: "Application Creation Failed",
+        description: `Failed to create any applications. ${errorCount} error${errorCount !== 1 ? 's' : ''} occurred.`,
+        variant: "destructive",
+      });
+    }
+  };
+
 
 
   const getInitials = (name: string) => {
@@ -365,23 +435,44 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
                 Clear Selection
               </Button>
             </div>
-            <Button
-              onClick={initiateBatchCalling}
-              disabled={isBatchCalling}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isBatchCalling ? (
-                <>
-                  <PhoneCall className="mr-2 h-4 w-4 animate-pulse" />
-                  Calling...
-                </>
-              ) : (
-                <>
-                  <PhoneCall className="mr-2 h-4 w-4" />
-                  Call Selected ({selectedCandidates.size})
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={initiateBatchCalling}
+                disabled={isBatchCalling || isBatchApplying}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isBatchCalling ? (
+                  <>
+                    <PhoneCall className="mr-2 h-4 w-4 animate-pulse" />
+                    Calling ({selectedCandidates.size})
+                  </>
+                ) : (
+                  <>
+                    <PhoneCall className="mr-2 h-4 w-4" />
+                    Call Selected ({selectedCandidates.size})
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={initiateBatchApplications}
+                disabled={isBatchApplying || isBatchCalling}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                {isBatchApplying ? (
+                  <>
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    Applying ({selectedCandidates.size})
+                  </>
+                ) : (
+                  <>
+                    <svg className="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Apply Selected ({selectedCandidates.size})
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}
