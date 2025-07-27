@@ -1,0 +1,180 @@
+2025-07-27 20:56:26.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2178253, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:27.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2188003, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:27.91
+b62ffb5a
+User
+Pinggy stdout: RB: 2197753, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:28.31
+b62ffb5a
+User
+Pinggy stdout: RB: 2207503, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:28.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2217253, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:29.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2227003, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:29.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2236753, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:30.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2246503, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:30.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2256253, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:31.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2266003, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:31.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2275753, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:32.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2285503, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:32.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2295253, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:33.31
+b62ffb5a
+User
+Pinggy stdout: RB: 2305003, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:33.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2314753, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:34.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2324503, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:34.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2334253, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:35.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2344003, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:35.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2353753, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:36.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2363503, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:36.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2373253, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:37.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2383003, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:37.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2392753, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:38.31
+b62ffb5a
+User
+Pinggy stdout: RB: 2402503, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:38.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2412253, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:39.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2422003, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:39.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2431753, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:40.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2441503, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:40.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2451253, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:41.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2461003, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:41.61
+b62ffb5a
+User
+Pinggy stdout: RB: 2470753, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:42.11
+b62ffb5a
+User
+Pinggy stdout: RB: 2480503, SB: 162528, TC: 2, AC: 1
+2025-07-27 20:56:42.11
+b62ffb5a
+User
+🔄 Refreshing Pinggy tunnel...
+2025-07-27 20:56:42.21
+b62ffb5a
+User
+🔄 Starting Pinggy tunnel refresh...
+2025-07-27 20:56:42.21
+b62ffb5a
+User
+🔧 Creating Pinggy tunnel for port 5000...
+2025-07-27 20:56:43.11
+b62ffb5a
+User
+🔌 Twilio client disconnected: 1006
+2025-07-27 20:56:43.11
+b62ffb5a
+User
+Transcript file closed for stream: MZ38a4b3c1801965438caddb89f2552722
+2025-07-27 20:56:46.37
+b62ffb5a
+User
+Pinggy stdout: You are not authenticated.
+2025-07-27 20:56:46.37
+b62ffb5a
+User
+Your tunnel will expire in 60 minutes. Upgrade to Pinggy Pro to get unrestricted tunnels. https://dashboard.pinggy.io
+2025-07-27 20:56:46.37
+b62ffb5a
+User
+http://rneoo-2600-1900-0-2d08--d00.a.free.pinggy.link
+2025-07-27 20:56:46.37
+b62ffb5a
+User
+https://rneoo-2600-1900-0-2d08--d00.a.free.pinggy.link
+2025-07-27 20:56:46.37
+b62ffb5a
+User
+✅ Pinggy tunnel ready (HTTP): rneoo-2600-1900-0-2d08--d00.a.free.pinggy.link
+2025-07-27 20:56:47.91
+b62ffb5a
+User
+✅ Pinggy tunnel established: rneoo-2600-1900-0-2d08--d00.a.free.pinggy.link
+2025-07-27 20:56:47.91
+b62ffb5a
+User
+⏰ Pinggy tunnel refresh scheduled for 50 minutes
+2025-07-27 20:56:47.91
+b62ffb5a
+User
+✅ Pinggy tunnel refreshed: rneoo-2600-1900-0-2d08--d00.a.free.pinggy.link
