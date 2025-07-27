@@ -385,6 +385,39 @@ IMPORTANT: You can ONLY proceed to step 2 if they explicitly confirm they are ${
         // Store context locally before clearing to avoid null reference
         const contextToUse = { ...readyCallContext };
 
+        // DETAILED LOGGING: What context data is being sent to OpenAI
+        console.log("📋 DETAILED CONTEXT BEING SENT TO OPENAI:");
+        console.log("========================================");
+        console.log("👤 Candidate Name:", contextToUse.candidateName);
+        console.log("💼 Job Title:", contextToUse.jobDetails?.title || "Not provided");
+        console.log("🎯 Match Percentage:", contextToUse.matchPercentage || "Not provided");
+        
+        // Log job details structure
+        if (contextToUse.jobDetails) {
+          console.log("📄 Job Details Keys:", Object.keys(contextToUse.jobDetails));
+          console.log("📝 Job Description Length:", contextToUse.jobDetails.description?.length || 0, "characters");
+          console.log("🎯 Job Requirements Length:", contextToUse.jobDetails.requirements?.length || 0, "characters");
+          console.log("📍 Job Location:", contextToUse.jobDetails.location || "Not specified");
+          console.log("💰 Job Salary:", contextToUse.jobDetails.salary || "Not specified");
+        } else {
+          console.log("❌ NO JOB DETAILS FOUND IN CONTEXT");
+        }
+
+        // Log candidate details if available
+        if (contextToUse.candidateDetails) {
+          console.log("📄 Candidate Details Keys:", Object.keys(contextToUse.candidateDetails));
+          console.log("📝 Resume Text Length:", contextToUse.candidateDetails.resumeText?.length || 0, "characters");
+          console.log("🎓 Education:", contextToUse.candidateDetails.education || "Not provided");
+          console.log("💼 Experience:", contextToUse.candidateDetails.experience || "Not provided");
+        } else {
+          console.log("❌ NO CANDIDATE RESUME DETAILS FOUND IN CONTEXT");
+        }
+
+        // Log the actual payload size
+        const payloadSize = JSON.stringify(contextualSessionUpdate).length;
+        console.log("📦 Total OpenAI Payload Size:", payloadSize, "bytes");
+        console.log("========================================");
+
         if (openaiWs) {
           openaiWs.send(JSON.stringify(contextualSessionUpdate));
           console.log(
