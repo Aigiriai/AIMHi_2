@@ -100,6 +100,26 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
+### 2025-01-27: Eliminated Pinggy Tunnel Dependency - Direct Webhooks Implementation  
+- **CRITICAL ARCHITECTURE CHANGE**: Completely removed Pinggy tunnel dependency for AI calling
+- **Root Cause Identified**: Pinggy tunnel infrastructure incompatible with OpenAI Realtime API requirements
+- **Fresh Deployment Testing**: Confirmed that even fresh tunnels (0 minutes old) cause 20-second delays and choppy audio  
+- **Unified Direct Domain Approach**: Both development and production now use direct Replit URLs
+  - Development: `ba72e664-d777-441a-9d68-2a70c7da29a3-00-oyr9cxrker3j.kirk.replit.dev`
+  - Production: `aimhi.aigiri.ai`
+- **Infrastructure Changes**:
+  - Removed `startPinggyAndGetDomain()` and `getCurrentPinggyDomain()` from server startup
+  - Replaced all Pinggy domain references with `getDirectDomain()` function
+  - Updated AI calling routes to use direct WebSocket connections
+  - Eliminated 50-minute tunnel refresh cycles and associated interruptions
+- **Expected Performance Improvements**:
+  - Eliminates 20-second initialization delays
+  - Removes choppy audio caused by tunnel latency
+  - Provides consistent performance matching development environment
+  - Eliminates WebSocket keepalive timeout failures (code 1011)
+- **Configuration Required**: Twilio webhooks must be reconfigured to use direct domains instead of Pinggy URLs
+- **Testing Status**: Server successfully running with direct webhook configuration
+
 ### 2025-01-26: Simplified Candidate Upload Workflow with Role-based Visibility
 - **MILESTONE ACHIEVED**: Simplified candidate upload system with proper role-based visibility controls
 - **Single Upload Interface**: Removed single upload tab, simplified modal to only use bulk upload for all users

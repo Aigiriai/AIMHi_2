@@ -5,8 +5,26 @@ import { WebSocketServer } from "ws";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { handleMediaStream, initializeCallContext } from "./ai-calling";
-import { startPinggyAndGetDomain, getCurrentPinggyDomain } from "./pinggy-service";
+// Removed Pinggy dependency - using direct Replit URLs
 import { initializeSQLiteDatabase } from "./init-database";
+
+// Function to get direct domain based on environment
+function getDirectDomain(): string {
+  if (process.env.NODE_ENV === 'production') {
+    return 'aimhi.aigiri.ai';
+  } else {
+    // Development environment - use Replit development URL
+    // This will be something like: your-repl-name.username.replit.dev
+    const replitUrl = process.env.REPLIT_DOMAINS || process.env.REPL_SLUG;
+    if (replitUrl) {
+      return replitUrl.replace('https://', '').replace('http://', '');
+    }
+    // Fallback for development
+    return 'localhost:5000';
+  }
+}
+
+export { getDirectDomain };
 
 
 
@@ -76,14 +94,8 @@ app.use((req, res, next) => {
   log('📦 Initializing SQLite database...');
   await initializeSQLiteDatabase();
   
-  // Start Pinggy tunnel for Twilio AI calling
-  log('🔗 Setting up Pinggy tunnel for AI calling...');
-  const pinggyDomain = await startPinggyAndGetDomain(5000);
-  if (!pinggyDomain) {
-    log('⚠️ Warning: Pinggy failed to start. AI calling features may not work.');
-  } else {
-    log(`✅ Pinggy tunnel established: ${pinggyDomain}`);
-  }
+  // Using direct Replit URLs for AI calling (eliminates Pinggy tunnel dependency)
+  log('🔗 AI calling configured for direct webhooks (no tunnel required)');
 
   // Create HTTP server and WebSocket server
   const httpServer = createServer(app);
@@ -117,10 +129,10 @@ app.use((req, res, next) => {
 
   // Start the server
   const port = 5000;
-  httpServer.listen(port, '0.0.0.0', async () => {
+  httpServer.listen(port, '0.0.0.0', () => {
     log(`Server running on port ${port} with AI calling support`);
-    const domain = await getCurrentPinggyDomain();
-    log(`Pinggy domain: ${domain || 'Not available'}`);
+    const directDomain = getDirectDomain();
+    log(`Direct webhook domain: ${directDomain}`);
   });
 
   // Cleanup on exit

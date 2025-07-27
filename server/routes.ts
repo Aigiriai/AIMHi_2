@@ -15,7 +15,7 @@ import { getDB } from "./db-connection";
 import { eq, and, or, desc, inArray, sql, gte } from "drizzle-orm";
 import { initializeMultiTenantSystem } from "./seed-demo";
 import multer from "multer";
-import { getCurrentPinggyDomain } from "./pinggy-service";
+import { getDirectDomain } from "./index";
 import { createIncomingCallTwiML, createOutboundCallTwiML, setCallContext, prepareCallContext } from "./ai-calling";
 import twilio from "twilio";
 import fs from "fs";
@@ -1263,19 +1263,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get the appropriate domain for WebSocket connection
-      let websocketDomain = '';
-      
-      // Get fresh Pinggy domain for each call (handles auto-refresh)
-      const pinggyDomain = await getCurrentPinggyDomain();
-      if (pinggyDomain) {
-        websocketDomain = pinggyDomain;
-        console.log('🌐 Using Pinggy domain:', websocketDomain);
-      } else {
-        // Fallback to production domain if Pinggy is not available
-        websocketDomain = 'aimhi.aigiri.ai';
-        console.log('🌐 Pinggy not available, using production domain:', websocketDomain);
-      }
+      // Get the direct domain for WebSocket connection (no tunnel required)
+      const websocketDomain = getDirectDomain();
+      console.log('🌐 Using direct domain:', websocketDomain);
       
       console.log('📋 TwiML WebSocket URL:', `wss://${websocketDomain}/media-stream`);
 
@@ -1562,18 +1552,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Get the appropriate domain for WebSocket connection
-      let websocketDomain = '';
-      
-      // Get fresh Pinggy domain for each call (handles auto-refresh)
-      const pinggyDomain = await getCurrentPinggyDomain();
-      if (!pinggyDomain) {
-        return res.status(503).json({ 
-          message: "Pinggy tunnel not available. AI calling is temporarily unavailable." 
-        });
-      }
-      websocketDomain = pinggyDomain;
-      console.log('🌐 Using Pinggy domain:', websocketDomain);
+      // Get the direct domain for WebSocket connection (no tunnel required)
+      const websocketDomain = getDirectDomain();
+      console.log('🌐 Using direct domain:', websocketDomain);
 
       // Check if Twilio credentials are available
       if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.PHONE_NUMBER_FROM) {
@@ -1607,7 +1588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`👤 Stored candidate name: ${candidateName}`);
       
       // Get domain for response
-      const responseDomain = await getCurrentPinggyDomain() || 'localhost:5000';
+      const responseDomain = getDirectDomain();
       
       if (jobDetails) {
         console.log(`📋 Sarah will discuss: ${jobDetails.title}`);
@@ -1632,12 +1613,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Twilio webhook for incoming calls
   app.post('/api/ai-call/incoming', async (req, res) => {
     try {
-      const pinggyDomain = await getCurrentPinggyDomain();
-      if (!pinggyDomain) {
-        return res.status(503).send('Pinggy tunnel not available');
-      }
-
-      const twiml = createIncomingCallTwiML(pinggyDomain!);
+      const directDomain = getDirectDomain();
+      const twiml = createIncomingCallTwiML(directDomain);
       res.type('text/xml');
       res.send(twiml);
     } catch (error) {
@@ -1646,12 +1623,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get Pinggy domain status
+  // Get direct domain status (no tunnel required)
   app.get('/api/ai-call/status', async (req, res) => {
-    const pinggyDomain = await getCurrentPinggyDomain();
+    const directDomain = getDirectDomain();
     res.json({
-      pinggyAvailable: !!pinggyDomain,
-      pinggyDomain,
+      directDomainAvailable: true,
+      directDomain,
       twilioConfigured: !!(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.PHONE_NUMBER_FROM)
     });
   });
