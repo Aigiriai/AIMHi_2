@@ -1,0 +1,152 @@
+2025-07-27 21:13:23.31
+b62ffb5a
+User
+Transcript file opened: /home/runner/workspace/call-transcripts/2025-07-27T15-43-23_Sudhir_10aab1c4.txt
+2025-07-27 21:13:23.31
+b62ffb5a
+User
+Pinggy stdout: RB: 14369, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:23.81
+b62ffb5a
+User
+Pinggy stdout: RB: 23982, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:24.11
+b62ffb5a
+User
+Connected to OpenAI Realtime API
+2025-07-27 21:13:24.11
+b62ffb5a
+User
+🚀 Applying pre-populated context immediately for Sudhir
+2025-07-27 21:13:24.11
+b62ffb5a
+User
+✅ Contextual session configuration sent with candidate details
+2025-07-27 21:13:24.11
+b62ffb5a
+User
+✅ Context preserved for subsequent calls
+2025-07-27 21:13:24.11
+b62ffb5a
+User
+Pinggy stdout: RB: 33607, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:25.01
+b62ffb5a
+User
+OpenAI Event: session.created
+2025-07-27 21:13:25.01
+b62ffb5a
+User
+Pinggy stdout: RB: 43255, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:25.01
+b62ffb5a
+User
+🎯 Triggered conversation start for Sudhir - following system instructions
+2025-07-27 21:13:25.01
+b62ffb5a
+User
+OpenAI Event: session.updated
+2025-07-27 21:13:25.01
+b62ffb5a
+User
+Session updated successfully
+2025-07-27 21:13:25.31
+b62ffb5a
+User
+Pinggy stdout: RB: 52930, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:25.61
+b62ffb5a
+User
+Pinggy stdout: RB: 64540, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:33.21
+b62ffb5a
+User
+🔄 Turn detection enabled after greeting
+2025-07-27 21:13:36.41
+b62ffb5a
+User
+Pinggy stdout: RB: 74215, SB: 129, TC: 1, AC: 1 RB: 83890, SB: 129, TC: 1, AC: 1 RB: 93565, SB: 129, TC: 1, AC: 1 RB: 103240, SB: 129, TC: 1, AC: 1 RB: 112915, SB: 129, TC: 1, AC: 1 RB: 122590, SB: 129, TC: 1, AC: 1 RB: 132265, SB: 129, TC: 1, AC: 1 RB: 141940, SB: 129, TC: 1, AC: 1 RB: 151615, SB: 129, TC: 1, AC: 1 RB: 161290, SB: 129, TC: 1, AC: 1 RB: 170965, SB: 129, TC: 1, AC: 1 RB: 180640, SB: 129, TC: 1, AC: 1 RB: 190315, SB: 129, TC: 1, AC: 1 RB: 200008, SB: 129, TC: 1, AC: 1 RB: 209708, SB: 129, TC: 1, AC: 1 RB: 219408, SB: 129, TC: 1, AC: 1 RB: 229108, SB: 129, TC: 1, AC: 1 RB: 238420, SB: 129, TC: 1, AC: 1 RB: 248120, SB: 129, TC: 1, AC: 1 RB: 265192, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:36.71
+b62ffb5a
+User
+Pinggy stdout: RB: 274892, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:37.51
+b62ffb5a
+User
+Pinggy stdout: RB: 284592, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:37.71
+b62ffb5a
+User
+Pinggy stdout: RB: 294292, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:38.01
+b62ffb5a
+User
+Pinggy stdout: RB: 303992, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:38.51
+b62ffb5a
+User
+Pinggy stdout: RB: 313692, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:39.21
+b62ffb5a
+User
+Pinggy stdout: RB: 323392, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:39.61
+b62ffb5a
+User
+Pinggy stdout: RB: 332704, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:39.81
+b62ffb5a
+User
+OpenAI Event: response.created
+2025-07-27 21:13:40.11
+b62ffb5a
+User
+Pinggy stdout: RB: 342404, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:40.11
+b62ffb5a
+User
+OpenAI Event: response.output_item.added
+2025-07-27 21:13:40.51
+b62ffb5a
+User
+OpenAI Event: conversation.item.created
+2025-07-27 21:13:40.51
+b62ffb5a
+User
+Pinggy stdout: RB: 352104, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:41.71
+b62ffb5a
+User
+OpenAI Event: response.content_part.added
+2025-07-27 21:13:41.71
+b62ffb5a
+User
+Pinggy stdout: RB: 361804, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:42.71
+b62ffb5a
+User
+Pinggy stdout: RB: 371504, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:42.71
+b62ffb5a
+User
+OpenAI Event: response.audio_transcript.delta
+2025-07-27 21:13:42.71
+b62ffb5a
+User
+OpenAI Event: response.audio_transcript.delta
+2025-07-27 21:13:43.31
+b62ffb5a
+User
+Pinggy stdout: RB: 381204, SB: 129, TC: 1, AC: 1 RB: 390921, SB: 129, TC: 1, AC: 1 RB: 400671, SB: 129, TC: 1, AC: 1
+2025-07-27 21:13:43.41
+b62ffb5a
+User
+OpenAI Event: response.audio_transcript.delta
+2025-07-27 21:13:43.61
+b62ffb5a
+User
+OpenAI Event: response.audio_transcript.delta
+2025-07-27 21:13:43.71
+b62ffb5a
+User
+Pinggy stdout: RB: 410421, SB: 129, TC: 1, AC: 1
