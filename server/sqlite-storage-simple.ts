@@ -278,7 +278,7 @@ export class SQLiteStorage implements IStorage {
       const assignmentsCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM job_assignments WHERE job_id = ?').get(id)?.count || 0;
       
       // Count status history for jobs (using entity_type and entity_id)
-      const statusHistoryCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM status_history WHERE entity_type = "job" AND entity_id = ?').get(id)?.count || 0;
+      const statusHistoryCount = this.sqlite.prepare("SELECT COUNT(*) as count FROM status_history WHERE entity_type = 'job' AND entity_id = ?").get(id)?.count || 0;
       
       // Check for original file
       const job = this.sqlite.prepare('SELECT original_file_name FROM jobs WHERE id = ?').get(id);
@@ -327,7 +327,7 @@ export class SQLiteStorage implements IStorage {
       console.log(`🗑️ FORCE DELETE: Deleted ${assignmentsResult.changes} job assignments`);
       
       // 5. Delete status history for this job
-      const statusHistoryResult = this.sqlite.prepare('DELETE FROM status_history WHERE entity_type = "job" AND entity_id = ?').run(id);
+      const statusHistoryResult = this.sqlite.prepare("DELETE FROM status_history WHERE entity_type = 'job' AND entity_id = ?").run(id);
       console.log(`🗑️ FORCE DELETE: Deleted ${statusHistoryResult.changes} status history records`);
       
       // 6. Delete job templates
