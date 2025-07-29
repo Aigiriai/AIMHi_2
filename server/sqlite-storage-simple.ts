@@ -265,20 +265,20 @@ export class SQLiteStorage implements IStorage {
     await this.ensureConnection();
     
     try {
-      // Count applications
+      // Count applications (using correct snake_case column name)
       const applicationsCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM applications WHERE job_id = ?').get(id)?.count || 0;
       
-      // Count matches
+      // Count matches (using correct snake_case column name)
       const matchesCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM job_matches WHERE job_id = ?').get(id)?.count || 0;
       
-      // Count interviews
+      // Count interviews (using correct snake_case column name)
       const interviewsCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM interviews WHERE job_id = ?').get(id)?.count || 0;
       
-      // Count assignments
+      // Count assignments (using correct snake_case column name)
       const assignmentsCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM job_assignments WHERE job_id = ?').get(id)?.count || 0;
       
-      // Count status history
-      const statusHistoryCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM status_history WHERE job_id = ?').get(id)?.count || 0;
+      // Count status history for jobs (using entity_type and entity_id)
+      const statusHistoryCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM status_history WHERE entity_type = "job" AND entity_id = ?').get(id)?.count || 0;
       
       // Check for original file
       const job = this.sqlite.prepare('SELECT original_file_name FROM jobs WHERE id = ?').get(id);
@@ -326,8 +326,8 @@ export class SQLiteStorage implements IStorage {
       const assignmentsResult = this.sqlite.prepare('DELETE FROM job_assignments WHERE job_id = ?').run(id);
       console.log(`🗑️ FORCE DELETE: Deleted ${assignmentsResult.changes} job assignments`);
       
-      // 5. Delete status history
-      const statusHistoryResult = this.sqlite.prepare('DELETE FROM status_history WHERE job_id = ?').run(id);
+      // 5. Delete status history for this job
+      const statusHistoryResult = this.sqlite.prepare('DELETE FROM status_history WHERE entity_type = "job" AND entity_id = ?').run(id);
       console.log(`🗑️ FORCE DELETE: Deleted ${statusHistoryResult.changes} status history records`);
       
       // 6. Delete job templates
