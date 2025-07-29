@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertTriangle } from "lucide-react";
 import { BrainIcon, BriefcaseIcon, UsersIcon, PercentIcon, BellIcon, SearchIcon, DownloadIcon, PlusIcon, UploadIcon, ExternalLinkIcon, CalendarIcon, Trash2Icon, LayoutDashboard, Users, Calendar, BarChart3 } from "lucide-react";
 import JobPostingModal from "@/components/job-posting-modal";
 import ResumeUploadModal from "@/components/resume-upload-modal";
@@ -50,6 +52,10 @@ function RecruitmentDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [selectedJobForAssignment, setSelectedJobForAssignment] = useState<{id: number, title: string} | null>(null);
+  const [showDeletionWarning, setShowDeletionWarning] = useState(false);
+  const [deletionImpact, setDeletionImpact] = useState<any>(null);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [jobToDelete, setJobToDelete] = useState<{id: number, title: string} | null>(null);
 
   // Listen for custom events from pipeline navigation
   useEffect(() => {
@@ -105,7 +111,7 @@ function RecruitmentDashboard() {
   const canCreateJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   const canEditJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   const canChangeJobStatus = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
-  const canDeleteJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
+  const canDeleteJobs = userRole && userRole === 'org_admin';
   
   // Candidate Management Permissions
   const canDeleteCandidates = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
@@ -146,9 +152,54 @@ function RecruitmentDashboard() {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleDeleteJobClick = async (jobId: number, jobTitle: string) => {
+    try {
+      // Get job deletion impact
+      const response = await fetch(`/api/jobs/${jobId}/deletion-impact`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 403) {
+          toast({
+            title: "Access Denied",
+            description: "Only Organization Administrators can delete jobs.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error("Failed to get deletion impact");
+      }
+      
+      const impactData = await response.json();
+      setDeletionImpact(impactData);
+      setJobToDelete({ id: jobId, title: jobTitle });
+      setShowDeletionWarning(true);
+      setConfirmationText("");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to check deletion impact",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteJobs = async () => {
     if (selectedJobs.length === 0) return;
     
+    // For multiple jobs, show them the first job's deletion impact as an example
+    if (selectedJobs.length === 1) {
+      const selectedJob = jobs.find(job => job.id === selectedJobs[0]);
+      if (selectedJob) {
+        await handleDeleteJobClick(selectedJob.id, selectedJob.title);
+        return;
+      }
+    }
+    
+    // For multiple jobs, use old behavior but with better error handling
     setIsDeleting(true);
     try {
       const deletePromises = selectedJobs.map(async (jobId) => {
@@ -161,9 +212,7 @@ function RecruitmentDashboard() {
         
         if (!response.ok) {
           if (response.status === 403) {
-            throw new Error("You don't have permission to delete jobs");
-          } else if (response.status === 500) {
-            throw new Error("Cannot delete job with existing applications");
+            throw new Error("Only Organization Administrators can delete jobs");
           }
           throw new Error(`Failed to delete job: ${response.statusText}`);
         }
@@ -187,6 +236,52 @@ function RecruitmentDashboard() {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to delete job postings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const confirmJobDeletion = async () => {
+    if (!jobToDelete || confirmationText !== "confirm") {
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/jobs/${jobToDelete.id}`, { 
+        method: "DELETE",
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 403) {
+          throw new Error("Only Organization Administrators can delete jobs");
+        }
+        throw new Error(`Failed to delete job: ${response.statusText}`);
+      }
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/matches"] });
+      
+      toast({
+        title: "Job Deleted",
+        description: `"${jobToDelete.title}" and all related data have been permanently deleted.`,
+      });
+      
+      setShowDeletionWarning(false);
+      setJobToDelete(null);
+      setDeletionImpact(null);
+      setConfirmationText("");
+      setSelectedJobs([]);
+    } catch (error) {
+      toast({
+        title: "Deletion Failed",
+        description: error instanceof Error ? error.message : "Failed to delete job",
         variant: "destructive",
       });
     } finally {
@@ -738,6 +833,17 @@ function RecruitmentDashboard() {
                                       <UsersIcon size={14} className="mr-1" />
                                       Assign
                                     </Button>
+                                    {canDeleteJobs && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-red-600 hover:text-red-700 hover:border-red-300"
+                                        onClick={() => handleDeleteJobClick(job.id, job.title)}
+                                      >
+                                        <Trash2Icon size={14} className="mr-1" />
+                                        Delete
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -956,6 +1062,115 @@ function RecruitmentDashboard() {
               jobTitle={selectedJobForAssignment.title}
             />
           )}
+
+          {/* Job Deletion Warning Modal */}
+          <Dialog open={showDeletionWarning} onOpenChange={setShowDeletionWarning}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <div className="flex items-center space-x-2">
+                  <AlertTriangle className="h-6 w-6 text-red-500" />
+                  <DialogTitle className="text-red-600">
+                    Permanent Job Deletion Warning
+                  </DialogTitle>
+                </div>
+                <DialogDescription className="text-gray-600">
+                  You are about to permanently delete "{jobToDelete?.title}". This action cannot be undone and will remove all related data.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-red-800 mb-3">The following data will be permanently deleted:</h4>
+                  <ul className="space-y-2 text-sm text-red-700">
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span>
+                        <strong>{deletionImpact?.impact?.applications || 0}</strong> application(s) submitted to this job
+                      </span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span>
+                        <strong>{deletionImpact?.impact?.matches || 0}</strong> AI match(es) generated for this job
+                      </span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span>
+                        <strong>{deletionImpact?.impact?.interviews || 0}</strong> interview record(s) scheduled for this job
+                      </span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span>
+                        <strong>{deletionImpact?.impact?.assignments || 0}</strong> assignment record(s) for team members
+                      </span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span>
+                        <strong>{deletionImpact?.impact?.statusHistory || 0}</strong> status history record(s) tracking job lifecycle
+                      </span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span>
+                        Original uploaded file{deletionImpact?.impact?.hasOriginalFile ? " (will be deleted)" : " (none)"}
+                      </span>
+                    </li>
+                    <li className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span>
+                        AI-generated template{deletionImpact?.impact?.hasTemplate ? " (will be deleted)" : " (none)"}
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Compliance Impact</h4>
+                  <p className="text-sm text-yellow-700">
+                    You will lose compliance reporting capabilities for this job posting and all associated candidate interactions. 
+                    This may affect your ability to demonstrate fair hiring practices and maintain audit trails.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    To confirm deletion, type "confirm" below:
+                  </label>
+                  <Input
+                    type="text"
+                    value={confirmationText}
+                    onChange={(e) => setConfirmationText(e.target.value)}
+                    placeholder="Type 'confirm' to enable deletion"
+                    className="border-red-200 focus:border-red-400"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="space-x-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowDeletionWarning(false);
+                    setJobToDelete(null);
+                    setDeletionImpact(null);
+                    setConfirmationText("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive"
+                  disabled={confirmationText !== "confirm" || isDeleting}
+                  onClick={confirmJobDeletion}
+                >
+                  {isDeleting ? "Deleting..." : "Permanently Delete Job"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     </ProtectedRoute>

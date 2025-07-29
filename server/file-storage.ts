@@ -89,13 +89,27 @@ export class FileStorageService {
     }
   }
 
-  async deleteJobFile(jobId: number, filename: string): Promise<boolean> {
-    const sanitizedFilename = this.sanitizeFilename(filename);
-    const filePath = path.join(this.storageDir, 'jobs', `${jobId}_${sanitizedFilename}`);
-    
+  async deleteJobFile(jobId: number, filename?: string): Promise<boolean> {
     try {
-      await fs.unlink(filePath);
-      return true;
+      if (filename) {
+        // Delete specific file
+        const sanitizedFilename = this.sanitizeFilename(filename);
+        const filePath = path.join(this.storageDir, 'jobs', `${jobId}_${sanitizedFilename}`);
+        await fs.unlink(filePath);
+        return true;
+      } else {
+        // Delete all files for this job (pattern matching)
+        const jobsDir = path.join(this.storageDir, 'jobs');
+        const files = await fs.readdir(jobsDir);
+        const jobFiles = files.filter(file => file.startsWith(`${jobId}_`));
+        
+        for (const file of jobFiles) {
+          const filePath = path.join(jobsDir, file);
+          await fs.unlink(filePath);
+          console.log(`🗑️ FORCE DELETE: Deleted job file ${file}`);
+        }
+        return true;
+      }
     } catch (error) {
       console.error('Failed to delete job file:', error);
       return false;

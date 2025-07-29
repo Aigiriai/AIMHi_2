@@ -587,15 +587,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/jobs/:id', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+  // Get job deletion impact (what will be deleted)
+  app.get('/api/jobs/:id/deletion-impact', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
       const currentUser = req.user!;
       const jobId = parseInt(req.params.id);
       
-      // Check if user has permission to delete jobs (recruiters cannot delete jobs)
-      if (currentUser.role === 'recruiter') {
+      // Only org_admin can access deletion impact (force delete restriction)
+      if (currentUser.role !== 'org_admin') {
         return res.status(403).json({ 
-          message: "You don't have permission to delete jobs. Only Super Admin, Org Admin, and Hiring Manager can delete jobs." 
+          message: "Only Organization Administrators can delete jobs." 
         });
       }
       
@@ -606,14 +607,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify job belongs to user's organization
-      if (job.organizationId !== req.user!.organizationId) {
+      if (job.organizationId !== currentUser.organizationId) {
         return res.status(403).json({ message: "Access denied" });
       }
 
-      await storage.deleteJob(jobId);
-      res.json({ message: "Job deleted successfully" });
+      const impact = await storage.getJobDeletionImpact(jobId);
+      res.json({
+        jobId,
+        jobTitle: job.title,
+        impact
+      });
     } catch (error) {
-      console.error("Error deleting job:", error);
+      console.error("Error getting job deletion impact:", error);
+      res.status(500).json({ message: "Failed to get deletion impact" });
+    }
+  });
+
+  app.delete('/api/jobs/:id', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const currentUser = req.user!;
+      const jobId = parseInt(req.params.id);
+      
+      // Only org_admin can force delete jobs
+      if (currentUser.role !== 'org_admin') {
+        return res.status(403).json({ 
+          message: "Only Organization Administrators can delete jobs." 
+        });
+      }
+      
+      const job = await storage.getJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      // Verify job belongs to user's organization
+      if (job.organizationId !== currentUser.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      // Perform force delete with cascade deletion
+      await storage.deleteJob(jobId);
+      
+      // Also delete the original file if it exists
+      if (job.originalFileName) {
+        try {
+          const { FileStorageService } = await import('./file-storage');
+          const fileStorage = new FileStorageService();
+          await fileStorage.deleteJobFile(jobId);
+          console.log(`🗑️ FORCE DELETE: Deleted original file for job ${jobId}`);
+        } catch (fileError) {
+          console.error(`⚠️ FORCE DELETE: Failed to delete original file for job ${jobId}:`, fileError);
+          // Continue with deletion even if file deletion fails
+        }
+      }
+      
+      res.json({ message: "Job and all related data deleted successfully" });
+    } catch (error) {
+      console.error("Error in force delete job:", error);
       res.status(500).json({ message: "Failed to delete job" });
     }
   });

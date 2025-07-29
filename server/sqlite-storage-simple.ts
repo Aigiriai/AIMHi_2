@@ -253,23 +253,98 @@ export class SQLiteStorage implements IStorage {
     }
   }
 
+  async getJobDeletionImpact(id: number): Promise<{
+    applications: number;
+    matches: number;
+    interviews: number;
+    assignments: number;
+    statusHistory: number;
+    hasOriginalFile: boolean;
+    hasTemplate: boolean;
+  }> {
+    await this.ensureConnection();
+    
+    try {
+      // Count applications
+      const applicationsCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM applications WHERE job_id = ?').get(id)?.count || 0;
+      
+      // Count matches
+      const matchesCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM job_matches WHERE job_id = ?').get(id)?.count || 0;
+      
+      // Count interviews
+      const interviewsCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM interviews WHERE job_id = ?').get(id)?.count || 0;
+      
+      // Count assignments
+      const assignmentsCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM job_assignments WHERE job_id = ?').get(id)?.count || 0;
+      
+      // Count status history
+      const statusHistoryCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM status_history WHERE job_id = ?').get(id)?.count || 0;
+      
+      // Check for original file
+      const job = this.sqlite.prepare('SELECT original_file_name FROM jobs WHERE id = ?').get(id);
+      const hasOriginalFile = !!(job?.original_file_name);
+      
+      // Check for template
+      const templateCount = this.sqlite.prepare('SELECT COUNT(*) as count FROM job_templates WHERE job_id = ?').get(id)?.count || 0;
+      const hasTemplate = templateCount > 0;
+      
+      return {
+        applications: applicationsCount,
+        matches: matchesCount,
+        interviews: interviewsCount,
+        assignments: assignmentsCount,
+        statusHistory: statusHistoryCount,
+        hasOriginalFile,
+        hasTemplate
+      };
+    } catch (error) {
+      console.error('Error getting job deletion impact:', error);
+      throw error;
+    }
+  }
+
   async deleteJob(id: number): Promise<void> {
     await this.ensureConnection();
     
     try {
-      // Delete related matches and interviews first
-      this.sqlite.prepare('DELETE FROM job_matches WHERE job_id = ?').run(id);
-      this.sqlite.prepare('DELETE FROM interviews WHERE job_id = ?').run(id);
+      console.log(`🗑️ FORCE DELETE: Starting cascade deletion for job ${id}`);
       
-      // Delete the job
-      const stmt = this.sqlite.prepare('DELETE FROM jobs WHERE id = ?');
-      const result = stmt.run(id);
+      // Delete all related records in correct order (child tables first)
+      // 1. Delete applications
+      const applicationsResult = this.sqlite.prepare('DELETE FROM applications WHERE job_id = ?').run(id);
+      console.log(`🗑️ FORCE DELETE: Deleted ${applicationsResult.changes} applications`);
       
-      if (result.changes === 0) {
+      // 2. Delete matches
+      const matchesResult = this.sqlite.prepare('DELETE FROM job_matches WHERE job_id = ?').run(id);
+      console.log(`🗑️ FORCE DELETE: Deleted ${matchesResult.changes} job matches`);
+      
+      // 3. Delete interviews
+      const interviewsResult = this.sqlite.prepare('DELETE FROM interviews WHERE job_id = ?').run(id);
+      console.log(`🗑️ FORCE DELETE: Deleted ${interviewsResult.changes} interviews`);
+      
+      // 4. Delete assignments
+      const assignmentsResult = this.sqlite.prepare('DELETE FROM job_assignments WHERE job_id = ?').run(id);
+      console.log(`🗑️ FORCE DELETE: Deleted ${assignmentsResult.changes} job assignments`);
+      
+      // 5. Delete status history
+      const statusHistoryResult = this.sqlite.prepare('DELETE FROM status_history WHERE job_id = ?').run(id);
+      console.log(`🗑️ FORCE DELETE: Deleted ${statusHistoryResult.changes} status history records`);
+      
+      // 6. Delete job templates
+      const templatesResult = this.sqlite.prepare('DELETE FROM job_templates WHERE job_id = ?').run(id);
+      console.log(`🗑️ FORCE DELETE: Deleted ${templatesResult.changes} job templates`);
+      
+      // 7. Finally delete the job itself
+      const jobResult = this.sqlite.prepare('DELETE FROM jobs WHERE id = ?').run(id);
+      console.log(`🗑️ FORCE DELETE: Deleted job record (${jobResult.changes} affected)`);
+      
+      if (jobResult.changes === 0) {
         throw new Error('Job not found or already deleted');
       }
+      
+      console.log(`✅ FORCE DELETE: Successfully completed cascade deletion for job ${id}`);
     } catch (error) {
-      console.error('Error deleting job:', error);
+      console.error('Error in force delete job:', error);
       throw error;
     }
   }
