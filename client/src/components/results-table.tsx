@@ -390,9 +390,8 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
           <TableHeader>
             <TableRow>
               <TableHead>Select</TableHead>
-              <TableHead>Details</TableHead>
               <TableHead>Job ID</TableHead>
-              <TableHead>Job Summary</TableHead>
+              <TableHead>Job Title</TableHead>
               <TableHead>Candidate</TableHead>
               <TableHead>Contact</TableHead>
               <TableHead>Experience</TableHead>
@@ -404,7 +403,6 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
             {Array.from({ length: 5 }).map((_, index) => (
               <TableRow key={index}>
                 <TableCell><Skeleton className="h-4 w-4" /></TableCell>
-                <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                 <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                 <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                 <TableCell><Skeleton className="h-4 w-32" /></TableCell>
@@ -501,9 +499,8 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
                   aria-label="Select all candidates"
                 />
               </TableHead>
-              <TableHead className="font-medium text-gray-500 uppercase tracking-wider">Details</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider">Job ID</TableHead>
-              <TableHead className="font-medium text-gray-500 uppercase tracking-wider">Job Summary</TableHead>
+              <TableHead className="font-medium text-gray-500 uppercase tracking-wider">Job Title</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider">Candidate</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider">Contact</TableHead>
               <TableHead className="font-medium text-gray-500 uppercase tracking-wider">Experience</TableHead>
@@ -529,29 +526,13 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
                       />
                     </TableCell>
                     <TableCell>
-                      {hasDetailedBreakdown && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleRowExpansion(matchKey)}
-                          className="p-1 h-6 w-6"
-                        >
-                          {isExpanded ? (
-                            <ChevronUpIcon className="h-4 w-4" />
-                          ) : (
-                            <ChevronDownIcon className="h-4 w-4" />
-                          )}
-                        </Button>
-                      )}
-                    </TableCell>
-                    <TableCell>
                       <span className="text-sm font-mono text-gray-900">
-                        JOB-2024-{match.job.id.toString().padStart(3, '0')}
+                        {match.job.id}
                       </span>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm text-gray-900 max-w-xs">
-                        {match.job.title} - {match.job.description.slice(0, 50)}...
+                        {match.job.title}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -658,7 +639,7 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
                   {/* Expanded criteria breakdown row */}
                   {isExpanded && hasDetailedBreakdown && (
                     <TableRow key={`${matchKey}-details`}>
-                      <TableCell colSpan={9} className="bg-gray-50 p-0">
+                      <TableCell colSpan={8} className="bg-gray-50 p-0">
                         <Card className="m-4 border-0 shadow-none">
                           <CardContent className="p-4">
                             <div className="space-y-3">
