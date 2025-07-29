@@ -100,6 +100,19 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
+### 2025-01-29: Critical Database Consistency Fix - User Data Preservation
+- **CRITICAL ISSUE RESOLVED**: Fixed user data loss during deployment environment switches
+- **Root Cause Identified**: System switched between `development.db` (5 users) and `production.db` (1 user) based on NODE_ENV
+- **Database Unification**: Modified init-database.ts to always use `development.db` for consistency
+- **Data Recovery**: Synchronized production database with development data to restore missing users
+- **User Impact**: Resolved deletion of all non-superadmin users during deployment
+- **Prevention**: Eliminated environment-based database switching that caused data inconsistency
+- **Database Files Before Fix**:
+  - development.db: 5 users (sudhir@aigiri.ai, a_recruiter@aigiri.ai, a_tl1@aigiri.ai, Manager1@aigir.ai, superadmin@aimhi.app)
+  - production.db: 1 user (superadmin@aimhi.app only)
+- **Database Files After Fix**: Both environments now use development.db with all user data preserved
+- **Future Deployments**: Will maintain user data consistency regardless of NODE_ENV setting
+
 ### 2025-01-29: Comprehensive Customizable Reporting System Implementation
 - **MILESTONE ACHIEVED**: Complete UI-first reporting system with drag-drop interface and visual analytics
 - **Report Builder Components**:

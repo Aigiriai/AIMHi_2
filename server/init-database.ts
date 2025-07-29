@@ -12,8 +12,9 @@ export async function initializeSQLiteDatabase() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
 
-    // Use environment-specific database name
-    const dbName = process.env.NODE_ENV === 'production' ? 'production.db' : 'development.db';
+    // Use consistent database name to prevent data loss during deployments
+    // Both development and production use the same database file
+    const dbName = 'development.db'; // Always use development.db to maintain data consistency
     const dbPath = path.join(dataDir, dbName);
     console.log(`📁 Database path: ${dbPath}`);
 
