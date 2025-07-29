@@ -128,6 +128,7 @@ export const jobs = sqliteTable("jobs", {
   salaryMin: integer("salary_min"),
   salaryMax: integer("salary_max"),
   keywords: text("keywords").notNull(),
+  originalFileName: text("original_file_name"), // Store original uploaded filename
   
   // ATS Pipeline fields
   status: text("status").notNull().default("draft"), // draft, active, paused, filled, closed, archived

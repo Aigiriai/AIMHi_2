@@ -99,6 +99,7 @@ export const jobs = pgTable("jobs", {
   experienceLevel: text("experience_level").notNull(),
   jobType: text("job_type").notNull(),
   keywords: text("keywords").notNull(),
+  originalFileName: text("original_file_name"), // Store original uploaded filename
   status: text("status").notNull().default("active"), // active, paused, closed
   settings: jsonb("settings").default({}), // Job-specific configurations
   createdAt: timestamp("created_at").defaultNow().notNull(),

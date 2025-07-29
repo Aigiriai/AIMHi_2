@@ -276,6 +276,20 @@ export async function initializeSQLiteDB() {
 
     console.log('✅ SQLite database initialized successfully');
     
+    // Add missing columns to existing tables (migrations)
+    try {
+      // Check if original_file_name column exists in jobs table
+      const jobsTableInfo = sqlite.prepare("PRAGMA table_info(jobs)").all();
+      const hasOriginalFileName = jobsTableInfo.some((col: any) => col.name === 'original_file_name');
+      
+      if (!hasOriginalFileName) {
+        sqlite.exec('ALTER TABLE jobs ADD COLUMN original_file_name TEXT');
+        console.log('✅ Added original_file_name column to jobs table');
+      }
+    } catch (error) {
+      console.log('Column migration handled:', error);
+    }
+    
     // Seed initial data
     await seedInitialData(db, sqlite);
     

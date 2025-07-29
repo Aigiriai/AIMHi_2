@@ -136,8 +136,8 @@ export class SQLiteStorage implements IStorage {
         INSERT INTO jobs (
           organization_id, team_id, created_by, title, description, 
           experience_level, job_type, requirements, location, salary_min, salary_max,
-          keywords, status, settings
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          keywords, original_file_name, status, settings
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       const result = stmt.run(
@@ -153,6 +153,7 @@ export class SQLiteStorage implements IStorage {
         insertJob.salaryMin || null,
         insertJob.salaryMax || null,
         insertJob.keywords,
+        insertJob.originalFileName || null,
         insertJob.status || 'active',
         '{}' // settings as JSON string
       );
@@ -169,6 +170,7 @@ export class SQLiteStorage implements IStorage {
         createdBy: job.created_by,
         experienceLevel: job.experience_level,
         jobType: job.job_type,
+        originalFileName: job.original_file_name,
         createdAt: new Date(job.created_at),
         updatedAt: new Date(job.updated_at)
       };
@@ -192,6 +194,7 @@ export class SQLiteStorage implements IStorage {
       createdBy: job.created_by,
       experienceLevel: job.experience_level,
       jobType: job.job_type,
+      originalFileName: job.original_file_name,
       createdAt: new Date(job.created_at),
       updatedAt: new Date(job.updated_at)
     };
@@ -215,6 +218,7 @@ export class SQLiteStorage implements IStorage {
         createdBy: job.created_by,
         experienceLevel: job.experience_level,
         jobType: job.job_type,
+        originalFileName: job.original_file_name,
         createdAt: new Date(job.created_at),
         updatedAt: new Date(job.updated_at)
       }));
@@ -239,6 +243,7 @@ export class SQLiteStorage implements IStorage {
         createdBy: job.created_by,
         experienceLevel: job.experience_level,
         jobType: job.job_type,
+        originalFileName: job.original_file_name,
         createdAt: new Date(job.created_at),
         updatedAt: new Date(job.updated_at)
       }));

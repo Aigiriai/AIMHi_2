@@ -317,6 +317,51 @@ function RecruitmentDashboard() {
     }
   };
 
+  const downloadJobFile = async (jobId: number, filename: string) => {
+    try {
+      const response = await fetch(`/api/jobs/${jobId}/download`);
+
+      if (!response.ok) {
+        throw new Error("Failed to download job file");
+      }
+
+      // Get the filename from Content-Disposition header or use the original filename
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let downloadFilename = filename;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          downloadFilename = filenameMatch[1];
+        }
+      }
+
+      // Use arrayBuffer to handle binary files correctly
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer]);
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = downloadFilename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Started",
+        description: `Job file "${filename}" is being downloaded.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: error instanceof Error ? error.message : "Failed to download job file",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAssignJob = (jobId: number, jobTitle: string) => {
     setSelectedJobForAssignment({ id: jobId, title: jobTitle });
     setShowAssignmentModal(true);
@@ -671,6 +716,16 @@ function RecruitmentDashboard() {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
+                                    {job.originalFileName && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => downloadJobFile(job.id, job.originalFileName)}
+                                      >
+                                        <DownloadIcon size={14} className="mr-1" />
+                                        Download
+                                      </Button>
+                                    )}
                                     <Button
                                       variant="outline"
                                       size="sm"

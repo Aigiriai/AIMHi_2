@@ -20,6 +20,7 @@ import { createIncomingCallTwiML, createOutboundCallTwiML, setCallContext, prepa
 import twilio from "twilio";
 import fs from "fs";
 import path from "path";
+import { FileStorageService } from "./file-storage";
 
 // Simple text similarity calculation using word overlap
 function calculateSimilarity(text1: string, text2: string): number {
@@ -67,6 +68,7 @@ const upload = multer({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const jobBoardService = new JobBoardService();
+  const fileStorage = new FileStorageService();
 
   // Initialize multi-tenant system on startup
   initializeMultiTenantSystem().catch(console.error);
@@ -380,11 +382,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('Processing job doc:', jobDoc.filename);
           console.log('Extracted data:', jobDoc.extractedData);
           
+          // Find the original file to store it
+          const originalFile = files.find(f => f.originalname === jobDoc.filename);
+          
           // Add organization context from authenticated user
           const completeData = {
             ...jobDoc.extractedData,
             organizationId: req.user!.organizationId,
-            createdBy: req.user!.id
+            createdBy: req.user!.id,
+            originalFileName: originalFile?.originalname
           };
           
           console.log('Complete data before validation:', completeData);
@@ -392,6 +398,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('Validated job data:', jobData);
           
           const job = await storage.createJob(jobData);
+          
+          // Store the original file if found
+          if (originalFile && job.id) {
+            try {
+              await fileStorage.storeJobFile(job.id, originalFile.originalname, originalFile.buffer);
+              console.log(`✅ Stored original file for job ${job.id}: ${originalFile.originalname}`);
+            } catch (fileError) {
+              console.error(`❌ Failed to store original file for job ${job.id}:`, fileError);
+            }
+          }
           
           // Automatically generate job template after successful job creation
           try {
@@ -434,6 +450,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error in bulk job upload:", error);
       res.status(500).json({ message: error.message || "Failed to process files" });
+    }
+  });
+
+  // Job file download endpoint
+  app.get('/api/jobs/:id/download', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
+    try {
+      const jobId = parseInt(req.params.id);
+      const currentUser = req.user!;
+
+      // Get the job to verify access and get filename
+      const job = await storage.getJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      // Verify job belongs to user's organization
+      if (job.organizationId !== currentUser.organizationId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      if (!job.originalFileName) {
+        return res.status(404).json({ message: "Original job file not available" });
+      }
+
+      // Get the file from storage
+      const fileData = await fileStorage.getJobFile(jobId, job.originalFileName);
+      
+      if (!fileData) {
+        return res.status(404).json({ message: "Job file not found" });
+      }
+
+      // Determine content type based on file extension
+      const ext = path.extname(job.originalFileName).toLowerCase();
+      let contentType = 'application/octet-stream';
+      
+      switch (ext) {
+        case '.pdf':
+          contentType = 'application/pdf';
+          break;
+        case '.doc':
+          contentType = 'application/msword';
+          break;
+        case '.docx':
+          contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+          break;
+        case '.txt':
+          contentType = 'text/plain';
+          break;
+      }
+
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Content-Disposition', `attachment; filename="${job.originalFileName}"`);
+      res.send(fileData);
+    } catch (error) {
+      console.error("Error downloading job file:", error);
+      res.status(500).json({ message: "Failed to download job file" });
     }
   });
 

@@ -63,6 +63,50 @@ export class FileStorageService {
     return path.join(this.storageDir, 'resumes', `${candidateId}_${sanitizedFilename}`);
   }
 
+  // Job file storage methods
+  async storeJobFile(jobId: number, filename: string, buffer: Buffer): Promise<string> {
+    const sanitizedFilename = this.sanitizeFilename(filename);
+    const filePath = path.join(this.storageDir, 'jobs', `${jobId}_${sanitizedFilename}`);
+    
+    try {
+      await fs.writeFile(filePath, buffer);
+      return filePath;
+    } catch (error) {
+      console.error('Failed to store job file:', error);
+      throw new Error('Job file storage failed');
+    }
+  }
+
+  async getJobFile(jobId: number, filename: string): Promise<Buffer | null> {
+    const sanitizedFilename = this.sanitizeFilename(filename);
+    const filePath = path.join(this.storageDir, 'jobs', `${jobId}_${sanitizedFilename}`);
+    
+    try {
+      return await fs.readFile(filePath);
+    } catch (error) {
+      console.error('Failed to retrieve job file:', error);
+      return null;
+    }
+  }
+
+  async deleteJobFile(jobId: number, filename: string): Promise<boolean> {
+    const sanitizedFilename = this.sanitizeFilename(filename);
+    const filePath = path.join(this.storageDir, 'jobs', `${jobId}_${sanitizedFilename}`);
+    
+    try {
+      await fs.unlink(filePath);
+      return true;
+    } catch (error) {
+      console.error('Failed to delete job file:', error);
+      return false;
+    }
+  }
+
+  getJobFilePath(jobId: number, filename: string): string {
+    const sanitizedFilename = this.sanitizeFilename(filename);
+    return path.join(this.storageDir, 'jobs', `${jobId}_${sanitizedFilename}`);
+  }
+
   private sanitizeFilename(filename: string): string {
     // Remove or replace dangerous characters
     return filename.replace(/[^a-zA-Z0-9.-]/g, '_');

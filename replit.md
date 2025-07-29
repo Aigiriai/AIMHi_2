@@ -100,6 +100,33 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
+### 2025-01-29: Job Description File Storage and Download System Implementation
+- **MILESTONE ACHIEVED**: Complete job file storage system with original document preservation
+- **Database Schema Updates**:
+  - Added `original_file_name` column to jobs table with automatic migration
+  - Updated all storage methods to handle file metadata
+  - Enhanced schema consistency across sqlite-storage-simple.ts and shared/schema.ts
+- **Backend API Implementation**:
+  - Enhanced bulk job upload route to store both extracted text and original files
+  - Added job file download endpoint `/api/jobs/:id/download` with proper authentication
+  - Integrated FileStorageService for secure job file management in `uploads/jobs/` directory
+  - Added content-type detection for PDF, DOC, DOCX, and TXT files
+- **Frontend User Experience**:
+  - Added download buttons to Job Postings table when original files are available
+  - Implemented `downloadJobFile()` function with proper error handling and user feedback
+  - Used binary-safe arrayBuffer() method for file downloads
+  - Added DownloadIcon to job cards for intuitive file access
+- **File Storage Architecture**:
+  - Jobs stored in `uploads/jobs/` with format `{jobId}_{sanitizedFilename}`
+  - Maintains original file format (PDF, DOCX, etc.) alongside extracted text
+  - Proper file cleanup and organization for multi-tenant environment
+- **Security and Access Control**:
+  - Organization-scoped file access with authentication verification
+  - Role-based download permissions consistent with job visibility rules
+  - Secure file serving with proper MIME types and Content-Disposition headers
+- **Database Migration Success**: Automatic column addition detected and applied successfully
+- **User Workflow Enhancement**: Users can now upload job descriptions as files and download original documents for reference
+
 ### 2025-01-27: Eliminated Pinggy Tunnel Dependency - Direct Webhooks Implementation  
 - **CRITICAL ARCHITECTURE CHANGE**: Completely removed Pinggy tunnel dependency for AI calling
 - **Root Cause Identified**: Pinggy tunnel infrastructure incompatible with OpenAI Realtime API requirements
