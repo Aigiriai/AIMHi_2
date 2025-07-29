@@ -6,20 +6,25 @@ import * as postgresSchema from '@shared/schema';
 import * as sqliteSchema from './sqlite-schema';
 import { initializeSQLiteDatabase } from './init-database';
 
-// Database connection manager
+// Database connection manager - with environment-aware caching
 let dbConnection: any = null;
 let dbSchema: any = null;
+let cachedEnvironment: string | undefined = null;
 
 export async function getDB() {
-  if (dbConnection) {
+  const currentEnv = process.env.NODE_ENV;
+  
+  // Check if we need to reinitialize due to environment change
+  if (dbConnection && cachedEnvironment === currentEnv) {
     return { db: dbConnection, schema: dbSchema };
   }
 
-  // Always use SQLite database for both development and deployment
-  console.log('🗄️ Using SQLite database');
+  // Environment changed or first initialization - create new connection
+  console.log(`🗄️ Using SQLite database (NODE_ENV: ${currentEnv || 'undefined'})`);
   const sqlite = await initializeSQLiteDatabase();
   dbConnection = sqliteDrizzle(sqlite, { schema: sqliteSchema });
   dbSchema = sqliteSchema;
+  cachedEnvironment = currentEnv;
 
   return { db: dbConnection, schema: dbSchema };
 }

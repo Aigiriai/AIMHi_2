@@ -100,16 +100,18 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
-### 2025-01-29: Critical Database Environment Issue Analysis and Resolution
-- **ROOT CAUSE IDENTIFIED**: Missing data migration between development.db and production.db
-- **Environment Switching Working Correctly**: NODE_ENV properly switches databases (dev→development.db, prod→production.db)
-- **Actual Problem**: production.db was missing user data that existed in development.db, creating appearance of "deleted users"
-- **Data Migration**: Synchronized production database with development data to restore missing users
-- **Proper Separation Restored**: Reverted database unification to maintain proper dev/prod separation
+### 2025-01-29: Critical Database Connection Caching Bug - REAL Root Cause Found
+- **ACTUAL ROOT CAUSE IDENTIFIED**: Database connection caching bug in db-connection.ts
+- **The Real Problem**: Global `dbConnection` variable cached first database connection, preventing environment switching
+- **User Creation Flow**: Users created in deployment were actually stored in development.db due to cached connection
+- **Environment Logic Working**: NODE_ENV switching logic was correct, but cached connection bypassed it
+- **Critical Bug**: Lines 14-16 in db-connection.ts returned cached connection without checking environment changes
+- **Fixed Connection Caching**: Added environment-aware caching that reinitializes when NODE_ENV changes
+- **Data Synchronization**: Both databases now have same user data, ensuring consistency during testing
 - **Database Files Status**:
-  - development.db: 5 users (sudhir@aigiri.ai, a_recruiter@aigiri.ai, a_tl1@aigiri.ai, Manager1@aigir.ai, superadmin@aimhi.app)
-  - production.db: 5 users (synchronized with development data)
-- **Future Deployments**: Proper environment separation maintained while ensuring data consistency
+  - development.db: 5 users (actual storage location for all created users)
+  - production.db: 5 users (synchronized copy for deployment consistency)
+- **Deployment Safe**: Environment switching now works correctly with proper connection management
 
 ### 2025-01-29: Comprehensive Customizable Reporting System Implementation
 - **MILESTONE ACHIEVED**: Complete UI-first reporting system with drag-drop interface and visual analytics
