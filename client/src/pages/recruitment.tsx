@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";
-import { BrainIcon, BriefcaseIcon, UsersIcon, PercentIcon, BellIcon, SearchIcon, DownloadIcon, PlusIcon, UploadIcon, ExternalLinkIcon, CalendarIcon, Trash2Icon, LayoutDashboard, Users, Calendar, BarChart3 } from "lucide-react";
+import { BrainIcon, BriefcaseIcon, UsersIcon, PercentIcon, BellIcon, SearchIcon, DownloadIcon, PlusIcon, UploadIcon, ExternalLinkIcon, CalendarIcon, Trash2Icon, LayoutDashboard, Users, Calendar, BarChart3, FileBarChart } from "lucide-react";
 import JobPostingModal from "@/components/job-posting-modal";
 import ResumeUploadModal from "@/components/resume-upload-modal";
 import JobBoardIntegration from "@/components/job-board-integration";
@@ -26,6 +26,7 @@ import JobAssignmentModal from "@/components/job-assignment-modal";
 import { CandidateAssignmentModal } from "@/components/candidate-assignment-modal";
 import { PipelineKanban } from "@/components/pipeline-kanban";
 import { ApplyToJobDropdown } from "@/components/apply-to-job-dropdown";
+import { ReportBuilder } from "@/components/reporting/ReportBuilder";
 
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 
@@ -549,7 +550,8 @@ function RecruitmentDashboard() {
     { value: "jobs", label: "Job Postings", icon: BriefcaseIcon },
     { value: "candidates", label: "Candidates", icon: Users },
     { value: "ai-matching", label: "AI Matching", icon: BrainIcon },
-    { value: "pipeline", label: "Pipeline", icon: BarChart3 }
+    { value: "pipeline", label: "Pipeline", icon: BarChart3 },
+    { value: "reports", label: "Reports", icon: FileBarChart }
   ];
 
   return (
@@ -566,7 +568,7 @@ function RecruitmentDashboard() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-5 mb-8">
+            <TabsList className="grid w-full grid-cols-6 mb-8">
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 return (
@@ -1025,6 +1027,11 @@ function RecruitmentDashboard() {
             {/* Pipeline Tab - Kanban Board */}
             <TabsContent value="pipeline" className="mt-0">
               <PipelineKanban />
+            </TabsContent>
+
+            {/* Reports Tab - Custom Report Builder */}
+            <TabsContent value="reports" className="mt-0">
+              <ReportBuilder />
             </TabsContent>
           </Tabs>
 
