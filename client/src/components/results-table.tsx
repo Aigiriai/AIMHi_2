@@ -182,12 +182,25 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
         throw new Error("Failed to download resume");
       }
 
-      const text = await response.text();
-      const blob = new Blob([text], { type: 'text/plain' });
+      // Get the filename from Content-Disposition header or use a default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `${candidateName.replace(/\s+/g, '_')}_resume.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Use arrayBuffer to handle binary files correctly
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer]);
+      
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${candidateName.replace(/\s+/g, '_')}_resume.txt`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

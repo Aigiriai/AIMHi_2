@@ -272,6 +272,51 @@ function RecruitmentDashboard() {
     }
   };
 
+  const downloadResume = async (candidateId: number, candidateName: string) => {
+    try {
+      const response = await fetch(`/api/candidates/${candidateId}/resume`);
+
+      if (!response.ok) {
+        throw new Error("Failed to download resume");
+      }
+
+      // Get the filename from Content-Disposition header or use a default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = `${candidateName.replace(/\s+/g, '_')}_resume.pdf`;
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Use arrayBuffer to handle binary files correctly
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer]);
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download Started",
+        description: `Resume for ${candidateName} is being downloaded.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Download Failed",
+        description: error instanceof Error ? error.message : "Failed to download resume",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAssignJob = (jobId: number, jobTitle: string) => {
     setSelectedJobForAssignment({ id: jobId, title: jobTitle });
     setShowAssignmentModal(true);
@@ -731,7 +776,11 @@ function RecruitmentDashboard() {
                                         queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
                                       }}
                                     />
-                                    <Button variant="outline" size="sm">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => downloadResume(candidate.id, candidate.name)}
+                                    >
                                       View Resume
                                     </Button>
                                     <CandidateAssignmentModal 
