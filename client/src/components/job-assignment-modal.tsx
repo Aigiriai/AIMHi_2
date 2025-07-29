@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Users, Trash2, UserCheck } from "lucide-react";
+import { UserPlus, Users } from "lucide-react";
 
 interface JobAssignmentModalProps {
   open: boolean;
@@ -71,19 +71,12 @@ export default function JobAssignmentModal({
   // Extract users array from response object
   const users = (usersResponse as any)?.users || [];
 
-  // Fetch current job assignments
-  const { data: assignments = [], isLoading: assignmentsLoading } = useQuery<JobAssignment[]>({
-    queryKey: ["/api/jobs", jobId, "assignments"],
-    enabled: open,
-  });
-
   // Assign user to job
   const assignUser = useMutation({
     mutationFn: async (data: { userId: number; role: string }) => {
       return apiRequest("POST", `/api/jobs/${jobId}/assignments`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "assignments"] });
       toast({
         title: "Success",
         description: "User assigned to job successfully",
@@ -95,27 +88,6 @@ export default function JobAssignmentModal({
       toast({
         title: "Error",
         description: error.message || "Failed to assign user",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Remove assignment
-  const removeAssignment = useMutation({
-    mutationFn: async (assignmentId: number) => {
-      return apiRequest("DELETE", `/api/jobs/${jobId}/assignments/${assignmentId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/jobs", jobId, "assignments"] });
-      toast({
-        title: "Success",
-        description: "Assignment removed successfully",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to remove assignment",
         variant: "destructive",
       });
     },
@@ -156,10 +128,8 @@ export default function JobAssignmentModal({
     }
   };
 
-  // Filter out already assigned users
-  const availableUsers = users.filter((user: any) => 
-    !assignments.some((assignment: any) => assignment.userId === user.id)
-  );
+  // Show all users since we removed the current assignments section
+  const availableUsers = users;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -244,62 +214,7 @@ export default function JobAssignmentModal({
             </CardContent>
           </Card>
 
-          {/* Current Assignments */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <UserCheck className="h-4 w-4" />
-                Current Assignments ({assignments.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {assignmentsLoading ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-16 w-full" />
-                  <Skeleton className="h-16 w-full" />
-                </div>
-              ) : assignments.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">
-                  No users assigned to this job yet
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {assignments.map((assignment: any) => (
-                    <div
-                      key={assignment.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="font-medium">
-                            {assignment.user?.firstName || 'Unknown'} {assignment.user?.lastName || 'User'}
-                          </p>
-                          <p className="text-sm text-gray-500">{assignment.user?.email || 'No email'}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Badge variant={getRoleBadgeVariant(assignment.role)}>
-                            {assignment.role}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {assignment.user?.role || 'Unknown'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeAssignment.mutate(assignment.id)}
-                        disabled={removeAssignment.isPending}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
 
           {/* Role Permissions Info */}
           <Card>
