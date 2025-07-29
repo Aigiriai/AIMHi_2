@@ -519,57 +519,143 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
     }
 
     // Delete in proper order to avoid foreign key constraint violations
+    console.log(`🗑️ ORGANIZATION DELETE: Starting deletion of organization ${orgId}`);
     
-    // 1. Delete interviews first (references jobs and candidates)
-    await db.delete(interviews)
-      .where(eq(interviews.organizationId, orgId));
-
-    // 2. Delete job matches (references jobs and candidates)
-    await db.delete(jobMatches)
-      .where(eq(jobMatches.organizationId, orgId));
-
-    // 3. Delete candidates
-    await db.delete(candidates)
-      .where(eq(candidates.organizationId, orgId));
-
-    // 4. Delete jobs
-    await db.delete(jobs)
-      .where(eq(jobs.organizationId, orgId));
-
-    // 5. Get users in the organization first
+    // Get users in the organization first (needed for foreign key cleanup)
     const orgUsers = await db.select({ id: users.id })
       .from(users)
       .where(eq(users.organizationId, orgId));
     
     const userIds = orgUsers.map(user => user.id);
+    console.log(`🗑️ ORGANIZATION DELETE: Found ${userIds.length} users to handle`);
 
-    // 6. Delete user teams for users in this organization
+    // Get jobs in the organization (needed for foreign key cleanup)
+    const orgJobs = await db.select({ id: jobs.id })
+      .from(jobs)
+      .where(eq(jobs.organizationId, orgId));
+    
+    const jobIds = orgJobs.map(job => job.id);
+    console.log(`🗑️ ORGANIZATION DELETE: Found ${jobIds.length} jobs to delete`);
+
+    // Get candidates in the organization (needed for foreign key cleanup)
+    const orgCandidates = await db.select({ id: candidates.id })
+      .from(candidates)
+      .where(eq(candidates.organizationId, orgId));
+    
+    const candidateIds = orgCandidates.map(candidate => candidate.id);
+    console.log(`🗑️ ORGANIZATION DELETE: Found ${candidateIds.length} candidates to delete`);
+
+    // 1. Delete all application-related data first (most dependent tables)
+    if (jobIds.length > 0 && candidateIds.length > 0) {
+      // Delete applications table entries (if exists)
+      try {
+        await db.execute(sql`DELETE FROM applications WHERE organization_id = ${orgId}`);
+        console.log(`🗑️ ORGANIZATION DELETE: Deleted applications`);
+      } catch (error) {
+        console.log(`🗑️ ORGANIZATION DELETE: Applications table may not exist, skipping`);
+      }
+    }
+
+    // 2. Delete assignment tables (reference users, jobs, candidates)
+    if (userIds.length > 0 && jobIds.length > 0) {
+      try {
+        await db.execute(sql`DELETE FROM job_assignments WHERE job_id IN (${sql.join(jobIds, sql`, `)})`);
+        console.log(`🗑️ ORGANIZATION DELETE: Deleted job assignments`);
+      } catch (error) {
+        console.log(`🗑️ ORGANIZATION DELETE: Job assignments table may not exist, skipping`);
+      }
+    }
+
+    if (userIds.length > 0 && candidateIds.length > 0) {
+      try {
+        await db.execute(sql`DELETE FROM candidate_assignments WHERE candidate_id IN (${sql.join(candidateIds, sql`, `)})`);
+        console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate assignments`);
+      } catch (error) {
+        console.log(`🗑️ ORGANIZATION DELETE: Candidate assignments table may not exist, skipping`);
+      }
+    }
+
+    // 3. Delete report templates (reference users)
+    if (userIds.length > 0) {
+      try {
+        await db.execute(sql`DELETE FROM report_templates WHERE user_id IN (${sql.join(userIds, sql`, `)})`);
+        console.log(`🗑️ ORGANIZATION DELETE: Deleted report templates`);
+      } catch (error) {
+        console.log(`🗑️ ORGANIZATION DELETE: Report templates table may not exist, skipping`);
+      }
+    }
+
+    // 4. Delete interviews (references jobs, candidates, users)
+    await db.delete(interviews)
+      .where(eq(interviews.organizationId, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted interviews`);
+
+    // 5. Delete job matches (references jobs and candidates)
+    await db.delete(jobMatches)
+      .where(eq(jobMatches.organizationId, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted job matches`);
+
+    // 6. Delete job templates (reference jobs)
+    if (jobIds.length > 0) {
+      try {
+        await db.execute(sql`DELETE FROM job_templates WHERE job_id IN (${sql.join(jobIds, sql`, `)})`);
+        console.log(`🗑️ ORGANIZATION DELETE: Deleted job templates`);
+      } catch (error) {
+        console.log(`🗑️ ORGANIZATION DELETE: Job templates table may not exist, skipping`);
+      }
+    }
+
+    // 7. Delete candidates (referenced by other tables)
+    await db.delete(candidates)
+      .where(eq(candidates.organizationId, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted candidates`);
+
+    // 8. Delete jobs (referenced by other tables)
+    await db.delete(jobs)
+      .where(eq(jobs.organizationId, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted jobs`);
+
+    // 9. Delete user teams for users in this organization
     if (userIds.length > 0) {
       await db.delete(userTeams)
         .where(inArray(userTeams.userId, userIds));
+      console.log(`🗑️ ORGANIZATION DELETE: Deleted user teams`);
     }
 
-    // 7. Delete usage metrics
-    await db.delete(usageMetrics)
-      .where(eq(usageMetrics.organizationId, orgId));
+    // 10. Delete user credentials
+    try {
+      await db.execute(sql`DELETE FROM user_credentials WHERE organization_id = ${orgId}`);
+      console.log(`🗑️ ORGANIZATION DELETE: Deleted user credentials`);
+    } catch (error) {
+      console.log(`🗑️ ORGANIZATION DELETE: User credentials table may not exist, skipping`);
+    }
 
-    // 8. Delete organization credentials
+    // 11. Delete organization credentials
     await db.delete(organizationCredentials)
       .where(eq(organizationCredentials.organizationId, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted organization credentials`);
 
-    // 9. Delete audit logs for users in this organization (references users)
+    // 12. Delete usage metrics
+    await db.delete(usageMetrics)
+      .where(eq(usageMetrics.organizationId, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted usage metrics`);
+
+    // 13. Delete audit logs for users in this organization (references users)
     if (userIds.length > 0) {
       await db.delete(auditLogs)
         .where(inArray(auditLogs.userId, userIds));
+      console.log(`🗑️ ORGANIZATION DELETE: Deleted user audit logs`);
     }
 
-    // 10. Delete audit logs for the organization
+    // 14. Delete audit logs for the organization
     await db.delete(auditLogs)
       .where(eq(auditLogs.organizationId, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted organization audit logs`);
 
-    // 11. Delete teams (may reference users as managers)
+    // 15. Delete teams (may reference users as managers) - do this before deleting users
     await db.delete(teams)
       .where(eq(teams.organizationId, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted teams`);
 
     // Handle users based on specified action
     if (transferUsersToOrg) {
@@ -608,14 +694,16 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
         userCount: activeUsers.length
       });
 
-      // 12. Delete all users in the organization (only if explicitly requested)
+      // 16. Delete all users in the organization (only if explicitly requested)
       await db.delete(users)
         .where(eq(users.organizationId, orgId));
+      console.log(`🗑️ ORGANIZATION DELETE: Deleted ${userIds.length} users`);
     }
 
-    // 13. Finally delete the organization
+    // 17. Finally delete the organization
     await db.delete(organizations)
       .where(eq(organizations.id, orgId));
+    console.log(`🗑️ ORGANIZATION DELETE: Deleted organization ${orgId}`);
 
     res.json({ message: 'Organization deleted successfully' });
   } catch (error) {
