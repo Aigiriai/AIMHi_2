@@ -112,6 +112,11 @@ export class OrganizationManager {
       })
     }).returning();
 
+    console.log(`👤 ORG MANAGER: About to create admin user in organization manager`);
+    console.log(`📊 ORG MANAGER: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+    console.log(`📧 ORG MANAGER: Admin email = ${adminEmail}`);
+    console.log(`🏢 ORG MANAGER: Organization ID = ${organization.id}`);
+    
     // Create admin user
     const passwordHash = await hashPassword(adminPassword);
     const [adminUser] = await db.insert(users).values({
@@ -147,6 +152,9 @@ export class OrganizationManager {
         analytics: ['read']
       })
     }).returning();
+    
+    console.log(`✅ ORG MANAGER: Admin user created successfully with ID = ${adminUser.id}`);
+    console.log(`📁 ORG MANAGER: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
 
     return {
       organization,

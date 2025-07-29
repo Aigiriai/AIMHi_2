@@ -890,7 +890,19 @@ export class SQLiteStorage implements IStorage {
   // User methods (basic implementations)
   async createUser(insertUser: InsertUser): Promise<User> {
     await this.ensureConnection();
-    throw new Error('User creation not implemented in SQLite storage');
+    
+    // Log database information before user creation
+    console.log(`👤 USER CREATION: Creating user in database`);
+    console.log(`📊 USER CREATION: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+    console.log(`📧 USER CREATION: User email = ${insertUser.email}`);
+    console.log(`🏢 USER CREATION: Organization ID = ${insertUser.organizationId}`);
+    
+    const [user] = await this.db.insert(this.schema.users).values(insertUser).returning();
+    
+    console.log(`✅ USER CREATION: User created successfully with ID = ${user.id}`);
+    console.log(`📁 USER CREATION: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+    
+    return user;
   }
 
   async getUser(id: number): Promise<User | undefined> {

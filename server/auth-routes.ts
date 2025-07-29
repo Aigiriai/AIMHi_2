@@ -669,7 +669,14 @@ router.post('/invite-organization-admin', authenticateToken, requireSuperAdmin, 
       adminPassword: tempPassword,
     };
 
+    console.log(`👤 ORG ADMIN CREATION: About to create organization admin via invite-organization-admin endpoint`);
+    console.log(`📊 ORG ADMIN CREATION: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+    console.log(`📧 ORG ADMIN CREATION: Admin email = ${email}`);
+    console.log(`🏢 ORG ADMIN CREATION: Organization name = ${organizationName}`);
+    
     const result = await organizationManager.createOrganization(orgData);
+    
+    console.log(`✅ ORG ADMIN CREATION: Organization admin created successfully with ID = ${result.adminUser.id}`);
 
     // Store credentials in database for persistent access
     await db.insert(organizationCredentials).values({
@@ -720,6 +727,10 @@ router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => 
     const invitingUser = req.user!;
 
     console.log('📧 Invite user request received:', { email, firstName, lastName, role, phone, invitingUserRole: invitingUser.role });
+    console.log(`👤 USER INVITATION: About to create user via invite-user endpoint`);
+    console.log(`📊 USER INVITATION: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+    console.log(`📧 USER INVITATION: User email = ${email}`);
+    console.log(`🏢 USER INVITATION: Organization ID = ${invitingUser.organizationId}`);
 
     // Validate required fields
     if (!email || !firstName || !lastName || !role) {
@@ -765,6 +776,9 @@ router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => 
     const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase() + '123!';
     const passwordHash = await hashPassword(tempPassword);
 
+    console.log(`👤 USER INVITATION: About to insert user into database via direct SQL insert`);
+    console.log(`📁 USER INVITATION: Database file determined by NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+    
     // Create the user with proper JSON serialization for SQLite
     const [newUser] = await db.insert(users).values({
       organizationId: invitingUser.organizationId!,
@@ -797,6 +811,9 @@ router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => 
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     }).returning();
+
+    console.log(`✅ USER INVITATION: User created successfully via invite-user with ID = ${newUser.id}`);
+    console.log(`📁 USER INVITATION: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
 
     await logAuditEvent(req, 'user_invited', 'user', newUser.id, {
       invitedEmail: email,

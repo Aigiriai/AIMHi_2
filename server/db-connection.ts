@@ -25,6 +25,9 @@ export async function getDB() {
   dbConnection = sqliteDrizzle(sqlite, { schema: sqliteSchema });
   dbSchema = sqliteSchema;
   cachedEnvironment = currentEnv;
+  
+  // Log the actual database file being used for debugging
+  console.log(`📊 DB CONNECTION: Database initialized for environment: ${currentEnv || 'undefined'}`);
 
   return { db: dbConnection, schema: dbSchema };
 }
