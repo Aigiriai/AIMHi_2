@@ -20,12 +20,10 @@ import EnhancedInterviewModal from "@/components/enhanced-interview-modal";
 import AdvancedAIMatchingModal from "@/components/advanced-ai-matching-modal";
 import InterviewsTable from "@/components/interviews-table";
 import ResultsTable from "@/components/results-table";
-import JobTemplateViewer from "@/components/job-template-viewer";
 import JobAssignmentModal from "@/components/job-assignment-modal";
 import { CandidateAssignmentModal } from "@/components/candidate-assignment-modal";
 import { PipelineKanban } from "@/components/pipeline-kanban";
 import { ApplyToJobDropdown } from "@/components/apply-to-job-dropdown";
-import { AddCandidateDropdown } from "@/components/add-candidate-dropdown";
 
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 
@@ -628,14 +626,6 @@ function RecruitmentDashboard() {
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <AddCandidateDropdown 
-                                      jobId={job.id} 
-                                      jobTitle={job.title}
-                                      onApplicationCreated={() => {
-                                        queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
-                                        queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
-                                      }}
-                                    />
                                     <Button
                                       variant="outline"
                                       size="sm"
@@ -644,7 +634,6 @@ function RecruitmentDashboard() {
                                       <UsersIcon size={14} className="mr-1" />
                                       Assign
                                     </Button>
-                                    <JobTemplateViewer jobId={job.id} jobTitle={job.title} />
                                   </div>
                                 </div>
                               </div>
