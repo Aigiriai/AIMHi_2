@@ -319,7 +319,11 @@ function RecruitmentDashboard() {
 
   const downloadJobFile = async (jobId: number, filename: string) => {
     try {
-      const response = await fetch(`/api/jobs/${jobId}/download`);
+      const response = await fetch(`/api/jobs/${jobId}/download`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        }
+      });
 
       if (!response.ok) {
         throw new Error("Failed to download job file");
