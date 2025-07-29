@@ -225,6 +225,8 @@ function RecruitmentDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/matches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/stats"] });
       
       toast({
         title: "Success",
@@ -267,6 +269,8 @@ function RecruitmentDashboard() {
       queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/matches"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pipeline/stats"] });
       
       toast({
         title: "Job Deleted",
