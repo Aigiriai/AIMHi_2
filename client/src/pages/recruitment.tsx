@@ -26,7 +26,7 @@ import JobAssignmentModal from "@/components/job-assignment-modal";
 import { CandidateAssignmentModal } from "@/components/candidate-assignment-modal";
 import { PipelineKanban } from "@/components/pipeline-kanban";
 import { ApplyToJobDropdown } from "@/components/apply-to-job-dropdown";
-import { ReportBuilder } from "@/components/reporting/ReportBuilder";
+import { SimpleReportBuilder } from "@/components/reporting/SimpleReportBuilder";
 
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 
@@ -1031,7 +1031,7 @@ function RecruitmentDashboard() {
 
             {/* Reports Tab - Custom Report Builder */}
             <TabsContent value="reports" className="mt-0">
-              <ReportBuilder />
+              <SimpleReportBuilder />
             </TabsContent>
           </Tabs>
 

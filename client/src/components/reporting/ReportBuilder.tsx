@@ -51,6 +51,21 @@ const initialState: ReportBuilderState = {
 };
 
 function ReportBuilderContent() {
+  console.log('🎯 REPORTS: ReportBuilderContent rendering');
+  
+  const undoRedoContext = useUndoRedo<ReportBuilderState>();
+  console.log('🎯 REPORTS: UndoRedo context:', undoRedoContext ? 'available' : 'null');
+  
+  if (!undoRedoContext) {
+    console.error('🚨 REPORTS: UndoRedo context is null - component not wrapped properly');
+    return (
+      <div className="p-6">
+        <h2 className="text-lg font-semibold text-red-600 mb-2">Report Builder Error</h2>
+        <p className="text-gray-600">The report builder failed to initialize properly. Please refresh the page.</p>
+      </div>
+    );
+  }
+
   const {
     state,
     setState,
@@ -59,7 +74,10 @@ function ReportBuilderContent() {
     canUndo,
     canRedo,
     saveState
-  } = useUndoRedo<ReportBuilderState>(initialState);
+  } = undoRedoContext;
+
+  console.log('🎯 REPORTS: Current state:', state);
+  console.log('🎯 REPORTS: State selectedRows:', state?.selectedRows);
 
   const [showPreview, setShowPreview] = useState(false);
   const [savedTemplates, setSavedTemplates] = useState<ReportTemplate[]>([]);
@@ -245,8 +263,11 @@ function ReportBuilderContent() {
 }
 
 export function ReportBuilder() {
+  console.log('🎯 REPORTS: ReportBuilder main component initializing');
+  console.log('🎯 REPORTS: Initial state:', initialState);
+  
   return (
-    <UndoRedoProvider>
+    <UndoRedoProvider initialState={initialState}>
       <ReportBuilderContent />
     </UndoRedoProvider>
   );

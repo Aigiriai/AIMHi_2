@@ -27,11 +27,15 @@ export function UndoRedoProvider<T>({
   children, 
   initialState 
 }: UndoRedoProviderProps<T>) {
+  console.log('🔄 UNDO_REDO: Provider initializing with state:', initialState);
+  
   const [undoRedoState, setUndoRedoState] = useState<UndoRedoState<T>>({
     past: [],
     present: initialState as T,
     future: []
   });
+
+  console.log('🔄 UNDO_REDO: Current undoRedoState:', undoRedoState);
 
   const [pendingState, setPendingState] = useState<T | null>(null);
 
@@ -103,10 +107,12 @@ export function UndoRedoProvider<T>({
   );
 }
 
-export function useUndoRedo<T>(): UndoRedoContextValue<T> {
+export function useUndoRedo<T>(): UndoRedoContextValue<T> | null {
   const context = useContext(UndoRedoContext);
+  console.log('🔄 UNDO_REDO: useUndoRedo hook called, context:', context ? 'available' : 'null');
   if (!context) {
-    throw new Error('useUndoRedo must be used within an UndoRedoProvider');
+    console.error('🚨 UNDO_REDO: useUndoRedo must be used within an UndoRedoProvider');
+    return null;
   }
   return context;
 }
