@@ -9,6 +9,12 @@ async function getDB() {
   const { db } = await getSQLiteDB();
   return db;
 }
+
+// SQLite database helper for raw queries
+async function getSQLite() {
+  const { sqlite } = await getSQLiteDB();
+  return sqlite;
+}
 import { generateToken, verifyPassword, hashPassword, authenticateToken, requireSuperAdmin, logAuditEvent, type AuthRequest } from './auth';
 import { organizationManager } from './organization-manager';
 
@@ -545,36 +551,43 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
     const candidateIds = orgCandidates.map(candidate => candidate.id);
     console.log(`🗑️ ORGANIZATION DELETE: Found ${candidateIds.length} candidates to delete`);
 
+    // Get direct SQLite access for raw queries
+    const sqlite = await getSQLite();
+    
     // 1. Delete applications first (references org, jobs, candidates, users - NO CASCADE)
-    await db.execute(sql`DELETE FROM applications WHERE organization_id = ${orgId}`);
+    sqlite.prepare('DELETE FROM applications WHERE organization_id = ?').run(orgId);
     console.log(`🗑️ ORGANIZATION DELETE: Deleted applications`);
 
     // 2. Delete job assignments (references jobs, users - NO CASCADE)  
     if (jobIds.length > 0) {
-      await db.execute(sql`DELETE FROM job_assignments WHERE job_id IN (${sql.join(jobIds, sql`, `)})`);
+      const placeholders = jobIds.map(() => '?').join(',');
+      sqlite.prepare(`DELETE FROM job_assignments WHERE job_id IN (${placeholders})`).run(...jobIds);
       console.log(`🗑️ ORGANIZATION DELETE: Deleted job assignments`);
     }
 
     // 3. Delete candidate assignments (references candidates, users - NO CASCADE)
     if (candidateIds.length > 0) {
-      await db.execute(sql`DELETE FROM candidate_assignments WHERE candidate_id IN (${sql.join(candidateIds, sql`, `)})`);
+      const placeholders = candidateIds.map(() => '?').join(',');
+      sqlite.prepare(`DELETE FROM candidate_assignments WHERE candidate_id IN (${placeholders})`).run(...candidateIds);
       console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate assignments`);
     }
 
     // 4. Delete status history (may reference candidates/jobs/users)
-    await db.execute(sql`DELETE FROM status_history WHERE organization_id = ${orgId}`);
+    sqlite.prepare('DELETE FROM status_history WHERE organization_id = ?').run(orgId);
     console.log(`🗑️ ORGANIZATION DELETE: Deleted status history`);
 
     // 5. Delete candidate submissions (may reference candidates/users)
     if (candidateIds.length > 0) {
-      await db.execute(sql`DELETE FROM candidate_submissions WHERE candidate_id IN (${sql.join(candidateIds, sql`, `)})`);
+      const placeholders = candidateIds.map(() => '?').join(',');
+      sqlite.prepare(`DELETE FROM candidate_submissions WHERE candidate_id IN (${placeholders})`).run(...candidateIds);
       console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate submissions`);
     }
 
     // 6. Delete report templates (reference users)
     if (userIds.length > 0) {
       try {
-        await db.execute(sql`DELETE FROM report_templates WHERE user_id IN (${sql.join(userIds, sql`, `)})`);
+        const placeholders = userIds.map(() => '?').join(',');
+        sqlite.prepare(`DELETE FROM report_templates WHERE user_id IN (${placeholders})`).run(...userIds);
         console.log(`🗑️ ORGANIZATION DELETE: Deleted report templates`);
       } catch (error) {
         console.log(`🗑️ ORGANIZATION DELETE: Report templates table may not exist, skipping`);
@@ -593,7 +606,8 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
 
     // 9. Delete job templates (reference jobs)
     if (jobIds.length > 0) {
-      await db.execute(sql`DELETE FROM job_templates WHERE job_id IN (${sql.join(jobIds, sql`, `)})`);
+      const placeholders = jobIds.map(() => '?').join(',');
+      sqlite.prepare(`DELETE FROM job_templates WHERE job_id IN (${placeholders})`).run(...jobIds);
       console.log(`🗑️ ORGANIZATION DELETE: Deleted job templates`);
     }
 
@@ -615,7 +629,7 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
     }
 
     // 13. Delete user credentials
-    await db.execute(sql`DELETE FROM user_credentials WHERE organization_id = ${orgId}`);
+    sqlite.prepare('DELETE FROM user_credentials WHERE organization_id = ?').run(orgId);
     console.log(`🗑️ ORGANIZATION DELETE: Deleted user credentials`);
 
     // 14. Delete organization credentials
