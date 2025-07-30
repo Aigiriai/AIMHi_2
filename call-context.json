@@ -25,11 +25,13 @@
     "requires_approval": 1,
     "auto_publish_at": null,
     "application_deadline": null,
+    "original_file_name": null,
     "organizationId": 1,
     "teamId": null,
     "createdBy": 1,
     "experienceLevel": "Mid Level",
     "jobType": "Full Time",
+    "originalFileName": null,
     "createdAt": "2025-07-25T07:22:31.000Z",
     "updatedAt": "2025-07-28T06:23:30.216Z"
   }

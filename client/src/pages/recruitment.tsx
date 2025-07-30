@@ -112,7 +112,7 @@ function RecruitmentDashboard() {
   const canCreateJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   const canEditJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   const canChangeJobStatus = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
-  const canDeleteJobs = userRole && userRole === 'org_admin';
+  const canDeleteJobs = userRole && ['super_admin', 'org_admin'].includes(userRole);
   
   // Candidate Management Permissions
   const canDeleteCandidates = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
