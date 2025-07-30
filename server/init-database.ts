@@ -17,6 +17,36 @@ export async function initializeSQLiteDatabase() {
     const dbPath = path.join(dataDir, dbName);
     console.log(`📁 Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV || 'undefined'})`);
 
+    // CRITICAL DEPLOYMENT FIX: Preserve existing production database data
+    let hasExistingData = false;
+    if (process.env.NODE_ENV === 'production' && fs.existsSync(dbPath)) {
+      // Create backup
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const backupPath = path.join(dataDir, `production.db.backup.${timestamp}`);
+      try {
+        fs.copyFileSync(dbPath, backupPath);
+        console.log(`💾 DEPLOYMENT SAFETY: Production database backed up to ${backupPath}`);
+        
+        // Check if database has existing user data
+        const tempDb = new Database(dbPath);
+        try {
+          const userCount = tempDb.prepare('SELECT COUNT(*) as count FROM users').get();
+          const orgCount = tempDb.prepare('SELECT COUNT(*) as count FROM organizations').get();
+          hasExistingData = (userCount.count > 1 || orgCount.count > 1); // More than super admin
+          console.log(`🔍 DEPLOYMENT SAFETY: Found ${userCount.count} users, ${orgCount.count} organizations`);
+          if (hasExistingData) {
+            console.log(`🛡️ DEPLOYMENT SAFETY: Existing user data detected - preserving database`);
+          }
+        } catch (checkError) {
+          console.warn(`⚠️ Could not check existing data:`, checkError);
+        } finally {
+          tempDb.close();
+        }
+      } catch (backupError) {
+        console.warn(`⚠️ Failed to backup production database:`, backupError);
+      }
+    }
+
     const sqlite = new Database(dbPath);
     
     // Enable WAL mode for better performance
@@ -24,6 +54,13 @@ export async function initializeSQLiteDatabase() {
     sqlite.pragma('synchronous = NORMAL');
     sqlite.pragma('cache_size = 1000');
     sqlite.pragma('temp_store = memory');
+    
+    // CRITICAL DEPLOYMENT FIX: Skip schema changes if production data exists
+    if (hasExistingData) {
+      console.log(`🛡️ DEPLOYMENT SAFETY: Preserving existing production data - skipping schema recreation`);
+      console.log('✅ SQLite database connection established with data preservation');
+      return sqlite;
+    }
     
     // Create organizations table with all required columns
     sqlite.exec(`
