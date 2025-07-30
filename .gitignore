@@ -7,7 +7,7 @@ vite.config.ts.*
 
 # Database files - production data should not be committed
 data/production.db*
-data/development.db*
+
 
 # Sensitive files with API keys and secrets
 attached_assets/call_with_ai.py
