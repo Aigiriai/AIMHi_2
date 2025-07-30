@@ -1,0 +1,150 @@
+2025-07-30 10:49:05.39
+d2d8f42c
+User
+> NODE_ENV=production node dist/index.js
+2025-07-30 10:49:07.51
+d2d8f42c
+User
+========================
+2025-07-30 10:51:55.03
+40d90f19
+System
+starting up user application
+2025-07-30 10:51:55.62
+40d90f19
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-07-30 10:51:58.62
+40d90f19
+User
+> rest-express@1.0.0 start
+2025-07-30 10:51:58.62
+40d90f19
+User
+> NODE_ENV=production node dist/index.js
+2025-07-30 10:52:02.39
+40d90f19
+User
+5:22:02 AM [express] Initializing consolidated Node.js backend...
+2025-07-30 10:52:02.39
+40d90f19
+User
+5:22:02 AM [express] 📦 Initializing SQLite database...
+2025-07-30 10:52:02.39
+40d90f19
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-07-30 10:52:02.48
+40d90f19
+User
+✅ SQLite database initialized successfully
+2025-07-30 10:52:02.48
+40d90f19
+User
+✅ Organizations table has timezone column
+2025-07-30 10:52:02.48
+40d90f19
+User
+5:22:02 AM [express] 🔗 AI calling configured for direct webhooks (no tunnel required)
+2025-07-30 10:52:02.48
+40d90f19
+User
+🔄 Initializing call context on app startup...
+2025-07-30 10:52:02.49
+40d90f19
+User
+📂 Call context loaded from disk
+2025-07-30 10:52:02.49
+40d90f19
+User
+✅ Restored context for Sudhir Bank from previous session
+2025-07-30 10:52:02.50
+40d90f19
+User
+📂 Multiple call contexts loaded from disk (2 candidates)
+2025-07-30 10:52:02.50
+40d90f19
+User
+📂 Loaded 2 candidate contexts for AI calling
+2025-07-30 10:52:02.50
+40d90f19
+User
+• Sudhir Bank (89%)
+2025-07-30 10:52:02.50
+40d90f19
+User
+• Sudhir (5%)
+2025-07-30 10:52:02.51
+40d90f19
+User
+🚀 Initializing multi-tenant system...
+2025-07-30 10:52:02.51
+40d90f19
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-07-30 10:52:02.51
+40d90f19
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-07-30 10:52:02.51
+40d90f19
+User
+✅ SQLite database initialized successfully
+2025-07-30 10:52:02.51
+40d90f19
+User
+✅ Organizations table has timezone column
+2025-07-30 10:52:02.51
+40d90f19
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-07-30 10:52:02.52
+40d90f19
+User
+✓ Super admin already exists
+2025-07-30 10:52:02.52
+40d90f19
+User
+✓ Demo organization seeding skipped - clean system ready
+2025-07-30 10:52:02.52
+40d90f19
+User
+✅ Multi-tenant system initialized successfully
+2025-07-30 10:52:02.52
+40d90f19
+User
+2025-07-30 10:52:02.52
+40d90f19
+User
+=== Login Credentials ===
+2025-07-30 10:52:02.52
+40d90f19
+User
+Super Admin:
+2025-07-30 10:52:02.52
+40d90f19
+User
+Email: superadmin@aimhi.app
+2025-07-30 10:52:02.52
+40d90f19
+User
+Password: SuperAdmin123!@#
+2025-07-30 10:52:02.52
+40d90f19
+User
+2025-07-30 10:52:02.52
+40d90f19
+User
+Demo Organization Admin:
+2025-07-30 10:52:02.52
+40d90f19
+User
+Email: admin@aimhidemo.com
+2025-07-30 10:52:02.52
+40d90f19
+User
+Password: Demo123!@#
+2025-07-30 10:52:02.52
+40d90f19
+User
+========================
