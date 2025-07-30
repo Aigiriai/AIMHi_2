@@ -605,10 +605,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = req.user!;
       const jobId = parseInt(req.params.id);
       
-      // Only org_admin can access deletion impact (force delete restriction)
-      if (currentUser.role !== 'org_admin') {
+      // Only super_admin and org_admin can access deletion impact (force delete restriction)
+      if (!['super_admin', 'org_admin'].includes(currentUser.role)) {
         return res.status(403).json({ 
-          message: "Only Organization Administrators can delete jobs." 
+          message: "Only Super Administrators and Organization Administrators can delete jobs." 
         });
       }
       
@@ -640,10 +640,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentUser = req.user!;
       const jobId = parseInt(req.params.id);
       
-      // Only org_admin can force delete jobs
-      if (currentUser.role !== 'org_admin') {
+      // Only super_admin and org_admin can force delete jobs
+      if (!['super_admin', 'org_admin'].includes(currentUser.role)) {
         return res.status(403).json({ 
-          message: "Only Organization Administrators can delete jobs." 
+          message: "Only Super Administrators and Organization Administrators can delete jobs." 
         });
       }
       
