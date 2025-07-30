@@ -142,6 +142,15 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
   - Clear matches operation respects user permissions
 - **Deployment Impact**: This resolves the critical data isolation vulnerability in AI matching system
 
+### 2025-01-30: Critical Database Connection Caching Bug - COMPLETE FIX Applied
+- **ACTUAL ROOT CAUSE FIXED**: Enhanced database connection caching to track both environment AND database path changes
+- **Critical Bug Resolved**: Global `dbConnection` variable now properly reinitializes when database path changes between development.db and production.db
+- **Enhanced Caching Logic**: Added `cachedDbPath` tracking to detect database file changes beyond just NODE_ENV
+- **Production Account Recovery**: Manually recreated missing Aigiri organization and chetan@aigiri.ai account in production database
+- **Database Synchronization**: Both databases now properly isolated with correct connection management
+- **Deployment Safety**: Environment switching now works correctly with comprehensive connection state tracking
+- **User Access Restored**: Aigiri organization (chetan@aigiri.ai / 988m8gns5B6NLW9B123!) restored in production database
+
 ### 2025-01-29: Critical Database Connection Caching Bug - REAL Root Cause Found
 - **ACTUAL ROOT CAUSE IDENTIFIED**: Database connection caching bug in db-connection.ts
 - **The Real Problem**: Global `dbConnection` variable cached first database connection, preventing environment switching
