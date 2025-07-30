@@ -100,6 +100,21 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
+### 2025-01-30: CRITICAL Deployment Database Preservation Fix - Data Loss Prevention
+- **CRITICAL DEPLOYMENT ISSUE RESOLVED**: Fixed deployment script that was deleting production database on every deployment
+- **Previous Data Loss Bug**: `deploy-setup.sh` was destructively removing `data/production.db` causing all user data to be lost on redeployment
+- **Root Cause**: Lines 11-18 in deploy-setup.sh contained `rm -f data/production.db` which deleted the entire production database
+- **New Deployment Safety**:
+  - Production database is now preserved during deployments
+  - Automatic timestamped backups created before any changes
+  - Only development database files are cleaned up
+  - Schema updates applied to existing database without data loss
+  - New databases only created if none exist
+- **Backup System**: `data/production.db.backup.YYYYMMDD_HHMMSS` files created automatically
+- **Schema Migration**: Safe ALTER TABLE statements add missing columns without affecting existing data
+- **User Impact**: Login credentials and all user data now persist across deployments
+- **Deployment Safety**: No more unexpected user account deletions or data resets
+
 ### 2025-01-30: AI Matching User-Level Isolation Implementation - CRITICAL SECURITY FIX
 - **CRITICAL SECURITY ISSUE RESOLVED**: Implemented user-level isolation for AI matching results to prevent overwriting
 - **Previous Vulnerability**: Users within same organization could overwrite each other's AI matching results

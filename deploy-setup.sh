@@ -8,18 +8,25 @@ echo "🚀 Starting deployment setup..."
 # Create data directory if it doesn't exist
 mkdir -p data
 
-# Remove old database files to ensure clean schema
-echo "🗑️ Cleaning up old database files..."
+# Backup existing production database if it exists
+if [ -f "data/production.db" ]; then
+  echo "📋 Backing up existing production database..."
+  cp data/production.db data/production.db.backup.$(date +%Y%m%d_%H%M%S)
+  echo "✅ Production database backed up"
+else
+  echo "📦 No existing production database found - will create new one"
+fi
+
+# Only remove development database files (not production)
+echo "🧹 Cleaning up development database files..."
 rm -f data/development.db
 rm -f data/development.db-shm
 rm -f data/development.db-wal
-rm -f data/production.db
-rm -f data/production.db-shm
-rm -f data/production.db-wal
 
-# Initialize SQLite database with proper schema for production
-echo "📦 Initializing SQLite database for production..."
-sqlite3 data/production.db <<EOF
+# Initialize SQLite database with proper schema for production (only if doesn't exist)
+if [ ! -f "data/production.db" ]; then
+  echo "📦 Creating new SQLite database for production..."
+  sqlite3 data/production.db <<EOF
 -- Create organizations table with all required columns
 CREATE TABLE IF NOT EXISTS organizations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -199,8 +206,31 @@ PRAGMA temp_store = memory;
 -- Verify timezone column exists
 .schema organizations
 EOF
+  echo "✅ New SQLite database created successfully"
+else
+  echo "✅ Existing production database preserved"
+  echo "🔧 Running schema updates on existing database..."
+  
+  # Run schema updates on existing database without destroying data
+  sqlite3 data/production.db <<EOF
+-- Add any missing columns (will fail silently if already exist)
+ALTER TABLE organizations ADD COLUMN timezone TEXT DEFAULT 'UTC';
+ALTER TABLE users ADD COLUMN phone TEXT;
+ALTER TABLE users ADD COLUMN has_temporary_password INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN temporary_password TEXT;
+ALTER TABLE jobs ADD COLUMN requirements TEXT NOT NULL DEFAULT 'Requirements not specified';
+ALTER TABLE jobs ADD COLUMN location TEXT NOT NULL DEFAULT 'Location not specified';
+ALTER TABLE jobs ADD COLUMN original_file_name TEXT;
 
-echo "✅ SQLite database initialized successfully"
+-- Enable WAL mode for better performance
+PRAGMA journal_mode = WAL;
+PRAGMA synchronous = NORMAL;
+PRAGMA cache_size = 1000;
+PRAGMA temp_store = memory;
+EOF
+  echo "✅ Schema updates applied to existing database"
+fi
+
 echo "✅ Deployment setup complete"
 
 # Check if timezone column exists in production database
