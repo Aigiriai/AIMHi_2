@@ -100,21 +100,22 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
-### 2025-01-30: CRITICAL Deployment Database Preservation Fix - Data Loss Prevention COMPLETE
-- **ROOT CAUSE IDENTIFIED**: Replit deployment bypasses deploy-setup.sh script entirely, directly running npm start
-- **REAL SOLUTION IMPLEMENTED**: Moved database preservation logic into init-database.ts application startup
-- **Critical Data Protection Added**:
-  - Automatic backup creation during production startup with timestamps
-  - Data existence detection prevents schema overwrite if users exist
-  - Production database now preserved completely when existing data detected
-  - Schema initialization skipped if existing user data found (>1 user or >1 organization)
-- **Deployment Safety Architecture**:
-  - Production database backups: `data/production.db.backup.YYYY-MM-DDTHH-MM-SS`
-  - Data preservation check runs on every production startup
-  - Existing user data completely protected from schema recreation
-  - Database connection caching fixed to prevent cross-environment contamination
-- **User Impact**: Login credentials and all user data now permanently persist across deployments
-- **Testing Confirmed**: Fixed deployment process that was bypassing deploy-setup.sh entirely
+### 2025-01-30: CRITICAL Deployment Database Issue - ROOT CAUSE FIXED
+- **ROOT CAUSE IDENTIFIED**: Git was tracking and overwriting production.db during deployments
+- **REAL SOLUTION IMPLEMENTED**: Added database files to .gitignore to prevent git overwrites
+- **Critical Fix Applied**:
+  - Added `data/production.db*` and `data/development.db*` to .gitignore
+  - Git no longer tracks or overwrites live production database during deployment
+  - User data created in production environment now persists across deployments
+- **Previous Failed Approaches Removed**:
+  - Removed database preservation logic that blocked schema updates
+  - Removed backup creation that would be incompatible with new schema changes
+  - Simplified database connection caching back to original form
+- **Deployment Architecture**: 
+  - Live production database stays untouched during git deployment
+  - Schema updates can proceed normally without data preservation conflicts
+  - No backup creation needed since git ignore prevents overwrites
+- **User Impact**: Login credentials and user data persist across deployments without blocking schema evolution
 
 ### 2025-01-30: AI Matching User-Level Isolation Implementation - CRITICAL SECURITY FIX
 - **CRITICAL SECURITY ISSUE RESOLVED**: Implemented user-level isolation for AI matching results to prevent overwriting
