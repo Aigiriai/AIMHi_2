@@ -1,0 +1,136 @@
+2025-07-30 15:47:57.05
+18d70aab
+User
+> rest-express@1.0.0 start
+2025-07-30 15:47:57.05
+18d70aab
+User
+> NODE_ENV=production node dist/index.js
+2025-07-30 15:47:59.87
+18d70aab
+User
+10:17:59 AM [express] Initializing consolidated Node.js backend...
+2025-07-30 15:47:59.87
+18d70aab
+User
+10:17:59 AM [express] 📦 Initializing SQLite database...
+2025-07-30 15:47:59.87
+18d70aab
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-07-30 15:47:59.91
+18d70aab
+User
+✅ SQLite database initialized successfully
+2025-07-30 15:47:59.91
+18d70aab
+User
+✅ Organizations table has timezone column
+2025-07-30 15:47:59.91
+18d70aab
+User
+10:17:59 AM [express] 🔗 AI calling configured for direct webhooks (no tunnel required)
+2025-07-30 15:47:59.91
+18d70aab
+User
+🔄 Initializing call context on app startup...
+2025-07-30 15:47:59.91
+18d70aab
+User
+📂 Call context loaded from disk
+2025-07-30 15:47:59.91
+18d70aab
+User
+✅ Restored context for Sudhir Bank from previous session
+2025-07-30 15:47:59.92
+18d70aab
+User
+📂 Multiple call contexts loaded from disk (1 candidates)
+2025-07-30 15:47:59.92
+18d70aab
+User
+📂 Loaded 1 candidate contexts for AI calling
+2025-07-30 15:47:59.92
+18d70aab
+User
+• Sudhir (97%)
+2025-07-30 15:47:59.92
+18d70aab
+User
+🚀 Initializing multi-tenant system...
+2025-07-30 15:47:59.93
+18d70aab
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-07-30 15:47:59.93
+18d70aab
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-07-30 15:47:59.93
+18d70aab
+User
+✅ SQLite database initialized successfully
+2025-07-30 15:47:59.93
+18d70aab
+User
+✅ Organizations table has timezone column
+2025-07-30 15:47:59.93
+18d70aab
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-07-30 15:47:59.94
+18d70aab
+User
+✓ Super admin already exists
+2025-07-30 15:47:59.94
+18d70aab
+User
+✓ Demo organization seeding skipped - clean system ready
+2025-07-30 15:47:59.94
+18d70aab
+User
+✅ Multi-tenant system initialized successfully
+2025-07-30 15:47:59.94
+18d70aab
+User
+=== Login Credentials ===
+2025-07-30 15:47:59.94
+18d70aab
+User
+Super Admin:
+2025-07-30 15:47:59.94
+18d70aab
+User
+Email: superadmin@aimhi.app
+2025-07-30 15:47:59.94
+18d70aab
+User
+Password: SuperAdmin123!@#
+2025-07-30 15:47:59.94
+18d70aab
+User
+Demo Organization Admin:
+2025-07-30 15:47:59.94
+18d70aab
+User
+Email: admin@aimhidemo.com
+2025-07-30 15:47:59.94
+18d70aab
+User
+Password: Demo123!@#
+2025-07-30 15:47:59.94
+18d70aab
+User
+========================
+2025-07-30 15:47:59.94
+18d70aab
+User
+10:17:59 AM [express] Server running on port 5000 with AI calling support
+2025-07-30 15:47:59.94
+18d70aab
+User
+10:17:59 AM [express] Direct webhook domain: aimhi.aigiri.ai
+2025-07-30 15:47:59.94
+18d70aab
+User
+✅ SQLite database initialized successfully
