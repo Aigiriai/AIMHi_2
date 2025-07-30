@@ -578,9 +578,25 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
 
     // 5. Delete candidate submissions (may reference candidates/users)
     if (candidateIds.length > 0) {
-      const placeholders = candidateIds.map(() => '?').join(',');
-      sqlite.prepare(`DELETE FROM candidate_submissions WHERE candidate_id IN (${placeholders})`).run(...candidateIds);
-      console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate submissions`);
+      try {
+        // Check what columns exist in candidate_submissions table
+        const tableInfo = sqlite.prepare("PRAGMA table_info(candidate_submissions)").all();
+        const hasOrgId = tableInfo.some((col: any) => col.name === 'organization_id');
+        const hasCandidateId = tableInfo.some((col: any) => col.name === 'candidate_id');
+        
+        if (hasOrgId) {
+          sqlite.prepare('DELETE FROM candidate_submissions WHERE organization_id = ?').run(orgId);
+          console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate submissions (by org_id)`);
+        } else if (hasCandidateId) {
+          const placeholders = candidateIds.map(() => '?').join(',');
+          sqlite.prepare(`DELETE FROM candidate_submissions WHERE candidate_id IN (${placeholders})`).run(...candidateIds);
+          console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate submissions (by candidate_id)`);
+        } else {
+          console.log(`🗑️ ORGANIZATION DELETE: Candidate submissions table has unexpected schema, skipping`);
+        }
+      } catch (error) {
+        console.log(`🗑️ ORGANIZATION DELETE: Candidate submissions table may not exist, skipping`);
+      }
     }
 
     // 6. Delete report templates (reference users)
