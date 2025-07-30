@@ -76,7 +76,7 @@ export default function Dashboard() {
       await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
         title: "Success",
-        description: "All AI matches have been cleared.",
+        description: "Your AI matches have been cleared.",
       });
     } catch (error) {
       toast({

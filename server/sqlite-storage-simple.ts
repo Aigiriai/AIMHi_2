@@ -36,8 +36,11 @@ export interface IStorage {
   createJobMatch(insertMatch: InsertJobMatch): Promise<JobMatch>;
   getJobMatches(jobId?: number, minPercentage?: number): Promise<JobMatchResult[]>;
   getJobMatchesByOrganization(organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]>;
+  getJobMatchesByUser(userId: number, organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]>;
+  getJobMatchesForUserRole(userId: number, userRole: string, organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]>;
   deleteJobMatchesByJobId(jobId: number): Promise<void>;
   clearAllMatches(): Promise<void>;
+  clearMatchesByUser(userId: number, organizationId: number): Promise<void>;
   
   // Interviews
   createInterview(insertInterview: InsertInterview): Promise<Interview>;
@@ -742,6 +745,136 @@ export class SQLiteStorage implements IStorage {
   async clearAllMatches(): Promise<void> {
     await this.ensureConnection();
     this.sqlite.prepare('DELETE FROM job_matches').run();
+  }
+
+  async getJobMatchesByUser(userId: number, organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
+    await this.ensureConnection();
+    
+    let query = `
+      SELECT 
+        jm.*,
+        j.title as job_title, j.description as job_description,
+        c.name as candidate_name, c.email as candidate_email, c.phone as candidate_phone, c.experience as candidate_experience
+      FROM job_matches jm
+      JOIN jobs j ON jm.job_id = j.id
+      JOIN candidates c ON jm.candidate_id = c.id
+      WHERE jm.organization_id = ? AND jm.matched_by = ?
+    `;
+    
+    const params = [organizationId, userId];
+    if (jobId) {
+      query += ' AND jm.job_id = ?';
+      params.push(jobId);
+    }
+    if (minPercentage) {
+      query += ' AND jm.match_percentage >= ?';
+      params.push(minPercentage);
+    }
+    
+    query += ' ORDER BY jm.match_percentage DESC';
+    
+    const matches = this.sqlite.prepare(query).all(...params);
+    
+    return matches.map(match => ({
+      id: match.id,
+      organizationId: match.organization_id,
+      jobId: match.job_id,
+      candidateId: match.candidate_id,
+      matchedBy: match.matched_by,
+      matchPercentage: match.match_percentage,
+      aiReasoning: match.ai_reasoning,
+      matchCriteria: JSON.parse(match.match_criteria || '{}'),
+      status: match.status,
+      createdAt: new Date(match.created_at),
+      updatedAt: new Date(match.updated_at),
+      job: {
+        id: match.job_id,
+        title: match.job_title,
+        description: match.job_description
+      } as Job,
+      candidate: {
+        id: match.candidate_id,
+        name: match.candidate_name,
+        email: match.candidate_email,
+        phone: match.candidate_phone,
+        experience: match.candidate_experience
+      } as Candidate
+    }));
+  }
+
+  async getJobMatchesForUserRole(userId: number, userRole: string, organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
+    await this.ensureConnection();
+    
+    let query = `
+      SELECT 
+        jm.*,
+        j.title as job_title, j.description as job_description,
+        c.name as candidate_name, c.email as candidate_email, c.phone as candidate_phone, c.experience as candidate_experience
+      FROM job_matches jm
+      JOIN jobs j ON jm.job_id = j.id
+      JOIN candidates c ON jm.candidate_id = c.id
+      WHERE jm.organization_id = ?
+    `;
+    
+    const params = [organizationId];
+    
+    // Role-based filtering logic
+    if (userRole === 'team_lead' || userRole === 'recruiter') {
+      // Team leads and recruiters can only see matches they created
+      query += ' AND jm.matched_by = ?';
+      params.push(userId);
+    } else if (userRole === 'manager') {
+      // Managers can see matches created by themselves or their team members
+      query += ` AND (jm.matched_by = ? OR jm.matched_by IN (
+        SELECT id FROM users WHERE organization_id = ? AND manager_id = ?
+      ))`;
+      params.push(userId, organizationId, userId);
+    }
+    // org_admin and super_admin can see all matches in organization (no additional filter)
+    
+    if (jobId) {
+      query += ' AND jm.job_id = ?';
+      params.push(jobId);
+    }
+    if (minPercentage) {
+      query += ' AND jm.match_percentage >= ?';
+      params.push(minPercentage);
+    }
+    
+    query += ' ORDER BY jm.match_percentage DESC';
+    
+    const matches = this.sqlite.prepare(query).all(...params);
+    
+    return matches.map(match => ({
+      id: match.id,
+      organizationId: match.organization_id,
+      jobId: match.job_id,
+      candidateId: match.candidate_id,
+      matchedBy: match.matched_by,
+      matchPercentage: match.match_percentage,
+      aiReasoning: match.ai_reasoning,
+      matchCriteria: JSON.parse(match.match_criteria || '{}'),
+      status: match.status,
+      createdAt: new Date(match.created_at),
+      updatedAt: new Date(match.updated_at),
+      job: {
+        id: match.job_id,
+        title: match.job_title,
+        description: match.job_description
+      } as Job,
+      candidate: {
+        id: match.candidate_id,
+        name: match.candidate_name,
+        email: match.candidate_email,
+        phone: match.candidate_phone,
+        experience: match.candidate_experience
+      } as Candidate
+    }));
+  }
+
+  async clearMatchesByUser(userId: number, organizationId: number): Promise<void> {
+    await this.ensureConnection();
+    this.sqlite.prepare('DELETE FROM job_matches WHERE matched_by = ? AND organization_id = ?').run(userId, organizationId);
   }
 
   // Interview methods (basic implementations)

@@ -100,6 +100,33 @@ AIM Hi System is a comprehensive AI-powered recruitment platform that streamline
 
 ## Recent Changes
 
+### 2025-01-30: AI Matching User-Level Isolation Implementation - CRITICAL SECURITY FIX
+- **CRITICAL SECURITY ISSUE RESOLVED**: Implemented user-level isolation for AI matching results to prevent overwriting
+- **Previous Vulnerability**: Users within same organization could overwrite each other's AI matching results
+- **New Security Architecture**:
+  - Organization-level isolation (existing) ✅ MAINTAINED
+  - User-level isolation (new) ✅ IMPLEMENTED
+  - Role-based access control for AI matches ✅ ADDED
+- **Database Layer Changes**:
+  - Added `getJobMatchesByUser()` method for user-specific match retrieval
+  - Added `getJobMatchesForUserRole()` method with hierarchical access control
+  - Added `clearMatchesByUser()` method for user-specific cleanup
+  - Enhanced all match storage to properly track `matchedBy` field
+- **Role-Based Access Control Rules**:
+  - **Team Lead/Recruiter**: Can only see matches they created
+  - **Manager**: Can see matches created by themselves + their team members
+  - **Org Admin/Super Admin**: Can see all matches in organization
+- **API Endpoint Updates**:
+  - `GET /api/matches`: Now uses `getJobMatchesForUserRole()` with proper filtering
+  - `DELETE /api/matches`: Now has user-level isolation (users can only clear their own matches)
+  - `POST /api/matches/batch-generate`: Fixed to properly set `matchedBy` field
+  - `POST /api/matches/advanced`: Already had proper `matchedBy` tracking
+- **User Data Protection**: 
+  - Users can no longer see or modify matches created by other users (unless hierarchy allows)
+  - All match operations now logged with user attribution
+  - Clear matches operation respects user permissions
+- **Deployment Impact**: This resolves the critical data isolation vulnerability in AI matching system
+
 ### 2025-01-29: Critical Database Connection Caching Bug - REAL Root Cause Found
 - **ACTUAL ROOT CAUSE IDENTIFIED**: Database connection caching bug in db-connection.ts
 - **The Real Problem**: Global `dbConnection` variable cached first database connection, preventing environment switching

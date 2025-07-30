@@ -155,15 +155,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Generate new match
             console.log(`🎯 BATCH GENERATE: Creating match for job ${job.id} (${job.title}) + candidate ${candidate.id} (${candidate.name})`);
             
-            const matchResult = await matchCandidateToJob(
-              candidate.id,
-              job.id,
-              organizationId
-            );
+            const matchResult = await matchCandidateToJob(job, candidate);
 
             if (matchResult) {
+              // Store the match result in database with proper user tracking
+              await storage.createJobMatch({
+                organizationId: currentUser.organizationId!,
+                jobId: job.id,
+                candidateId: candidate.id,
+                matchedBy: currentUser.id, // CRITICAL: Track who created the match
+                matchPercentage: matchResult.matchPercentage,
+                aiReasoning: matchResult.reasoning,
+                matchCriteria: JSON.stringify({
+                  criteriaScores: matchResult.criteriaScores,
+                  weightedScores: matchResult.weightedScores,
+                  skillAnalysis: matchResult.skillAnalysis
+                }),
+                status: 'pending'
+              });
+              
               generatedCount++;
-              console.log(`✅ BATCH GENERATE: Generated match with ${matchResult.overall_match_percentage}% score`);
+              console.log(`✅ BATCH GENERATE: Generated match with ${matchResult.matchPercentage}% score for user ${currentUser.id}`);
             }
 
           } catch (error) {
@@ -1279,16 +1291,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const jobId = req.query.jobId ? parseInt(req.query.jobId as string) : undefined;
       const minPercentage = req.query.minPercentage ? parseFloat(req.query.minPercentage as string) : undefined;
+      const currentUser = req.user!;
       
-      console.log('🔍 ROUTE: Getting matches with organization filtering');
+      console.log(`🔍 ROUTE: Getting matches with user-level filtering for user ${currentUser.id} (${currentUser.role})`);
       
-      const allMatches = await storage.getJobMatches(jobId, minPercentage);
-      // Filter by organization
-      const matches = allMatches.filter(match => match.organizationId === req.user!.organizationId!);
+      // Use role-based filtering instead of organization-only filtering
+      const matches = await storage.getJobMatchesForUserRole(
+        currentUser.id,
+        currentUser.role,
+        currentUser.organizationId!,
+        jobId,
+        minPercentage
+      );
       
-      console.log('🔍 ROUTE: Got matches count:', matches.length);
+      console.log(`🔍 ROUTE: Got ${matches.length} matches for user ${currentUser.id} with role ${currentUser.role}`);
       if (matches.length > 0) {
-        console.log('🔍 ROUTE: First match has skillAnalysis:', !!matches[0].skillAnalysis);
+        console.log('🔍 ROUTE: Sample match created by user:', matches[0].matchedBy);
       }
       res.json(matches);
     } catch (error) {
@@ -1491,17 +1509,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Data Management routes
-  app.delete('/api/matches', async (req, res) => {
+  // Data Management routes - Updated with user-level isolation
+  app.delete('/api/matches', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      await storage.clearAllMatches();
+      const currentUser = req.user!;
+      const clearAll = req.query.clearAll === 'true';
+      
+      if (clearAll && (currentUser.role === 'org_admin' || currentUser.role === 'super_admin')) {
+        // Only org admins and super admins can clear all matches in organization
+        await storage.clearAllMatches();
+        console.log(`🗑️ All matches cleared by ${currentUser.role} user ${currentUser.id}`);
+      } else {
+        // Clear only matches created by the current user
+        await storage.clearMatchesByUser(currentUser.id, currentUser.organizationId!);
+        console.log(`🗑️ Matches cleared for user ${currentUser.id} in organization ${currentUser.organizationId}`);
+      }
       
       // Clear call context when matches are cleared
       const { clearCallContext } = await import('./ai-calling');
       clearCallContext('all');
       console.log("🗑️ Call context cleared along with AI matches");
       
-      res.json({ message: "All matches cleared successfully" });
+      res.json({ message: "Matches cleared successfully" });
     } catch (error) {
       console.error("Error clearing matches:", error);
       res.status(500).json({ message: "Failed to clear matches" });
