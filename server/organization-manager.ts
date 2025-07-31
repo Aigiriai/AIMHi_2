@@ -22,13 +22,12 @@ export class OrganizationManager {
 
     // CRITICAL VALIDATION: Check for existing users with this email in ANY organization
     // Email must be globally unique for user identification across organizations
-    const db = await getDB();
-    const existingUser = await db.select()
-      .from(users)
-      .where(eq(users.email, adminEmail))
-      .limit(1);
+    const sqlite = await getSQLite();
+    const existingUser = sqlite.prepare(`
+      SELECT id FROM users WHERE email = ? LIMIT 1
+    `).get(adminEmail);
 
-    if (existingUser.length > 0) {
+    if (existingUser) {
       throw new Error(`User with email ${adminEmail} already exists in the system`);
     }
 
@@ -36,12 +35,11 @@ export class OrganizationManager {
     let subdomain = name.toLowerCase().replace(/[^a-z0-9]/g, '').substring(0, 20);
     
     // Check for existing subdomain and make it unique if needed
-    const existingSubdomain = await db.select()
-      .from(organizations)
-      .where(eq(organizations.subdomain, subdomain))
-      .limit(1);
+    const existingSubdomain = sqlite.prepare(`
+      SELECT id FROM organizations WHERE subdomain = ? LIMIT 1
+    `).get(subdomain);
 
-    if (existingSubdomain.length > 0) {
+    if (existingSubdomain) {
       // Append timestamp to make it unique
       subdomain = `${subdomain}${Date.now().toString().slice(-6)}`;
     }
@@ -51,88 +49,91 @@ export class OrganizationManager {
     
     // Validate domain uniqueness if provided
     if (finalDomain) {
-      const existingDomain = await db.select()
-        .from(organizations)
-        .where(eq(organizations.domain, finalDomain))
-        .limit(1);
-
-      if (existingDomain.length > 0) {
+      const existingDomain = sqlite.prepare(`
+        SELECT id FROM organizations WHERE domain = ? LIMIT 1
+      `).get(finalDomain);
+      
+      if (existingDomain) {
         throw new Error(`Organization with domain ${finalDomain} already exists`);
       }
     }
 
     // CRITICAL: Validate organization name uniqueness (globally required for login)
-    const existingOrgName = await db.select()
-      .from(organizations)
-      .where(eq(organizations.name, name))
-      .limit(1);
+    const existingOrgName = sqlite.prepare(`
+      SELECT id FROM organizations WHERE name = ? LIMIT 1
+    `).get(name);
 
-    if (existingOrgName.length > 0) {
+    if (existingOrgName) {
       throw new Error(`Organization with name "${name}" already exists. Organization names must be globally unique.`);
     }
 
-    // Create organization
-    const [organization] = await db.insert(organizations).values({
+    // Create organization using raw SQL
+    const organizationResult = sqlite.prepare(`
+      INSERT INTO organizations (
+        name, domain, subdomain, plan, status, timezone, date_format, currency,
+        settings, billing_settings, compliance_settings, integration_settings,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
       name,
-      domain: finalDomain,
+      finalDomain,
       subdomain,
       plan,
-      settings: JSON.stringify({
+      'active',
+      'UTC',
+      'MM/DD/YYYY',
+      'USD',
+      JSON.stringify({
         theme: 'default',
         timezone: 'UTC',
         dateFormat: 'MM/DD/YYYY',
         currency: 'USD'
       }),
-      billingSettings: JSON.stringify({
+      JSON.stringify({
         pricingModel: 'per_user',
         pricePerUser: 50,
         pricePerResume: 2,
         pricePerInterview: 5,
         billingCycle: 'monthly'
       }),
-      complianceSettings: JSON.stringify({
+      JSON.stringify({
         dataRetentionDays: 2555, // 7 years
         gdprCompliant: true,
         ccpaCompliant: true,
         auditLogRetentionDays: 2555
       }),
-      integrationSettings: JSON.stringify({
+      JSON.stringify({
         allowedIntegrations: ['linkedin', 'indeed', 'greenhouse', 'workday'],
         apiRateLimit: 1000,
         webhookEnabled: true
-      })
-    }).returning();
+      }),
+      new Date().toISOString(),
+      new Date().toISOString()
+    );
+
+    const organizationId = organizationResult.lastInsertRowid;
 
     console.log(`👤 ORG MANAGER: About to create admin user in organization manager`);
     console.log(`📊 ORG MANAGER: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
     console.log(`📧 ORG MANAGER: Admin email = ${adminEmail}`);
-    console.log(`🏢 ORG MANAGER: Organization ID = ${organization.id}`);
+    console.log(`🏢 ORG MANAGER: Organization ID = ${organizationId}`);
     
-    // Create admin user
+    // Create admin user using raw SQL
     const passwordHash = await hashPassword(adminPassword);
-    const [adminUser] = await db.insert(users).values({
-      organizationId: organization.id,
-      email: adminEmail,
+    const adminUserResult = sqlite.prepare(`
+      INSERT INTO users (
+        organization_id, email, password_hash, first_name, last_name, role,
+        is_active, permissions, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      organizationId,
+      adminEmail,
       passwordHash,
-      firstName: adminFirstName,
-      lastName: adminLastName,
-      role: 'org_admin',
-      isActive: true,
-      settings: JSON.stringify({
-        theme: 'default',
-        notifications: {
-          email: true,
-          browser: true,
-          newCandidates: true,
-          interviewReminders: true,
-          systemUpdates: true
-        },
-        dashboard: {
-          defaultView: 'overview',
-          refreshInterval: 30
-        }
-      }),
-      permissions: JSON.stringify({
+      adminFirstName,
+      adminLastName,
+      'org_admin',
+      1, // is_active
+      JSON.stringify({
         users: ['create', 'read', 'update', 'delete'],
         teams: ['create', 'read', 'update', 'delete'],
         jobs: ['create', 'read', 'update', 'delete'],
@@ -141,15 +142,33 @@ export class OrganizationManager {
         settings: ['read', 'update'],
         billing: ['read', 'update'],
         analytics: ['read']
-      })
-    }).returning();
+      }),
+      new Date().toISOString(),
+      new Date().toISOString()
+    );
+
+    const adminUserId = adminUserResult.lastInsertRowid;
     
-    console.log(`✅ ORG MANAGER: Admin user created successfully with ID = ${adminUser.id}`);
+    console.log(`✅ ORG MANAGER: Admin user created successfully with ID = ${adminUserId}`);
     console.log(`📁 ORG MANAGER: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
 
     return {
-      organization,
-      adminUser,
+      organization: {
+        id: organizationId,
+        name,
+        domain: finalDomain,
+        subdomain,
+        plan,
+        status: 'active',
+        createdAt: new Date().toISOString()
+      },
+      adminUser: {
+        id: adminUserId,
+        email: adminEmail,
+        firstName: adminFirstName,
+        lastName: adminLastName,
+        role: 'org_admin'
+      },
       teams: []
     };
   }
