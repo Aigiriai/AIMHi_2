@@ -154,8 +154,8 @@ export default function SuperAdminDashboard() {
     org.domain?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Use pagination total for accurate counts
-  const totalOrganizations = organizationsData?.pagination?.total || 0;
+  // Use pagination totalOrganizations for accurate counts
+  const totalOrganizations = organizationsData?.pagination?.totalOrganizations || 0;
   const activeOrganizations = allOrganizations.filter((org: Organization) => org.status === 'active').length;
   const totalUsers = allOrganizations.reduce((sum: number, org: Organization) => sum + org.userCount, 0);
   const totalRevenue = totalOrganizations * 500; // Use total organizations for revenue calculation
