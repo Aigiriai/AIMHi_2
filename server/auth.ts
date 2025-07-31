@@ -1,8 +1,11 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { Request, Response, NextFunction } from 'express';
-import { getDB } from './db-connection';
-import { eq, and, sql } from 'drizzle-orm';
+// Get the SQLite database instance
+async function getSQLite() {
+  const { initializeSQLiteDatabase } = await import('./init-database');
+  return await initializeSQLiteDatabase();
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key';
 const SALT_ROUNDS = 12;
@@ -57,32 +60,30 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const { db, schema } = await getDB();
+    const sqlite = await getSQLite();
     
-    // Fetch fresh user data
-    const user = await db
-      .select()
-      .from(schema.users)
-      .where(and(
-        eq(schema.users.id, decoded.userId),
-        eq(schema.users.isActive, 1)
-      ))
-      .limit(1);
+    // Fetch fresh user data using raw SQL
+    const user = sqlite.prepare(`
+      SELECT id, organization_id, email, first_name, last_name, role, permissions
+      FROM users 
+      WHERE id = ?
+      LIMIT 1
+    `).get(decoded.userId);
 
-    if (!user.length) {
+    if (!user) {
       return res.status(401).json({ message: 'Invalid token' });
     }
 
     req.user = {
-      id: user[0].id,
-      organizationId: user[0].organizationId,
-      email: user[0].email,
-      firstName: user[0].firstName,
-      lastName: user[0].lastName,
-      role: user[0].role,
-      permissions: user[0].permissions,
+      id: user.id,
+      organizationId: user.organization_id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      role: user.role,
+      permissions: user.permissions,
     };
-    req.organizationId = user[0].organizationId;
+    req.organizationId = user.organization_id;
 
     // Update last login (skip for SQLite compatibility)
     // await db

@@ -71,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const fileStorage = new FileStorageService();
 
   // Initialize multi-tenant system on startup
-  initializeMultiTenantSystem().catch(console.error);
+  // initializeMultiTenantSystem().catch(console.error); // Disabled to avoid drizzle conflicts
 
   // Test endpoint for AI matching demonstration
   app.post('/api/test-ai-match', async (req, res) => {

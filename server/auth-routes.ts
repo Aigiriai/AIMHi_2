@@ -71,9 +71,8 @@ router.post('/login', async (req, res) => {
     // Find user by email AND organization name using raw SQL join
     const result = sqlite.prepare(`
       SELECT 
-        u.id, u.email, u.first_name, u.last_name, u.phone, u.role, u.permissions, 
-        u.settings, u.organization_id, u.password_hash, u.has_temporary_password, 
-        u.temporary_password, u.is_active,
+        u.id, u.email, u.first_name, u.last_name, u.role, u.permissions, 
+        u.organization_id, u.password_hash,
         o.id as org_id, o.name as organization_name, o.domain, o.plan, o.status
       FROM users u
       INNER JOIN organizations o ON u.organization_id = o.id
@@ -97,15 +96,8 @@ router.post('/login', async (req, res) => {
       status: result.status
     };
 
-    // Verify password - check temporary password first if it exists
-    let isValidPassword = false;
-    if (user.has_temporary_password && user.temporary_password) {
-      // For temporary passwords, compare directly (plain text)
-      isValidPassword = password === user.temporary_password;
-    } else {
-      // For regular passwords, use bcrypt verification
-      isValidPassword = await verifyPassword(password, user.password_hash);
-    }
+    // Verify password using bcrypt verification
+    const isValidPassword = await verifyPassword(password, user.password_hash);
     
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -164,8 +156,8 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
     // Get user with organization data using raw SQL join
     const result = sqlite.prepare(`
       SELECT 
-        u.id, u.email, u.first_name, u.last_name, u.phone, u.role, 
-        u.permissions, u.settings, u.organization_id,
+        u.id, u.email, u.first_name, u.last_name, u.role, 
+        u.permissions, u.organization_id,
         o.name as organization_name, o.domain, o.plan, o.status,
         o.timezone, o.date_format, o.currency
       FROM users u
@@ -190,10 +182,10 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       email: result.email,
       firstName: result.first_name,
       lastName: result.last_name,
-      phone: result.phone,
+      phone: null,
       role: result.role,
       permissions: result.permissions,
-      settings: result.settings,
+      settings: "{}",
       organizationId: result.organization_id,
       organizationName: result.organization_name,
       organizationPlan: result.plan,
