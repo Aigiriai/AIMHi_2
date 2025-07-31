@@ -29,6 +29,7 @@ import { ApplyToJobDropdown } from "@/components/apply-to-job-dropdown";
 import { SimpleReportBuilder } from "@/components/reporting/SimpleReportBuilder";
 
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
+import * as XLSX from 'xlsx';
 
 interface Stats {
   activeJobs: number;
@@ -130,27 +131,194 @@ function RecruitmentDashboard() {
     match.candidate.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const exportResults = () => {
-    const csvContent = [
-      ['Job Title', 'Candidate Name', 'Match Percentage', 'Experience', 'Email'],
-      ...filteredMatches.map(match => [
-        match.job.title,
-        match.candidate.name,
-        `${match.matchPercentage}%`,
-        `${match.candidate.experience} years`,
-        match.candidate.email
-      ])
-    ].map(row => row.join(',')).join('\n');
+  // Helper function to extract skillAnalysis from matchCriteria
+  const extractSkillAnalysis = (match: any) => {
+    if (!match.matchCriteria) return null;
+    
+    try {
+      const criteria = typeof match.matchCriteria === 'string' 
+        ? JSON.parse(match.matchCriteria) 
+        : match.matchCriteria;
+      return criteria.skillAnalysis || null;
+    } catch (error) {
+      console.error('Error parsing matchCriteria for skillAnalysis:', error);
+      return null;
+    }
+  };
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+  const exportResults = () => {
+    if (filteredMatches.length === 0) {
+      toast({
+        title: "No Data to Export",
+        description: "Please run AI matching to generate results before exporting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create a new workbook
+    const workbook = XLSX.utils.book_new();
+
+    // Main summary sheet
+    const summaryData = [
+      ['Job ID', 'Job Title', 'Candidate ID', 'Candidate Name', 'Email', 'Phone', 'Experience (Years)', 'Match Percentage', 'Match Label', 'Status'],
+      ...filteredMatches.map(match => [
+        match.job.id,
+        match.job.title,
+        match.candidate.id,
+        match.candidate.name,
+        match.candidate.email,
+        match.candidate.phone,
+        match.candidate.experience,
+        Math.round(match.matchPercentage),
+        calculateMatchLabel(match.matchPercentage, filteredMatches).label,
+        match.status || 'Pending'
+      ])
+    ];
+
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    
+    // Auto-size columns for better readability
+    const summaryColWidths = [
+      { wch: 8 },   // Job ID
+      { wch: 40 },  // Job Title
+      { wch: 12 },  // Candidate ID
+      { wch: 20 },  // Candidate Name
+      { wch: 25 },  // Email
+      { wch: 15 },  // Phone
+      { wch: 12 },  // Experience
+      { wch: 12 },  // Match %
+      { wch: 15 },  // Match Label
+      { wch: 10 }   // Status
+    ];
+    summarySheet['!cols'] = summaryColWidths;
+    
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'AI Matching Summary');
+
+    // Create detailed analysis sheets for each candidate
+    filteredMatches.forEach((match) => {
+      const skillAnalysis = extractSkillAnalysis(match);
+      
+      if (skillAnalysis) {
+        // Parse criteria scores
+        let criteriaData = [];
+        try {
+          const criteria = typeof match.matchCriteria === 'string' 
+            ? JSON.parse(match.matchCriteria) 
+            : match.matchCriteria;
+          
+          if (criteria.criteriaScores && criteria.weightedScores) {
+            criteriaData = [
+              ['Criteria', 'Score (%)', 'Weight (%)', 'Weighted Points'],
+              ['Skills Match', criteria.criteriaScores.skillsMatch, 30, criteria.weightedScores.skillsMatch],
+              ['Experience Level', criteria.criteriaScores.experienceLevel, 20, criteria.weightedScores.experienceLevel],
+              ['Keyword Relevance', criteria.criteriaScores.keywordRelevance, 35, criteria.weightedScores.keywordRelevance],
+              ['Professional Depth', criteria.criteriaScores.professionalDepth, 10, criteria.weightedScores.professionalDepth],
+              ['Domain Experience', criteria.criteriaScores.domainExperience, 5, criteria.weightedScores.domainExperience],
+              ['', '', '', ''],
+              ['Overall Match Score', Math.round(match.matchPercentage), '100%', Math.round(match.matchPercentage)]
+            ];
+          }
+        } catch (error) {
+          console.error('Error parsing criteria for export:', error);
+        }
+
+        // Create detailed analysis data
+        const analysisData = [
+          ['Candidate Analysis Report'],
+          ['Candidate:', match.candidate.name],
+          ['Job Position:', match.job.title],
+          ['Overall Match:', `${Math.round(match.matchPercentage)}%`],
+          [''],
+          ['CRITERIA BREAKDOWN'],
+          ...criteriaData,
+          [''],
+          ['DETAILED SKILL ANALYSIS'],
+          ['']
+        ];
+
+        // Add skill analysis for each criteria
+        Object.entries(skillAnalysis).forEach(([criteriaName, analysis]: [string, any]) => {
+          const formattedName = criteriaName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+          
+          analysisData.push([`${formattedName.toUpperCase()}`]);
+          analysisData.push(['Skills Present:']);
+          if (analysis.skillsHas && analysis.skillsHas.length > 0) {
+            analysis.skillsHas.forEach((skill: string) => {
+              analysisData.push([`✓ ${skill}`]);
+            });
+          } else {
+            analysisData.push(['None specified']);
+          }
+          
+          analysisData.push(['Skills Missing:']);
+          if (analysis.skillsMissing && analysis.skillsMissing.length > 0) {
+            analysis.skillsMissing.forEach((skill: string) => {
+              analysisData.push([`✗ ${skill}`]);
+            });
+          } else {
+            analysisData.push(['None identified']);
+          }
+          
+          analysisData.push(['Analysis:']);
+          analysisData.push([analysis.criteriaExplanation || 'No detailed explanation available']);
+          analysisData.push(['']);
+        });
+
+        // Create worksheet for this candidate
+        const candidateSheet = XLSX.utils.aoa_to_sheet(analysisData);
+        
+        // Set column widths for better readability
+        candidateSheet['!cols'] = [
+          { wch: 50 }, // Main content column
+          { wch: 15 }, // Secondary column
+          { wch: 15 }, // Weight column
+          { wch: 15 }  // Points column
+        ];
+        
+        // Safe sheet name (Excel has limitations on sheet names)
+        let sheetName = `${match.candidate.name} Analysis`;
+        if (sheetName.length > 31) {
+          sheetName = `${match.candidate.name.substring(0, 20)} Analysis`;
+        }
+        // Remove invalid characters for Excel sheet names
+        sheetName = sheetName.replace(/[:\\/?*\[\]]/g, '');
+        
+        XLSX.utils.book_append_sheet(workbook, candidateSheet, sheetName);
+      }
+    });
+
+    // Generate Excel file
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    
+    // Download the file
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'ai-matching-results.csv';
+    a.download = `AI_Matching_Results_${new Date().toISOString().split('T')[0]}.xlsx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export Complete",
+      description: `Generated Excel file with ${filteredMatches.length} matches and detailed analysis sheets.`,
+    });
+  };
+
+  // Helper function to calculate match label (if not already available)
+  const calculateMatchLabel = (percentage: number, allMatches: any[]) => {
+    if (percentage >= 85) {
+      return { label: 'EXCELLENT', variant: 'default', color: 'bg-green-500 text-white font-bold' };
+    } else if (percentage >= 70) {
+      return { label: 'GOOD', variant: 'secondary', color: 'bg-blue-500 text-white font-bold' };
+    } else if (percentage >= 50) {
+      return { label: 'FAIR', variant: 'outline', color: 'bg-yellow-500 text-black font-bold' };
+    } else {
+      return { label: 'POOR', variant: 'outline', color: 'bg-gray-400 text-black font-bold' };
+    }
   };
 
   const handleDeleteJobClick = async (jobId: number, jobTitle: string) => {
