@@ -2679,6 +2679,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database Management Endpoints (Super Admin Only)
+  app.post('/api/admin/database/reset-development', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      // Check if user is super admin
+      if (!req.user || req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Super admin access required' });
+      }
+
+      const devDbPath = path.join(process.cwd(), 'data', 'development.db');
+      const devDbShmPath = path.join(process.cwd(), 'data', 'development.db-shm');
+      const devDbWalPath = path.join(process.cwd(), 'data', 'development.db-wal');
+
+      // Create backup with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = path.join(process.cwd(), 'data', `development.db.backup.${timestamp}`);
+
+      try {
+        if (fs.existsSync(devDbPath)) {
+          fs.copyFileSync(devDbPath, backupPath);
+          console.log(`📋 Development database backed up to ${backupPath}`);
+          
+          // Delete database files
+          fs.unlinkSync(devDbPath);
+          if (fs.existsSync(devDbShmPath)) fs.unlinkSync(devDbShmPath);
+          if (fs.existsSync(devDbWalPath)) fs.unlinkSync(devDbWalPath);
+          
+          console.log('🗑️ Development database files deleted');
+        }
+        
+        res.json({ 
+          message: 'Development database reset successfully',
+          backup: backupPath,
+          requiresRestart: true
+        });
+      } catch (error) {
+        console.error('❌ Failed to reset development database:', error);
+        res.status(500).json({ message: 'Failed to reset development database' });
+      }
+    } catch (error) {
+      console.error('❌ Database reset error:', error);
+      res.status(500).json({ message: 'Database reset failed' });
+    }
+  });
+
+  app.post('/api/admin/database/reset-production', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      // Check if user is super admin
+      if (!req.user || req.user.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Super admin access required' });
+      }
+
+      const prodDbPath = path.join(process.cwd(), 'data', 'production.db');
+      const prodDbShmPath = path.join(process.cwd(), 'data', 'production.db-shm');
+      const prodDbWalPath = path.join(process.cwd(), 'data', 'production.db-wal');
+
+      // Create backup with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = path.join(process.cwd(), 'data', `production.db.backup.${timestamp}`);
+
+      try {
+        if (fs.existsSync(prodDbPath)) {
+          fs.copyFileSync(prodDbPath, backupPath);
+          console.log(`📋 Production database backed up to ${backupPath}`);
+          
+          // Delete database files
+          fs.unlinkSync(prodDbPath);
+          if (fs.existsSync(prodDbShmPath)) fs.unlinkSync(prodDbShmPath);
+          if (fs.existsSync(prodDbWalPath)) fs.unlinkSync(prodDbWalPath);
+          
+          console.log('🗑️ Production database files deleted');
+        }
+        
+        res.json({ 
+          message: 'Production database reset successfully',
+          backup: backupPath,
+          requiresRestart: true
+        });
+      } catch (error) {
+        console.error('❌ Failed to reset production database:', error);
+        res.status(500).json({ message: 'Failed to reset production database' });
+      }
+    } catch (error) {
+      console.error('❌ Database reset error:', error);
+      res.status(500).json({ message: 'Database reset failed' });
+    }
+  });
+
   // Mount route modules
   app.use('/api/auth', authRoutes);
   app.use('/api/settings', settingsRoutes);
