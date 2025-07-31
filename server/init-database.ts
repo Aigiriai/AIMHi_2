@@ -313,6 +313,27 @@ export async function initializeSQLiteDatabase() {
       );
     `);
 
+    // Create job matches table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS job_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        job_id INTEGER NOT NULL,
+        candidate_id INTEGER NOT NULL,
+        matched_by INTEGER NOT NULL,
+        match_percentage REAL NOT NULL,
+        ai_reasoning TEXT,
+        match_criteria TEXT DEFAULT '{}',
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (matched_by) REFERENCES users(id)
+      );
+    `);
+
     // Create candidate submissions table for Team Lead and Recruiter submissions
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS candidate_submissions (

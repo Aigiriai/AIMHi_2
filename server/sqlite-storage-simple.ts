@@ -362,37 +362,144 @@ export class SQLiteStorageSimple implements IStorage {
     }
   }
 
-  // Mock implementations for remaining methods - can be implemented as needed
+  // Job matching operations
   async createJobMatch(insertMatch: InsertJobMatch): Promise<JobMatch> {
-    throw new Error('Method not implemented in simplified storage');
+    const sqlite = await this.ensureConnection();
+    const result = sqlite.prepare(`
+      INSERT INTO job_matches (
+        job_id, candidate_id, match_percentage, match_criteria, 
+        matched_by, organization_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      insertMatch.jobId,
+      insertMatch.candidateId,
+      insertMatch.matchPercentage,
+      typeof insertMatch.matchCriteria === 'string' ? insertMatch.matchCriteria : JSON.stringify(insertMatch.matchCriteria),
+      insertMatch.matchedBy,
+      insertMatch.organizationId,
+      new Date().toISOString(),
+      new Date().toISOString()
+    );
+    
+    return sqlite.prepare('SELECT * FROM job_matches WHERE id = ?').get(result.lastInsertRowid) as JobMatch;
   }
 
   async getJobMatches(jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
-    return [];
+    const sqlite = await this.ensureConnection();
+    let query = `
+      SELECT jm.*, j.title as job_title, j.description as job_description,
+             c.name as candidate_name, c.email as candidate_email
+      FROM job_matches jm
+      JOIN jobs j ON jm.job_id = j.id
+      JOIN candidates c ON jm.candidate_id = c.id
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    
+    if (jobId) {
+      query += ' AND jm.job_id = ?';
+      params.push(jobId);
+    }
+    if (minPercentage !== undefined) {
+      query += ' AND jm.match_percentage >= ?';
+      params.push(minPercentage);
+    }
+    
+    query += ' ORDER BY jm.match_percentage DESC, jm.created_at DESC';
+    
+    const matches = sqlite.prepare(query).all(...params);
+    return matches.map((match: any) => ({
+      ...match,
+      job: { id: match.job_id, title: match.job_title, description: match.job_description },
+      candidate: { id: match.candidate_id, name: match.candidate_name, email: match.candidate_email }
+    }));
   }
 
   async getJobMatchesByOrganization(organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
-    return [];
+    const sqlite = await this.ensureConnection();
+    let query = `
+      SELECT jm.*, j.title as job_title, j.description as job_description,
+             c.name as candidate_name, c.email as candidate_email
+      FROM job_matches jm
+      JOIN jobs j ON jm.job_id = j.id
+      JOIN candidates c ON jm.candidate_id = c.id
+      WHERE jm.organization_id = ?
+    `;
+    const params: any[] = [organizationId];
+    
+    if (jobId) {
+      query += ' AND jm.job_id = ?';
+      params.push(jobId);
+    }
+    if (minPercentage !== undefined) {
+      query += ' AND jm.match_percentage >= ?';
+      params.push(minPercentage);
+    }
+    
+    query += ' ORDER BY jm.match_percentage DESC, jm.created_at DESC';
+    
+    const matches = sqlite.prepare(query).all(...params);
+    return matches.map((match: any) => ({
+      ...match,
+      job: { id: match.job_id, title: match.job_title, description: match.job_description },
+      candidate: { id: match.candidate_id, name: match.candidate_name, email: match.candidate_email }
+    }));
   }
 
   async getJobMatchesByUser(userId: number, organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
-    return [];
+    const sqlite = await this.ensureConnection();
+    let query = `
+      SELECT jm.*, j.title as job_title, j.description as job_description,
+             c.name as candidate_name, c.email as candidate_email
+      FROM job_matches jm
+      JOIN jobs j ON jm.job_id = j.id
+      JOIN candidates c ON jm.candidate_id = c.id
+      WHERE jm.matched_by = ? AND jm.organization_id = ?
+    `;
+    const params: any[] = [userId, organizationId];
+    
+    if (jobId) {
+      query += ' AND jm.job_id = ?';
+      params.push(jobId);
+    }
+    if (minPercentage !== undefined) {
+      query += ' AND jm.match_percentage >= ?';
+      params.push(minPercentage);
+    }
+    
+    query += ' ORDER BY jm.match_percentage DESC, jm.created_at DESC';
+    
+    const matches = sqlite.prepare(query).all(...params);
+    return matches.map((match: any) => ({
+      ...match,
+      job: { id: match.job_id, title: match.job_title, description: match.job_description },
+      candidate: { id: match.candidate_id, name: match.candidate_name, email: match.candidate_email }
+    }));
   }
 
   async getJobMatchesForUserRole(userId: number, userRole: string, organizationId: number, jobId?: number, minPercentage?: number): Promise<JobMatchResult[]> {
-    return [];
+    // Super admin and org admin see all matches in organization
+    if (userRole === 'super_admin' || userRole === 'org_admin') {
+      return this.getJobMatchesByOrganization(organizationId, jobId, minPercentage);
+    }
+    
+    // Others see only their own matches
+    return this.getJobMatchesByUser(userId, organizationId, jobId, minPercentage);
   }
 
   async deleteJobMatchesByJobId(jobId: number): Promise<void> {
-    // Implementation needed
+    const sqlite = await this.ensureConnection();
+    sqlite.prepare('DELETE FROM job_matches WHERE job_id = ?').run(jobId);
   }
 
   async clearAllMatches(): Promise<void> {
-    // Implementation needed
+    const sqlite = await this.ensureConnection();
+    sqlite.prepare('DELETE FROM job_matches').run();
   }
 
   async clearMatchesByUser(userId: number, organizationId: number): Promise<void> {
-    // Implementation needed
+    const sqlite = await this.ensureConnection();
+    sqlite.prepare('DELETE FROM job_matches WHERE matched_by = ? AND organization_id = ?').run(userId, organizationId);
   }
 
   async createInterview(insertInterview: InsertInterview): Promise<Interview> {

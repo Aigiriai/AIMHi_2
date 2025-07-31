@@ -54,6 +54,10 @@ export interface MatchResult {
 
 // Normalize resume content to ensure consistent analysis
 function normalizeResumeContent(content: string): string {
+  // Add null safety check
+  if (!content || typeof content !== 'string') {
+    return '';
+  }
   return content
     .toLowerCase()
     .replace(/\s+/g, " ") // Normalize whitespace
@@ -66,6 +70,10 @@ function generateContentHash(
   jobDescription: string,
   resumeContent: string,
 ): number {
+  // Add null safety check
+  if (!resumeContent || !jobDescription) {
+    return 12345; // Default hash for missing content
+  }
   const combined = normalizeResumeContent(jobDescription + resumeContent);
   let hash = 0;
   for (let i = 0; i < combined.length; i++) {
@@ -259,17 +267,17 @@ export async function matchCandidateToJob(
     // Generate consistent seed based on content for deterministic results
     const contentSeed = generateContentHash(
       job.description,
-      candidate.resumeContent,
+      candidate.resume_content,
     );
 
     // Normalize content to ensure consistent analysis
     const normalizedResumeContent = normalizeResumeContent(
-      candidate.resumeContent,
+      candidate.resume_content,
     );
     const normalizedJobDescription = normalizeResumeContent(job.description);
 
     // Use original content for display but normalized for consistent hashing
-    const fullResumeContent = candidate.resumeContent;
+    const fullResumeContent = candidate.resume_content;
     const fullJobDescription = job.description;
 
     // Extract critical requirements from job description

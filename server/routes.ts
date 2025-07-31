@@ -1050,18 +1050,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/candidates/:id/resume', async (req, res) => {
     try {
       const candidate = await storage.getCandidate(parseInt(req.params.id));
-      if (!candidate || !candidate.resumeFileName) {
+      if (!candidate || !candidate.resume_file_name) {
         return res.status(404).json({ message: "Resume not found" });
       }
 
       // Try to get the original file from file storage first
-      const { getResumeFile } = await import('./file-storage');
-      const fileStorage = new (await import('./file-storage')).FileStorageService();
-      const originalFile = await fileStorage.getResumeFile(candidate.id, candidate.resumeFileName);
+      const { FileStorageService } = await import('./file-storage');
+      const fileStorage = new FileStorageService();
+      const originalFile = await fileStorage.getResumeFile(candidate.id, candidate.resume_file_name);
 
       if (originalFile) {
         // Serve the original file with appropriate content type
-        const fileExtension = candidate.resumeFileName.split('.').pop()?.toLowerCase();
+        const fileExtension = candidate.resume_file_name.split('.').pop()?.toLowerCase();
         let contentType = 'application/octet-stream';
         
         switch (fileExtension) {
@@ -1087,17 +1087,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resumeFileName}"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resume_file_name}"`);
         res.send(originalFile);
       } else {
         // Fallback to text content if original file not found
-        if (!candidate.resumeContent) {
+        if (!candidate.resume_content) {
           return res.status(404).json({ message: "Resume file not found" });
         }
         
         res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resumeFileName}"`);
-        res.send(candidate.resumeContent);
+        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resume_file_name}"`);
+        res.send(candidate.resume_content);
       }
     } catch (error) {
       console.error("Error downloading resume:", error);
