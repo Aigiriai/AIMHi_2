@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./sqlite-storage-simple";
-import { insertJobSchema, insertCandidateSchema, insertInterviewSchema } from "@shared/schema";
+import { insertJobSchema, insertCandidateSchema, insertInterviewSchema } from "./sqlite-schema";
 import { matchCandidateToJob, batchMatchCandidates } from "./ai-matching";
 import { extractResumeDataFromImage } from "./image-processing";
 import { JobBoardService } from "./job-board-integrations";

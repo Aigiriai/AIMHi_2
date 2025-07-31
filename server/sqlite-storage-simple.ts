@@ -252,23 +252,27 @@ export class SQLiteStorageSimple implements IStorage {
   // Job operations
   async createJob(insertJob: InsertJob): Promise<Job> {
     const sqlite = await this.ensureConnection();
+    
+    // Properties are now correctly mapped through sqlite-schema validation
+    
     const result = sqlite.prepare(`
       INSERT INTO jobs (
         title, description, requirements, experience_level, job_type, 
         keywords, location, organization_id, status, original_file_name,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        created_by, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       insertJob.title,
       insertJob.description,
       insertJob.requirements || '',
-      insertJob.experience_level,
-      insertJob.job_type,
+      insertJob.experienceLevel || (insertJob as any).experience_level,
+      insertJob.jobType || (insertJob as any).job_type,
       insertJob.keywords,
       insertJob.location || '',
-      insertJob.organization_id,
+      insertJob.organizationId || (insertJob as any).organization_id,
       insertJob.status || 'active',
-      insertJob.original_file_name || '',
+      insertJob.originalFileName || (insertJob as any).original_file_name || '',
+      insertJob.createdBy || (insertJob as any).created_by,
       new Date().toISOString(),
       new Date().toISOString()
     );
@@ -297,18 +301,19 @@ export class SQLiteStorageSimple implements IStorage {
     const result = sqlite.prepare(`
       INSERT INTO candidates (
         name, email, phone, experience, resume_content, resume_file_name,
-        organization_id, status, assigned_to, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        organization_id, added_by, status, assigned_to, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       insertCandidate.name,
       insertCandidate.email,
       insertCandidate.phone,
       insertCandidate.experience,
-      insertCandidate.resume_content,
-      insertCandidate.resume_file_name,
-      insertCandidate.organization_id,
+      insertCandidate.resumeContent || insertCandidate.resume_content,
+      insertCandidate.resumeFileName || insertCandidate.resume_file_name,
+      insertCandidate.organizationId || insertCandidate.organization_id,
+      insertCandidate.addedBy || insertCandidate.added_by,
       insertCandidate.status || 'active',
-      insertCandidate.assigned_to || null,
+      insertCandidate.assignedTo || insertCandidate.assigned_to || null,
       new Date().toISOString(),
       new Date().toISOString()
     );
