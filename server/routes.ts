@@ -136,15 +136,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const candidate of candidates) {
           try {
             // Check if match already exists
-            const { db, schema } = await getDB();
-            const existingMatch = await db
-              .select()
-              .from(schema.jobMatches)
-              .where(and(
-                eq(schema.jobMatches.jobId, job.id),
-                eq(schema.jobMatches.candidateId, candidate.id)
-              ))
-              .get();
+            const sqlite = await initializeSQLiteDatabase();
+            const existingMatch = sqlite.prepare(`
+              SELECT * FROM job_matches 
+              WHERE job_id = ? AND candidate_id = ? 
+              LIMIT 1
+            `).get(job.id, candidate.id);
 
             if (existingMatch) {
               console.log(`⏭️ BATCH GENERATE: Match already exists for job ${job.id} + candidate ${candidate.id}`);
@@ -282,31 +279,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if team with this name already exists in the organization
-      const { db, schema } = await getDB();
-      const existingTeam = await db.select()
-        .from(schema.teams)
-        .where(and(
-          eq(schema.teams.name, name),
-          eq(schema.teams.organizationId, currentUser.organizationId!)
-        ))
-        .limit(1);
+      const sqlite = await initializeSQLiteDatabase();
+      const existingTeam = sqlite.prepare(`
+        SELECT * FROM teams 
+        WHERE name = ? AND organization_id = ? 
+        LIMIT 1
+      `).get(name, currentUser.organizationId!);
 
-      if (existingTeam.length > 0) {
+      if (existingTeam) {
         return res.status(400).json({ message: `Team with name "${name}" already exists in this organization` });
       }
 
       // Create the team
-      const [newTeam] = await db.insert(schema.teams).values({
-        organizationId: currentUser.organizationId!,
+      const result = sqlite.prepare(`
+        INSERT INTO teams (organization_id, name, description, manager_id, settings, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        currentUser.organizationId!,
         name,
-        description: description || '',
-        managerId: currentUser.id,
-        settings: {
+        description || '',
+        currentUser.id,
+        JSON.stringify({
           autoAssignJobs: false,
           requireApproval: true,
           defaultInterviewDuration: 60
-        }
-      }).returning();
+        }),
+        new Date().toISOString(),
+        new Date().toISOString()
+      );
+      
+      const newTeam = sqlite.prepare('SELECT * FROM teams WHERE id = ?').get(result.lastInsertRowid);
 
       res.json({
         message: 'Team created successfully',
@@ -527,39 +529,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Fetching jobs for organization: ${currentUser.organizationId}`);
       
       // Get database connection
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       
       // Role-based job filtering with detailed permission matrix
-      let jobsQuery;
+      let jobs;
       
       if (['super_admin', 'org_admin'].includes(currentUser.role)) {
         // Super admin and org admin can see all jobs in their organization
-        jobsQuery = db.select()
-          .from(schema.jobs)
-          .where(eq(schema.jobs.organizationId, currentUser.organizationId!))
-          .orderBy(desc(schema.jobs.createdAt));
+        jobs = sqlite.prepare(`
+          SELECT * FROM jobs 
+          WHERE organization_id = ? 
+          ORDER BY created_at DESC
+        `).all(currentUser.organizationId!);
       } else {
         // For Manager, Team Lead, and Recruiter: only see jobs they created or are assigned to
-        const assignedJobIds = await db.select({ jobId: schema.jobAssignments.jobId })
-          .from(schema.jobAssignments)
-          .where(eq(schema.jobAssignments.userId, currentUser.id));
+        const assignedJobIds = sqlite.prepare(`
+          SELECT job_id FROM job_assignments 
+          WHERE user_id = ?
+        `).all(currentUser.id);
         
-        const assignedIds = assignedJobIds.map((a: any) => a.jobId);
+        const assignedIds = assignedJobIds.map((a: any) => a.job_id);
         
-        // Get jobs where user is either the creator OR has an assignment
-        jobsQuery = db.select()
-          .from(schema.jobs)
-          .where(and(
-            eq(schema.jobs.organizationId, currentUser.organizationId!),
-            or(
-              eq(schema.jobs.createdBy, currentUser.id), // Jobs they created
-              assignedIds.length > 0 ? inArray(schema.jobs.id, assignedIds) : sql`0 = 1` // Jobs they're assigned to
-            )
-          ))
-          .orderBy(desc(schema.jobs.createdAt));
+        if (assignedIds.length > 0) {
+          // Get jobs where user is either the creator OR has an assignment
+          const placeholders = assignedIds.map(() => '?').join(',');
+          jobs = sqlite.prepare(`
+            SELECT * FROM jobs 
+            WHERE organization_id = ? AND (created_by = ? OR id IN (${placeholders}))
+            ORDER BY created_at DESC
+          `).all(currentUser.organizationId!, currentUser.id, ...assignedIds);
+        } else {
+          // Only jobs they created
+          jobs = sqlite.prepare(`
+            SELECT * FROM jobs 
+            WHERE organization_id = ? AND created_by = ?
+            ORDER BY created_at DESC
+          `).all(currentUser.organizationId!, currentUser.id);
+        }
       }
-      
-      const jobs = await jobsQuery.all();
       console.log(`Retrieved organization jobs: ${jobs.length}`);
       
       res.json(jobs);
@@ -978,12 +985,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
           
           // Get candidate assignments for this user
-          const { db, schema } = await getDB();
-          const assignedCandidateResults = await db
-            .select({ candidateId: schema.candidateAssignments.candidateId })
-            .from(schema.candidateAssignments)
-            .where(eq(schema.candidateAssignments.userId, currentUser.id))
-            .all();
+          const sqlite = await initializeSQLiteDatabase();
+          const assignedCandidateResults = sqlite.prepare(`
+            SELECT candidate_id as candidateId FROM candidate_assignments 
+            WHERE user_id = ?
+          `).all(currentUser.id);
           
           const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
           const assignedCandidates = allCandidates.filter(candidate => 
@@ -1006,14 +1012,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const allCandidates = await storage.getCandidatesByOrganization(organizationId);
           
           // Get candidate assignments for this user
-          const { db, schema } = await getDB();
-          const assignedCandidateResults = await db
-            .select({ candidateId: schema.candidateAssignments.candidateId })
-            .from(schema.candidateAssignments)
-            .where(eq(schema.candidateAssignments.userId, currentUser.id))
-            .all();
+          const sqlite2 = await initializeSQLiteDatabase();
+          const assignedCandidateResults2 = sqlite2.prepare(`
+            SELECT candidate_id as candidateId FROM candidate_assignments 
+            WHERE user_id = ?
+          `).all(currentUser.id);
           
-          const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
+          const assignedCandidateIds = assignedCandidateResults2.map((a: any) => a.candidateId);
           candidates = allCandidates.filter(candidate => 
             assignedCandidateIds.includes(candidate.id)
           );
@@ -1151,12 +1156,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
         
         // Get candidate assignments for this user
-        const { db: dbConn, schema } = await getDB();
-        const assignedCandidateResults = await dbConn
-          .select({ candidateId: schema.candidateAssignments.candidateId })
-          .from(schema.candidateAssignments)
-          .where(eq(schema.candidateAssignments.userId, currentUser.id))
-          .all();
+        const sqlite3 = await initializeSQLiteDatabase();
+        const assignedCandidateResults = sqlite3.prepare(`
+          SELECT candidate_id as candidateId FROM candidate_assignments 
+          WHERE user_id = ?
+        `).all(currentUser.id);
         
         const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
         const assignedCandidates = allCandidates.filter(candidate => 
@@ -1563,34 +1567,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📊 STATS: Calculating user-specific stats for user ${currentUser.id} (${currentUser.role}) in organization ${currentUser.organizationId}`);
       
       // Get database connection for permission-based filtering
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       
       // Get user's accessible job IDs based on role and assignments
       let accessibleJobIds: number[] = [];
       
       if (['super_admin', 'org_admin'].includes(currentUser.role)) {
         // Super admin and org admin can see all jobs in their organization
-        const allJobs = await db.select({ id: schema.jobs.id })
-          .from(schema.jobs)
-          .where(eq(schema.jobs.organizationId, currentUser.organizationId!))
-          .all();
+        const allJobs = sqlite.prepare(`
+          SELECT id FROM jobs WHERE organization_id = ?
+        `).all(currentUser.organizationId!);
         accessibleJobIds = allJobs.map((job: any) => job.id);
       } else {
         // For Manager, Team Lead, and Recruiter: only jobs they created or are assigned to
-        const assignedJobIds = await db.select({ jobId: schema.jobAssignments.jobId })
-          .from(schema.jobAssignments)
-          .where(eq(schema.jobAssignments.userId, currentUser.id))
-          .all();
+        const assignedJobIds = sqlite.prepare(`
+          SELECT job_id FROM job_assignments WHERE user_id = ?
+        `).all(currentUser.id);
         
-        const createdJobs = await db.select({ id: schema.jobs.id })
-          .from(schema.jobs)
-          .where(and(
-            eq(schema.jobs.organizationId, currentUser.organizationId!),
-            eq(schema.jobs.createdBy, currentUser.id)
-          ))
-          .all();
+        const createdJobs = sqlite.prepare(`
+          SELECT id FROM jobs WHERE organization_id = ? AND created_by = ?
+        `).all(currentUser.organizationId!, currentUser.id);
         
-        const assignedIds = assignedJobIds.map((a: any) => a.jobId);
+        const assignedIds = assignedJobIds.map((a: any) => a.job_id);
         const createdIds = createdJobs.map((j: any) => j.id);
         accessibleJobIds = Array.from(new Set([...assignedIds, ...createdIds]));
       }
@@ -1788,40 +1786,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job assignment routes
   app.get('/api/jobs/:jobId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       const jobId = parseInt(req.params.jobId);
       const currentUser = req.user!;
 
       // Verify user has access to this job
-      const job = await db.select()
-        .from(schema.jobs)
-        .where(and(
-          eq(schema.jobs.id, jobId),
-          eq(schema.jobs.organizationId, currentUser.organizationId!)
-        ))
-        .get();
+      const job = sqlite.prepare(`
+        SELECT * FROM jobs 
+        WHERE id = ? AND organization_id = ?
+      `).get(jobId, currentUser.organizationId!);
 
       if (!job) {
         return res.status(404).json({ message: 'Job not found' });
       }
 
       // Get assignments with user details
-      const assignments = await db.select({
-        id: schema.jobAssignments.id,
-        userId: schema.jobAssignments.userId,
-        role: schema.jobAssignments.role,
-        assignedBy: schema.jobAssignments.assignedBy,
-        createdAt: schema.jobAssignments.createdAt,
-        user: {
-          firstName: schema.users.firstName,
-          lastName: schema.users.lastName,
-          email: schema.users.email,
-          role: schema.users.role,
-        }
-      })
-      .from(schema.jobAssignments)
-      .innerJoin(schema.users, eq(schema.jobAssignments.userId, schema.users.id))
-      .where(eq(schema.jobAssignments.jobId, jobId));
+      const assignments = sqlite.prepare(`
+        SELECT 
+          ja.id,
+          ja.user_id as userId,
+          ja.role,
+          ja.assigned_by as assignedBy,
+          ja.created_at as createdAt,
+          u.first_name as firstName,
+          u.last_name as lastName,
+          u.email,
+          u.role as userRole
+        FROM job_assignments ja
+        INNER JOIN users u ON ja.user_id = u.id
+        WHERE ja.job_id = ?
+      `).all(jobId);
 
       res.json(assignments);
     } catch (error) {
@@ -1832,7 +1826,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/jobs/:jobId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       const jobId = parseInt(req.params.jobId);
       const currentUser = req.user!;
       const { userId, role } = req.body;
@@ -1848,13 +1842,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify user has permission to assign (owner, org_admin, or manager)
       if (!['super_admin', 'org_admin', 'manager'].includes(currentUser.role)) {
-        const isJobOwner = await db.select()
-          .from(schema.jobs)
-          .where(and(
-            eq(schema.jobs.id, jobId),
-            eq(schema.jobs.createdBy, currentUser.id)
-          ))
-          .get();
+        const isJobOwner = sqlite.prepare(`
+          SELECT * FROM jobs 
+          WHERE id = ? AND created_by = ?
+        `).get(jobId, currentUser.id);
 
         if (!isJobOwner) {
           return res.status(403).json({ message: 'Insufficient permissions to assign users' });
@@ -1862,45 +1853,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify target user exists and is in same organization
-      const targetUser = await db.select()
-        .from(schema.users)
-        .where(and(
-          eq(schema.users.id, userId),
-          eq(schema.users.organizationId, currentUser.organizationId!)
-        ))
-        .get();
+      const targetUser = sqlite.prepare(`
+        SELECT * FROM users 
+        WHERE id = ? AND organization_id = ?
+      `).get(userId, currentUser.organizationId!);
 
       if (!targetUser) {
         return res.status(404).json({ message: 'User not found or not in same organization' });
       }
 
       // Check if assignment already exists
-      const existingAssignment = await db.select()
-        .from(schema.jobAssignments)
-        .where(and(
-          eq(schema.jobAssignments.jobId, jobId),
-          eq(schema.jobAssignments.userId, userId)
-        ))
-        .get();
+      const existingAssignment = sqlite.prepare(`
+        SELECT * FROM job_assignments 
+        WHERE job_id = ? AND user_id = ?
+      `).get(jobId, userId);
 
       if (existingAssignment) {
         return res.status(400).json({ message: 'User is already assigned to this job' });
       }
 
       // Create assignment
-      const assignment = await db.insert(schema.jobAssignments)
-        .values({
-          jobId,
-          userId,
-          role,
-          assignedBy: currentUser.id,
-          createdAt: new Date().toISOString()
-        })
-        .returning();
+      const result = sqlite.prepare(`
+        INSERT INTO job_assignments (job_id, user_id, role, assigned_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(jobId, userId, role, currentUser.id, new Date().toISOString(), new Date().toISOString());
+      
+      const assignment = sqlite.prepare('SELECT * FROM job_assignments WHERE id = ?').get(result.lastInsertRowid);
 
       res.json({
         message: 'User assigned successfully',
-        assignment: assignment[0]
+        assignment: assignment
       });
     } catch (error) {
       console.error('Create job assignment error:', error);
@@ -1910,19 +1892,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/jobs/:jobId/assignments/:assignmentId', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       const jobId = parseInt(req.params.jobId);
       const assignmentId = parseInt(req.params.assignmentId);
       const currentUser = req.user!;
 
       // Verify assignment exists and user has permission to remove it
-      const assignment = await db.select()
-        .from(schema.jobAssignments)
-        .where(and(
-          eq(schema.jobAssignments.id, assignmentId),
-          eq(schema.jobAssignments.jobId, jobId)
-        ))
-        .get();
+      const assignment = sqlite.prepare(`
+        SELECT * FROM job_assignments 
+        WHERE id = ? AND job_id = ?
+      `).get(assignmentId, jobId);
 
       if (!assignment) {
         return res.status(404).json({ message: 'Assignment not found' });
@@ -1931,16 +1910,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check permissions (can remove if: super_admin, org_admin, manager, job creator, or the assigned user themselves)
       const canRemove = 
         ['super_admin', 'org_admin', 'manager'].includes(currentUser.role) ||
-        assignment.assignedBy === currentUser.id ||
-        assignment.userId === currentUser.id;
+        assignment.assigned_by === currentUser.id ||
+        assignment.user_id === currentUser.id;
 
       if (!canRemove) {
         return res.status(403).json({ message: 'Insufficient permissions to remove assignment' });
       }
 
       // Delete assignment
-      await db.delete(schema.jobAssignments)
-        .where(eq(schema.jobAssignments.id, assignmentId));
+      sqlite.prepare('DELETE FROM job_assignments WHERE id = ?').run(assignmentId);
 
       res.json({ message: 'Assignment removed successfully' });
     } catch (error) {
@@ -1952,7 +1930,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Candidate assignment routes with comprehensive error handling and logging
   app.get('/api/candidates/:candidateId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       const candidateId = parseInt(req.params.candidateId);
       const currentUser = req.user!;
 
@@ -1968,13 +1946,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify candidate exists and belongs to user's organization
-      const candidate = await db.select()
-        .from(schema.candidates)
-        .where(and(
-          eq(schema.candidates.id, candidateId),
-          eq(schema.candidates.organizationId, currentUser.organizationId!)
-        ))
-        .get();
+      const candidate = sqlite.prepare(`
+        SELECT * FROM candidates 
+        WHERE id = ? AND organization_id = ?
+      `).get(candidateId, currentUser.organizationId!);
 
       if (!candidate) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Candidate ${candidateId} not found in organization ${currentUser.organizationId} for user ${currentUser.id}`);
@@ -2035,7 +2010,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/candidates/:candidateId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       const candidateId = parseInt(req.params.candidateId);
       const currentUser = req.user!;
       const { userId, role } = req.body;
@@ -2209,7 +2184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/candidates/:candidateId/assignments/:assignmentId', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       const candidateId = parseInt(req.params.candidateId);
       const assignmentId = parseInt(req.params.assignmentId);
       const currentUser = req.user!;
@@ -2234,13 +2209,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify assignment exists and belongs to the candidate
-      const assignment = await db.select()
-        .from(schema.candidateAssignments)
-        .where(and(
-          eq(schema.candidateAssignments.id, assignmentId),
-          eq(schema.candidateAssignments.candidateId, candidateId)
-        ))
-        .get();
+      const assignment = sqlite.prepare(`
+        SELECT * FROM candidate_assignments 
+        WHERE id = ? AND candidate_id = ?
+      `).get(assignmentId, candidateId);
 
       if (!assignment) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Assignment ${assignmentId} not found for candidate ${candidateId}`);
@@ -2354,27 +2326,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has permission to access both candidate and job
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       
       // Check job assignment
-      const jobAssignment = await db
-        .select()
-        .from(schema.jobAssignments)
-        .where(and(
-          eq(schema.jobAssignments.jobId, jobId),
-          eq(schema.jobAssignments.userId, currentUser.id)
-        ))
-        .get();
+      const jobAssignment = sqlite.prepare(`
+        SELECT * FROM job_assignments 
+        WHERE job_id = ? AND user_id = ?
+      `).get(jobId, currentUser.id);
 
       // Check candidate assignment  
-      const candidateAssignment = await db
-        .select()
-        .from(schema.candidateAssignments)
-        .where(and(
-          eq(schema.candidateAssignments.candidateId, candidateId),
-          eq(schema.candidateAssignments.userId, currentUser.id)
-        ))
-        .get();
+      const candidateAssignment = sqlite.prepare(`
+        SELECT * FROM candidate_assignments 
+        WHERE candidate_id = ? AND user_id = ?
+      `).get(candidateId, currentUser.id);
 
       // Super admin and org admin can create applications without assignments
       const hasPermission = currentUser.role === 'super_admin' || 
@@ -2465,7 +2429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 SUGGESTIONS: Getting application suggestions for user ${currentUser.id} with min score ${minScore}%`);
 
       // Get user's assigned jobs and candidates
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       
       let accessibleJobIds: number[] = [];
       let accessibleCandidateIds: number[] = [];
@@ -2478,20 +2442,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accessibleCandidateIds = allCandidates.map(c => c.id);
       } else {
         // Get assigned jobs and candidates
-        const jobAssignments = await db
-          .select({ jobId: schema.jobAssignments.jobId })
-          .from(schema.jobAssignments)
-          .where(eq(schema.jobAssignments.userId, currentUser.id))
-          .all();
+        const jobAssignments = sqlite.prepare(`
+          SELECT job_id as jobId FROM job_assignments 
+          WHERE user_id = ?
+        `).all(currentUser.id);
         
-        const candidateAssignments = await db
-          .select({ candidateId: schema.candidateAssignments.candidateId })
-          .from(schema.candidateAssignments)
-          .where(eq(schema.candidateAssignments.userId, currentUser.id))
-          .all();
+        const candidateAssignments = sqlite.prepare(`
+          SELECT candidate_id as candidateId FROM candidate_assignments 
+          WHERE user_id = ?
+        `).all(currentUser.id);
 
-        accessibleJobIds = jobAssignments.map(ja => ja.jobId);
-        accessibleCandidateIds = candidateAssignments.map(ca => ca.candidateId);
+        accessibleJobIds = jobAssignments.map((ja: any) => ja.jobId);
+        accessibleCandidateIds = candidateAssignments.map((ca: any) => ca.candidateId);
       }
 
       if (accessibleJobIds.length === 0 || accessibleCandidateIds.length === 0) {
@@ -2576,41 +2538,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = currentUser.organizationId!;
 
       // Get user's accessible jobs
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       
       let accessibleJobs: any[] = [];
 
       if (currentUser.role === 'super_admin' || currentUser.role === 'org_admin') {
         accessibleJobs = await storage.getJobsByOrganization(organizationId);
       } else {
-        const jobAssignments = await db
-          .select({ jobId: schema.jobAssignments.jobId })
-          .from(schema.jobAssignments)
-          .where(eq(schema.jobAssignments.userId, currentUser.id))
-          .all();
+        const jobAssignments = sqlite.prepare(`
+          SELECT job_id as jobId FROM job_assignments 
+          WHERE user_id = ?
+        `).all(currentUser.id);
         
-        const jobIds = jobAssignments.map(ja => ja.jobId);
+        const jobIds = jobAssignments.map((ja: any) => ja.jobId);
         if (jobIds.length > 0) {
-          accessibleJobs = await db
-            .select()
-            .from(schema.jobs)
-            .where(and(
-              inArray(schema.jobs.id, jobIds),
-              eq(schema.jobs.organizationId, organizationId)
-            ))
-            .all();
+          const jobQuery = `SELECT * FROM jobs WHERE id IN (${jobIds.map(() => '?').join(',')}) AND organization_id = ?`;
+          accessibleJobs = sqlite.prepare(jobQuery).all(...jobIds, organizationId);
         }
       }
 
       // Filter out jobs that already have applications for this candidate
-      const existingApplications = await db
-        .select({ jobId: schema.applications.jobId })
-        .from(schema.applications)
-        .where(and(
-          eq(schema.applications.candidateId, parseInt(candidateId)),
-          eq(schema.applications.organizationId, organizationId)
-        ))
-        .all();
+      const existingApplications = sqlite.prepare(`
+        SELECT job_id as jobId FROM applications 
+        WHERE candidate_id = ? AND organization_id = ?
+      `).all(parseInt(candidateId), organizationId);
 
       const existingJobIds = new Set(existingApplications.map(app => app.jobId));
       const availableJobs = accessibleJobs.filter(job => !existingJobIds.has(job.id));
@@ -2631,41 +2582,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = currentUser.organizationId!;
 
       // Get user's accessible candidates
-      const { db, schema } = await getDB();
+      const sqlite = await initializeSQLiteDatabase();
       
       let accessibleCandidates: any[] = [];
 
       if (currentUser.role === 'super_admin' || currentUser.role === 'org_admin') {
         accessibleCandidates = await storage.getCandidatesByOrganization(organizationId);
       } else {
-        const candidateAssignments = await db
-          .select({ candidateId: schema.candidateAssignments.candidateId })
-          .from(schema.candidateAssignments)
-          .where(eq(schema.candidateAssignments.userId, currentUser.id))
-          .all();
+        const candidateAssignments = sqlite.prepare(`
+          SELECT candidate_id as candidateId FROM candidate_assignments 
+          WHERE user_id = ?
+        `).all(currentUser.id);
         
-        const candidateIds = candidateAssignments.map(ca => ca.candidateId);
+        const candidateIds = candidateAssignments.map((ca: any) => ca.candidateId);
         if (candidateIds.length > 0) {
-          accessibleCandidates = await db
-            .select()
-            .from(schema.candidates)
-            .where(and(
-              inArray(schema.candidates.id, candidateIds),
-              eq(schema.candidates.organizationId, organizationId)
-            ))
-            .all();
+          const candidateQuery = `SELECT * FROM candidates WHERE id IN (${candidateIds.map(() => '?').join(',')}) AND organization_id = ?`;
+          accessibleCandidates = sqlite.prepare(candidateQuery).all(...candidateIds, organizationId);
         }
       }
 
       // Filter out candidates that already have applications for this job
-      const existingApplications = await db
-        .select({ candidateId: schema.applications.candidateId })
-        .from(schema.applications)
-        .where(and(
-          eq(schema.applications.jobId, parseInt(jobId)),
-          eq(schema.applications.organizationId, organizationId)
-        ))
-        .all();
+      const existingApplications = sqlite.prepare(`
+        SELECT candidate_id as candidateId FROM applications 
+        WHERE job_id = ? AND organization_id = ?
+      `).all(parseInt(jobId), organizationId);
 
       const existingCandidateIds = new Set(existingApplications.map(app => app.candidateId));
       const availableCandidates = accessibleCandidates.filter(candidate => !existingCandidateIds.has(candidate.id));

@@ -65,7 +65,8 @@ export async function createSuperAdmin() {
         new Date().toISOString()
       );
       
-      return sqlite.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+      const newUser = sqlite.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+      return newUser;
     } else {
       console.log('🏢 Creating super admin organization...');
       // Import organizationManager dynamically to avoid circular dependencies
