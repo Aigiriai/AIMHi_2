@@ -91,7 +91,8 @@ export class OrganizationManager {
         adminFirstName,
         adminLastName,
         hashedPassword,
-        'org_admin',
+        // Set role to 'super_admin' if this is the super admin organization, otherwise 'org_admin'
+        domain === 'platform.aimhi.app' ? 'super_admin' : 'org_admin',
         1, // is_active
         JSON.stringify({
           users: ['create', 'read', 'update', 'delete'],
