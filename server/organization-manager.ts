@@ -1,18 +1,9 @@
-import { getSQLiteDB } from './sqlite-db';
-import { organizations, users, teams, userTeams, usageMetrics } from './sqlite-schema';
-import { eq, and, or, desc, sql } from 'drizzle-orm';
 import { hashPassword } from './auth';
-import type { InsertOrganization, InsertUser, InsertTeam, Organization, User, Team } from './sqlite-schema';
 
-// Get the database instance
-let dbInstance: any = null;
-
-async function getDB() {
-  if (!dbInstance) {
-    const dbConnection = await getSQLiteDB();
-    dbInstance = dbConnection.db;
-  }
-  return dbInstance;
+// Get the SQLite database instance
+async function getSQLite() {
+  const { initializeSQLiteDatabase } = await import('./init-database');
+  return await initializeSQLiteDatabase();
 }
 
 export class OrganizationManager {
@@ -165,58 +156,49 @@ export class OrganizationManager {
 
   // Get organization with statistics
   async getOrganizationWithStats(orgId: number) {
-    const db = await getDB();
-    const [org] = await db
-      .select()
-      .from(organizations)
-      .where(eq(organizations.id, orgId))
-      .limit(1);
-
+    const { initializeSQLiteDatabase } = await import('./init-database');
+    const sqlite = await initializeSQLiteDatabase();
+    
+    // Get organization data
+    const org = sqlite.prepare('SELECT * FROM organizations WHERE id = ? LIMIT 1').get(orgId);
+    
     if (!org) return null;
 
     // Get admin user (organization admin or super admin for platform org)
-    const [adminUser] = await db
-      .select()
-      .from(users)
-      .where(and(
-        eq(users.organizationId, orgId),
-        or(
-          eq(users.role, 'org_admin'),
-          eq(users.role, 'super_admin')
-        ),
-        eq(users.isActive, 1)
-      ))
-      .limit(1);
+    const adminUser = sqlite.prepare(`
+      SELECT * FROM users 
+      WHERE organization_id = ? 
+        AND (role = 'org_admin' OR role = 'super_admin')
+        AND is_active = 1
+      LIMIT 1
+    `).get(orgId);
 
     // Get counts
-    const [userCount] = await db
-      .select({ count: sql`count(*)` })
-      .from(users)
-      .where(and(eq(users.organizationId, orgId), eq(users.isActive, 1)));
+    const userCount = sqlite.prepare(`
+      SELECT COUNT(*) as count FROM users 
+      WHERE organization_id = ? AND is_active = 1
+    `).get(orgId);
 
-    const [teamCount] = await db
-      .select({ count: sql`count(*)` })
-      .from(teams)
-      .where(eq(teams.organizationId, orgId));
+    const teamCount = sqlite.prepare(`
+      SELECT COUNT(*) as count FROM teams 
+      WHERE organization_id = ?
+    `).get(orgId);
 
     // Get current month usage
     const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
-    const monthlyUsage = await db
-      .select()
-      .from(usageMetrics)
-      .where(and(
-        eq(usageMetrics.organizationId, orgId),
-        eq(usageMetrics.billingPeriod, currentMonth)
-      ));
+    const monthlyUsage = sqlite.prepare(`
+      SELECT * FROM usage_metrics 
+      WHERE organization_id = ? AND billing_period = ?
+    `).all(orgId, currentMonth);
 
     return {
       ...org,
       adminUser: adminUser ? {
         id: adminUser.id,
         email: adminUser.email,
-        firstName: adminUser.firstName,
-        lastName: adminUser.lastName,
-        lastLoginAt: adminUser.lastLoginAt
+        firstName: adminUser.first_name,
+        lastName: adminUser.last_name,
+        lastLoginAt: adminUser.last_login_at
       } : null,
       userCount: Number(userCount.count),
       teamCount: Number(teamCount.count),
@@ -247,20 +229,20 @@ export class OrganizationManager {
 
   // Get hierarchical user structure
   async getOrganizationHierarchy(orgId: number) {
-    const db = await getDB();
-    const allUsers = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.organizationId, orgId), eq(users.isActive, 1)));
+    const sqlite = await getSQLite();
+    const allUsers = sqlite.prepare(`
+      SELECT * FROM users 
+      WHERE organization_id = ? AND is_active = 1
+    `).all(orgId);
 
     // Build hierarchy tree
-    const userMap = new Map(allUsers.map(user => [user.id, { ...user, subordinates: [] as any[] }]));
+    const userMap = new Map(allUsers.map((user: any) => [user.id, { ...user, subordinates: [] as any[] }]));
     const hierarchy: any[] = [];
 
-    allUsers.forEach(user => {
+    allUsers.forEach((user: any) => {
       const userWithSubs = userMap.get(user.id)!;
-      if (user.managerId) {
-        const manager = userMap.get(user.managerId);
+      if (user.manager_id) {
+        const manager = userMap.get(user.manager_id);
         if (manager) {
           manager.subordinates.push(userWithSubs);
         } else {

@@ -1,19 +1,16 @@
 import { Router } from 'express';
-import { eq, and, ne, inArray, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { getSQLiteDB } from './sqlite-db';
-import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from './sqlite-schema';
+import { initializeSQLiteDatabase } from './init-database';
 
-// Database connection helper
+// Database connection helper  
 async function getDB() {
-  const { db } = await getSQLiteDB();
-  return db;
+  // For now, use raw SQLite instead of drizzle to avoid schema conflicts
+  return await getSQLite();
 }
 
 // SQLite database helper for raw queries
 async function getSQLite() {
-  const { sqlite } = await getSQLiteDB();
-  return sqlite;
+  return await initializeSQLiteDatabase();
 }
 import { generateToken, verifyPassword, hashPassword, authenticateToken, requireSuperAdmin, logAuditEvent, type AuthRequest } from './auth';
 import { organizationManager } from './organization-manager';
@@ -69,37 +66,45 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password, organizationName } = loginSchema.parse(req.body);
 
-    // Find user by email AND organization name (both required)
-    const whereConditions = and(
-      eq(users.email, email),
-      eq(users.isActive, 1), // SQLite uses 1 for true, 0 for false
-      eq(organizations.status, 'active'),
-      eq(organizations.name, organizationName)
-    );
+    const sqlite = await getSQLite();
+    
+    // Find user by email AND organization name using raw SQL join
+    const result = sqlite.prepare(`
+      SELECT 
+        u.id, u.email, u.first_name, u.last_name, u.phone, u.role, u.permissions, 
+        u.settings, u.organization_id, u.password_hash, u.has_temporary_password, 
+        u.temporary_password, u.is_active,
+        o.id as org_id, o.name as organization_name, o.domain, o.plan, o.status
+      FROM users u
+      INNER JOIN organizations o ON u.organization_id = o.id
+      WHERE u.email = ? 
+        AND u.is_active = 1
+        AND o.status = 'active'
+        AND o.name = ?
+      LIMIT 1
+    `).get(email, organizationName);
 
-    const db = await getDB();
-    const result = await db.select({
-      user: users,
-      organization: organizations,
-    }).from(users)
-      .innerJoin(organizations, eq(users.organizationId, organizations.id))
-      .where(whereConditions)
-      .limit(1);
-
-    if (!result.length) {
+    if (!result) {
       return res.status(401).json({ message: 'Invalid credentials or organization' });
     }
 
-    const { user, organization } = result[0];
+    const user = result;
+    const organization = {
+      id: result.org_id,
+      name: result.organization_name,
+      domain: result.domain,
+      plan: result.plan,
+      status: result.status
+    };
 
     // Verify password - check temporary password first if it exists
     let isValidPassword = false;
-    if (user.hasTemporaryPassword && user.temporaryPassword) {
+    if (user.has_temporary_password && user.temporary_password) {
       // For temporary passwords, compare directly (plain text)
-      isValidPassword = password === user.temporaryPassword;
+      isValidPassword = password === user.temporary_password;
     } else {
       // For regular passwords, use bcrypt verification
-      isValidPassword = await verifyPassword(password, user.passwordHash);
+      isValidPassword = await verifyPassword(password, user.password_hash);
     }
     
     if (!isValidPassword) {
@@ -109,10 +114,10 @@ router.post('/login', async (req, res) => {
     // Generate token
     const token = generateToken({
       id: user.id,
-      organizationId: user.organizationId,
+      organizationId: user.organization_id,
       email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
+      firstName: user.first_name,
+      lastName: user.last_name,
       role: user.role,
       permissions: user.permissions,
     });
@@ -138,10 +143,10 @@ router.post('/login', async (req, res) => {
       user: {
         id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: user.first_name,
+        lastName: user.last_name,
         role: user.role,
-        organizationId: user.organizationId,
+        organizationId: user.organization_id,
         organizationName: organization.name,
       },
     });
@@ -154,20 +159,24 @@ router.post('/login', async (req, res) => {
 // GET /auth/me - Get current user info
 router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
-    const user = await db.select({
-      user: users,
-      organization: organizations,
-    }).from(users)
-      .innerJoin(organizations, eq(users.organizationId, organizations.id))
-      .where(eq(users.id, req.user!.id))
-      .limit(1);
+    const sqlite = await getSQLite();
+    
+    // Get user with organization data using raw SQL join
+    const result = sqlite.prepare(`
+      SELECT 
+        u.id, u.email, u.first_name, u.last_name, u.phone, u.role, 
+        u.permissions, u.settings, u.organization_id,
+        o.name as organization_name, o.domain, o.plan, o.status,
+        o.timezone, o.date_format, o.currency
+      FROM users u
+      INNER JOIN organizations o ON u.organization_id = o.id
+      WHERE u.id = ?
+      LIMIT 1
+    `).get(req.user!.id);
 
-    if (!user.length) {
+    if (!result) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    const { user: userData, organization } = user[0];
 
     // Set cache control headers to prevent caching issues
     res.set({
@@ -177,17 +186,27 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
     });
 
     res.json({
-      id: userData.id,
-      email: userData.email,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      phone: userData.phone,
-      role: userData.role,
-      permissions: userData.permissions,
-      settings: userData.settings,
-      organizationId: userData.organizationId,
-      organizationName: organization.name,
-      organizationPlan: organization.plan,
+      id: result.id,
+      email: result.email,
+      firstName: result.first_name,
+      lastName: result.last_name,
+      phone: result.phone,
+      role: result.role,
+      permissions: result.permissions,
+      settings: result.settings,
+      organizationId: result.organization_id,
+      organizationName: result.organization_name,
+      organizationPlan: result.plan,
+      organization: {
+        id: result.organization_id,
+        name: result.organization_name,
+        domain: result.domain,
+        plan: result.plan,
+        status: result.status,
+        timezone: result.timezone,
+        dateFormat: result.date_format,
+        currency: result.currency
+      }
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -358,39 +377,40 @@ router.post('/organizations', authenticateToken, requireSuperAdmin, async (req: 
 // GET /auth/organizations - List all organizations (Super Admin only)
 router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
+    const sqlite = await getSQLite();
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
     // Get total count first
-    const [totalResult] = await db.select({ count: sql<number>`count(*)` })
-      .from(organizations);
+    const totalResult = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get();
     const totalOrgs = totalResult.count;
 
-    const orgs = await db.select()
-      .from(organizations)
-      .orderBy(desc(organizations.id))
-      .limit(limit)
-      .offset(offset);
+    // Get organizations with pagination
+    const orgs = sqlite.prepare(`
+      SELECT * FROM organizations 
+      ORDER BY id DESC 
+      LIMIT ? OFFSET ?
+    `).all(limit, offset);
 
     const orgStats = await Promise.all(
       orgs.map(async (org) => {
         const stats = await organizationManager.getOrganizationWithStats(org.id);
         
-        // Get stored credentials for this organization
-        const [credentials] = await db.select()
-          .from(organizationCredentials)
-          .where(eq(organizationCredentials.organizationId, org.id))
-          .limit(1);
+        // Get stored credentials for this organization using raw SQL
+        const credentials = sqlite.prepare(`
+          SELECT * FROM organization_credentials 
+          WHERE organization_id = ? 
+          LIMIT 1
+        `).get(org.id);
 
         return {
           ...stats,
           temporaryCredentials: credentials ? {
             email: credentials.email,
-            password: credentials.temporaryPassword,
+            password: credentials.temporary_password,
             loginUrl: `${req.protocol}://${req.get('host')}/login`,
-            isPasswordChanged: credentials.isPasswordChanged
+            isPasswordChanged: credentials.is_password_changed
           } : null
         };
       })
@@ -416,7 +436,7 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
 // PUT /auth/organizations/:id - Update organization details (Super Admin only)
 router.put('/organizations/:id', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
+    const sqlite = await getSQLite();
     const organizationId = parseInt(req.params.id);
     const updateData = z.object({
       name: z.string().optional(),
@@ -426,43 +446,71 @@ router.put('/organizations/:id', authenticateToken, requireSuperAdmin, async (re
       currency: z.string().optional(),
     }).parse(req.body);
 
-    // Update organization directly in the organizations table
-    const [updatedOrg] = await db
-      .update(organizations)
-      .set({
-        name: updateData.name,
-        domain: updateData.domain,
-        timezone: updateData.timezone,
-        dateFormat: updateData.dateFormat,
-        currency: updateData.currency,
-        updatedAt: new Date().toISOString()
-      })
-      .where(eq(organizations.id, organizationId))
-      .returning();
+    // Build dynamic update query
+    const updates = [];
+    const values = [];
+    
+    if (updateData.name) {
+      updates.push('name = ?');
+      values.push(updateData.name);
+    }
+    if (updateData.domain) {
+      updates.push('domain = ?');
+      values.push(updateData.domain);
+    }
+    if (updateData.timezone) {
+      updates.push('timezone = ?');
+      values.push(updateData.timezone);
+    }
+    if (updateData.dateFormat) {
+      updates.push('date_format = ?');
+      values.push(updateData.dateFormat);
+    }
+    if (updateData.currency) {
+      updates.push('currency = ?');
+      values.push(updateData.currency);
+    }
+    
+    if (updates.length === 0) {
+      return res.status(400).json({ message: 'No valid update fields provided' });
+    }
+    
+    updates.push('updated_at = ?');
+    values.push(new Date().toISOString());
+    values.push(organizationId);
 
-    if (!updatedOrg) {
+    // Update organization using raw SQL
+    const result = sqlite.prepare(`
+      UPDATE organizations 
+      SET ${updates.join(', ')} 
+      WHERE id = ?
+    `).run(...values);
+
+    if (result.changes === 0) {
       return res.status(404).json({ message: 'Organization not found' });
     }
 
-    await logAuditEvent(req, 'organization_updated', 'organization', organizationId, {
-      updatedFields: Object.keys(updateData),
-    });
+    // Get updated organization
+    const updatedOrg = sqlite.prepare('SELECT * FROM organizations WHERE id = ?').get(organizationId);
 
     res.json({
-      success: true,
       message: 'Organization updated successfully',
       organization: updatedOrg
     });
   } catch (error) {
     console.error('Update organization error:', error);
-    res.status(500).json({ message: 'Failed to update organization' });
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ message: 'Invalid update data', errors: error.errors });
+    } else {
+      res.status(500).json({ message: 'Failed to update organization' });
+    }
   }
 });
 
 // DELETE /auth/organizations/:id - Delete organization (Super Admin only)
 router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
+    const sqlite = await getSQLite();
     const orgId = parseInt(req.params.id);
     const { transferUsersToOrg, deleteUserData = false } = req.body;
     
@@ -471,16 +519,13 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
     }
 
     // CRITICAL SAFETY CHECK: Never allow deletion of super admin organization
-    const [targetOrg] = await db.select()
-      .from(organizations)
-      .where(eq(organizations.id, orgId))
-      .limit(1);
+    const targetOrg = sqlite.prepare('SELECT * FROM organizations WHERE id = ? LIMIT 1').get(orgId);
 
     if (!targetOrg) {
       return res.status(404).json({ message: 'Organization not found' });
     }
 
-    if (targetOrg.domain === 'platform.aimhi.app') {
+    if (targetOrg.domain === 'platform.aimhi.app' || targetOrg.domain === 'aimhi.app') {
       return res.status(403).json({ message: 'Cannot delete super admin organization' });
     }
 
@@ -488,12 +533,10 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
     const isUserDeletingOwnOrg = req.user!.organizationId === orgId;
 
     // CRITICAL SAFETY CHECK: Never allow deletion of super admin user
-    const superAdminsInOrg = await db.select()
-      .from(users)
-      .where(and(
-        eq(users.organizationId, orgId),
-        eq(users.role, 'super_admin')
-      ));
+    const superAdminsInOrg = sqlite.prepare(`
+      SELECT * FROM users 
+      WHERE organization_id = ? AND role = 'super_admin'
+    `).all(orgId);
 
     if (superAdminsInOrg.length > 0) {
       return res.status(403).json({ message: 'Cannot delete organization containing super admin users' });
@@ -552,28 +595,28 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
     console.log(`🗑️ ORGANIZATION DELETE: Found ${candidateIds.length} candidates to delete`);
 
     // Get direct SQLite access for raw queries
-    const sqlite = await getSQLite();
+    const sqliteDB = await getSQLite();
     
     // 1. Delete applications first (references org, jobs, candidates, users - NO CASCADE)
-    sqlite.prepare('DELETE FROM applications WHERE organization_id = ?').run(orgId);
+    sqliteDB.prepare('DELETE FROM applications WHERE organization_id = ?').run(orgId);
     console.log(`🗑️ ORGANIZATION DELETE: Deleted applications`);
 
     // 2. Delete job assignments (references jobs, users - NO CASCADE)  
     if (jobIds.length > 0) {
       const placeholders = jobIds.map(() => '?').join(',');
-      sqlite.prepare(`DELETE FROM job_assignments WHERE job_id IN (${placeholders})`).run(...jobIds);
+      sqliteDB.prepare(`DELETE FROM job_assignments WHERE job_id IN (${placeholders})`).run(...jobIds);
       console.log(`🗑️ ORGANIZATION DELETE: Deleted job assignments`);
     }
 
     // 3. Delete candidate assignments (references candidates, users - NO CASCADE)
     if (candidateIds.length > 0) {
       const placeholders = candidateIds.map(() => '?').join(',');
-      sqlite.prepare(`DELETE FROM candidate_assignments WHERE candidate_id IN (${placeholders})`).run(...candidateIds);
+      sqliteDB.prepare(`DELETE FROM candidate_assignments WHERE candidate_id IN (${placeholders})`).run(...candidateIds);
       console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate assignments`);
     }
 
     // 4. Delete status history (may reference candidates/jobs/users)
-    sqlite.prepare('DELETE FROM status_history WHERE organization_id = ?').run(orgId);
+    sqliteDB.prepare('DELETE FROM status_history WHERE organization_id = ?').run(orgId);
     console.log(`🗑️ ORGANIZATION DELETE: Deleted status history`);
 
     // 5. Delete candidate submissions (may reference candidates/users)
