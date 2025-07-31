@@ -322,9 +322,9 @@ async function seedInitialData(db: any, sqlite: Database) {
       const hashedPassword = await bcrypt.hash('SuperAdmin123!@#', 10);
       
       sqlite.prepare(`
-        INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(orgId, 'superadmin@aimhi.app', hashedPassword, 'Super', 'Admin', 'super_admin');
+        INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role, has_temporary_password)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(orgId, 'superadmin@aimhi.app', hashedPassword, 'Super', 'Admin', 'super_admin', 0);
       
       // Create demo organization
       const demoOrgResult = sqlite.prepare(`
@@ -338,9 +338,9 @@ async function seedInitialData(db: any, sqlite: Database) {
       const demoHashedPassword = await bcrypt.hash('Demo123!@#', 10);
       
       sqlite.prepare(`
-        INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(demoOrgId, 'admin@aimhidemo.com', demoHashedPassword, 'Demo', 'Admin', 'org_admin');
+        INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role, has_temporary_password)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(demoOrgId, 'admin@aimhidemo.com', demoHashedPassword, 'Demo', 'Admin', 'org_admin', 0);
       
       console.log('✓ Initial data seeded successfully');
     } else {

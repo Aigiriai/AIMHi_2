@@ -1,11 +1,8 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { Request, Response, NextFunction } from 'express';
-// Get the SQLite database instance
-async function getSQLite() {
-  const { initializeSQLiteDatabase } = await import('./init-database');
-  return await initializeSQLiteDatabase();
-}
+import { getDB } from './db-connection';
+import { eq, and, sql } from 'drizzle-orm';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key';
 const SALT_ROUNDS = 12;
@@ -60,30 +57,32 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    const sqlite = await getSQLite();
+    const { db, schema } = await getDB();
     
-    // Fetch fresh user data using raw SQL
-    const user = sqlite.prepare(`
-      SELECT id, organization_id, email, first_name, last_name, role, permissions
-      FROM users 
-      WHERE id = ?
-      LIMIT 1
-    `).get(decoded.userId) as any;
+    // Fetch fresh user data
+    const user = await db
+      .select()
+      .from(schema.users)
+      .where(and(
+        eq(schema.users.id, decoded.userId),
+        eq(schema.users.isActive, 1)
+      ))
+      .limit(1);
 
-    if (!user) {
+    if (!user.length) {
       return res.status(401).json({ message: 'Invalid token' });
     }
 
     req.user = {
-      id: user.id,
-      organizationId: user.organization_id,
-      email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      role: user.role,
-      permissions: user.permissions,
+      id: user[0].id,
+      organizationId: user[0].organizationId,
+      email: user[0].email,
+      firstName: user[0].firstName,
+      lastName: user[0].lastName,
+      role: user[0].role,
+      permissions: user[0].permissions,
     };
-    req.organizationId = user.organization_id;
+    req.organizationId = user[0].organizationId;
 
     // Update last login (skip for SQLite compatibility)
     // await db
@@ -154,22 +153,35 @@ export function requireSuperAdmin(req: AuthRequest, res: Response, next: NextFun
   next();
 }
 
-// Manager hierarchy check (simplified implementation)
+// Manager hierarchy check
 export async function canAccessUser(currentUserId: number, targetUserId: number): Promise<boolean> {
   if (currentUserId === targetUserId) return true;
 
   try {
-    const sqlite = await getSQLite();
+    const { db, schema } = await getDB();
     
-    // Check if currentUser is a manager of targetUser (simplified)
-    const targetUser = sqlite.prepare(`
-      SELECT manager_id FROM users WHERE id = ?
-    `).get(targetUserId) as any;
+    // Check if currentUser is a manager of targetUser (direct or indirect)
+    const targetUser = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, targetUserId))
+      .limit(1);
 
-    if (!targetUser) return false;
+    if (!targetUser.length) return false;
 
-    // Simple hierarchy check (can be enhanced with recursive logic)
-    if (targetUser.manager_id === currentUserId) return true;
+    let managerId = targetUser[0].managerId;
+    while (managerId) {
+      if (managerId === currentUserId) return true;
+
+      const manager = await db
+        .select()
+        .from(schema.users)
+        .where(eq(schema.users.id, managerId))
+        .limit(1);
+
+      if (!manager.length) break;
+      managerId = manager[0].managerId;
+    }
 
     return false;
   } catch (error) {

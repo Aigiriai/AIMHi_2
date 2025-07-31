@@ -1,5 +1,6 @@
-// Fixed import for organizationManager
-import { initializeSQLiteDatabase } from './init-database';
+import { organizationManager } from './organization-manager';
+import { getDB } from './db-connection';
+import { eq } from 'drizzle-orm';
 import { hashPassword } from './auth';
 
 export async function seedDemoOrganization() {
@@ -15,42 +16,41 @@ export async function seedDemoOrganization() {
 
 export async function createSuperAdmin() {
   try {
-    const sqlite = await initializeSQLiteDatabase();
+    const { db, schema } = await getDB();
     
     // Check if super admin already exists
-    const existingSuperAdmin = sqlite.prepare(`
-      SELECT * FROM users WHERE role = 'super_admin' LIMIT 1
-    `).get();
+    const existingSuperAdmin = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.role, 'super_admin'))
+      .limit(1);
 
-    if (existingSuperAdmin) {
+    if (existingSuperAdmin.length > 0) {
       console.log('✓ Super admin already exists');
-      return existingSuperAdmin;
+      return existingSuperAdmin[0];
     }
 
     // Check if super admin organization already exists
-    const existingSuperAdminOrg = sqlite.prepare(`
-      SELECT * FROM organizations WHERE domain = 'platform.aimhi.app' LIMIT 1
-    `).get();
+    const existingSuperAdminOrg = await db
+      .select()
+      .from(schema.organizations)
+      .where(eq(schema.organizations.domain, 'platform.aimhi.app'))
+      .limit(1);
 
     let superAdminOrg;
-    if (existingSuperAdminOrg) {
+    if (existingSuperAdminOrg.length > 0) {
       console.log('✓ Super admin organization already exists');
       
       // Create the super admin user in the existing organization
-      const result = sqlite.prepare(`
-        INSERT INTO users (
-          organization_id, email, first_name, last_name, password_hash, 
-          role, is_active, permissions, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        existingSuperAdminOrg.id,
-        'superadmin@aimhi.app',
-        'Super',
-        'Admin',
-        await hashPassword('SuperAdmin123!@#'),
-        'super_admin',
-        1,
-        JSON.stringify({
+      const [superAdmin] = await db.insert(schema.users).values({
+        organizationId: existingSuperAdminOrg[0].id,
+        email: 'superadmin@aimhi.app',
+        firstName: 'Super',
+        lastName: 'Admin',
+        passwordHash: await hashPassword('SuperAdmin123!@#'),
+        role: 'super_admin',
+        isActive: true,
+        permissions: {
           users: ['create', 'read', 'update', 'delete'],
           teams: ['create', 'read', 'update', 'delete'],
           jobs: ['create', 'read', 'update', 'delete'],
@@ -58,31 +58,38 @@ export async function createSuperAdmin() {
           interviews: ['create', 'read', 'update', 'delete'],
           settings: ['read', 'update'],
           billing: ['read', 'update'],
-          analytics: ['read'],
-          organizations: ['create', 'read', 'update', 'delete']
-        }),
-        new Date().toISOString(),
-        new Date().toISOString()
-      );
-      
-      const newUser = sqlite.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
-      return newUser;
+          analytics: ['read']
+        }
+      }).returning();
+
+      console.log('✓ Super admin created successfully');
+      console.log(`  Super Admin ID: ${superAdmin.id}`);
+      console.log(`  Email: ${superAdmin.email}`);
+      return superAdmin;
     } else {
-      console.log('🏢 Creating super admin organization...');
-      // Import organizationManager dynamically to avoid circular dependencies
-      const { organizationManager } = await import('./organization-manager');
+      // Create super admin organization first
       superAdminOrg = await organizationManager.createOrganization({
-        name: 'AIM Hi System',
+        name: 'AIM Hi Platform Administration',
         domain: 'platform.aimhi.app',
         plan: 'enterprise',
         adminEmail: 'superadmin@aimhi.app',
         adminFirstName: 'Super',
         adminLastName: 'Admin',
-        adminPassword: 'SuperAdmin123!@#'
+        adminPassword: 'SuperAdmin123!@#',
       });
-      
-      console.log('✓ Super admin organization and user created');
-      return superAdminOrg.adminUser;
+
+      // Update the admin user to super_admin role
+      const [superAdmin] = await db
+        .update(users)
+        .set({ role: 'super_admin' })
+        .where(eq(users.id, superAdminOrg.adminUser.id))
+        .returning();
+
+      console.log('✓ Super admin created successfully');
+      console.log(`  Super Admin ID: ${superAdmin.id}`);
+      console.log(`  Email: ${superAdmin.email}`);
+
+      return superAdmin;
     }
   } catch (error) {
     console.error('Failed to create super admin:', error);
@@ -91,16 +98,25 @@ export async function createSuperAdmin() {
 }
 
 export async function initializeMultiTenantSystem() {
+  console.log('🚀 Initializing multi-tenant system...');
+  
   try {
-    console.log('🏗️ Initializing multi-tenant system...');
-    
     // Create super admin
     await createSuperAdmin();
     
-    // Seed demo organization (optional)
+    // Create demo organization
     await seedDemoOrganization();
     
     console.log('✅ Multi-tenant system initialized successfully');
+    console.log('\n=== Login Credentials ===');
+    console.log('Super Admin:');
+    console.log('  Email: superadmin@aimhi.app');
+    console.log('  Password: SuperAdmin123!@#');
+    console.log('\nDemo Organization Admin:');
+    console.log('  Email: admin@aimhidemo.com');
+    console.log('  Password: Demo123!@#');
+    console.log('========================\n');
+    
   } catch (error) {
     console.error('❌ Failed to initialize multi-tenant system:', error);
     throw error;

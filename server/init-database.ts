@@ -110,7 +110,6 @@ export async function initializeSQLiteDatabase() {
         location TEXT NOT NULL DEFAULT 'Location not specified',
         salary_min INTEGER,
         salary_max INTEGER,
-        original_file_name TEXT DEFAULT '',
         
         -- ATS Pipeline fields
         status TEXT NOT NULL DEFAULT 'draft',
@@ -146,12 +145,10 @@ export async function initializeSQLiteDatabase() {
         source TEXT DEFAULT 'manual',
         tags TEXT DEFAULT '[]',
         status TEXT NOT NULL DEFAULT 'active',
-        assigned_to INTEGER,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (organization_id) REFERENCES organizations(id),
-        FOREIGN KEY (added_by) REFERENCES users(id),
-        FOREIGN KEY (assigned_to) REFERENCES users(id)
+        FOREIGN KEY (added_by) REFERENCES users(id)
       );
     `);
 
@@ -313,27 +310,6 @@ export async function initializeSQLiteDatabase() {
       );
     `);
 
-    // Create job matches table
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS job_matches (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        organization_id INTEGER NOT NULL,
-        job_id INTEGER NOT NULL,
-        candidate_id INTEGER NOT NULL,
-        matched_by INTEGER NOT NULL,
-        match_percentage REAL NOT NULL,
-        ai_reasoning TEXT,
-        match_criteria TEXT DEFAULT '{}',
-        status TEXT NOT NULL DEFAULT 'pending',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id),
-        FOREIGN KEY (job_id) REFERENCES jobs(id),
-        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
-        FOREIGN KEY (matched_by) REFERENCES users(id)
-      );
-    `);
-
     // Create candidate submissions table for Team Lead and Recruiter submissions
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS candidate_submissions (
@@ -379,7 +355,7 @@ export async function initializeSQLiteDatabase() {
       );
     `);
 
-    // Add missing columns to existing tables if they don't exist
+    // Add ATS columns to existing jobs table if they don't exist
     const jobsColumns = [
       'approved_by INTEGER',
       'approved_at TEXT',
@@ -387,26 +363,12 @@ export async function initializeSQLiteDatabase() {
       'filled_at TEXT',
       'requires_approval INTEGER NOT NULL DEFAULT 1',
       'auto_publish_at TEXT',
-      'application_deadline TEXT',
-      'original_file_name TEXT DEFAULT \'\''
+      'application_deadline TEXT'
     ];
 
     for (const column of jobsColumns) {
       try {
         sqlite.exec(`ALTER TABLE jobs ADD COLUMN ${column};`);
-      } catch (error) {
-        // Column already exists, which is fine
-      }
-    }
-
-    // Add missing columns to candidates table
-    const candidatesColumns = [
-      'assigned_to INTEGER'
-    ];
-
-    for (const column of candidatesColumns) {
-      try {
-        sqlite.exec(`ALTER TABLE candidates ADD COLUMN ${column};`);
       } catch (error) {
         // Column already exists, which is fine
       }

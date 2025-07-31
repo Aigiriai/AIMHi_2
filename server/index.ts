@@ -94,11 +94,6 @@ app.use((req, res, next) => {
   log('📦 Initializing SQLite database...');
   await initializeSQLiteDatabase();
   
-  // Initialize multi-tenant system with super admin
-  log('🏗️ Initializing multi-tenant system...');
-  const { initializeMultiTenantSystem } = await import('./seed-demo');
-  await initializeMultiTenantSystem();
-  
   // Using direct Replit URLs for AI calling (eliminates Pinggy tunnel dependency)
   log('🔗 AI calling configured for direct webhooks (no tunnel required)');
 

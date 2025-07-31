@@ -1,6 +1,7 @@
-import { initializeSQLiteDatabase } from "./init-database";
+import { getSQLiteDB } from "./sqlite-db";
+import { organizations, users, teams } from "./sqlite-schema";
+import { eq } from "drizzle-orm";
 
-// Simplified settings service without drizzle ORM
 export interface OrganizationSettings {
   name: string;
   domain: string;
@@ -37,129 +38,222 @@ export interface UserSettings {
   notifications?: {
     email?: boolean;
     browser?: boolean;
-    sms?: boolean;
+    newCandidates?: boolean;
+    newMatches?: boolean;
+    interviews?: boolean;
+    reports?: boolean;
+  };
+  dashboard?: {
+    layout?: 'grid' | 'list';
+    widgets?: string[];
   };
   privacy?: {
-    profileVisibility?: 'public' | 'private' | 'organization';
-    activityTracking?: boolean;
-    dataSharing?: boolean;
+    profileVisible?: boolean;
+    activityVisible?: boolean;
+  };
+}
+
+export interface TeamSettings {
+  name?: string;
+  description?: string;
+  visibility?: 'public' | 'private';
+  permissions?: {
+    canCreateJobs?: boolean;
+    canManageCandidates?: boolean;
+    canScheduleInterviews?: boolean;
+    canViewReports?: boolean;
+  };
+  workflow?: {
+    autoAssignCandidates?: boolean;
+    requireApprovalForMatches?: boolean;
+    interviewReminderDays?: number;
   };
 }
 
 export class SettingsService {
-  // Get organization settings
-  async getOrganizationSettings(organizationId: number): Promise<OrganizationSettings | null> {
-    try {
-      const sqlite = await initializeSQLiteDatabase();
-      
-      const org = sqlite.prepare(`
-        SELECT * FROM organizations WHERE id = ?
-      `).get(organizationId) as any;
-      
-      if (!org) return null;
-      
-      // Return basic organization settings (can be enhanced with additional settings table)
-      return {
-        name: org.name,
-        domain: org.domain || '',
-        timezone: org.timezone || 'UTC',
-        dateFormat: org.date_format || 'YYYY-MM-DD',
-        currency: org.currency || 'USD',
-        plan: org.plan || 'basic'
-      };
-    } catch (error) {
-      console.error('Error getting organization settings:', error);
-      return null;
+  // Organization Settings
+  async getOrganizationSettings(organizationId: number): Promise<OrganizationSettings> {
+    const { db } = await getSQLiteDB();
+    const [org] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, organizationId));
+
+    if (!org) {
+      throw new Error("Organization not found");
     }
+
+    return {
+      name: org.name,
+      domain: org.domain || "",
+      timezone: (org.settings as any)?.timezone || "UTC",
+      dateFormat: (org.settings as any)?.dateFormat || "MM/DD/YYYY",
+      currency: (org.settings as any)?.currency || "USD",
+      plan: org.plan,
+      branding: (org.settings as any)?.branding || {},
+      notifications: (org.settings as any)?.notifications || { emailEnabled: true, smsEnabled: false },
+      compliance: org.complianceSettings as any || { gdprEnabled: false, ccpaEnabled: false, dataRetentionDays: 365 },
+      integrations: org.integrationSettings as any || {}
+    };
   }
 
-  // Update organization settings
-  async updateOrganizationSettings(organizationId: number, settings: Partial<OrganizationSettings>): Promise<boolean> {
-    try {
-      const sqlite = await initializeSQLiteDatabase();
-      
-      // Update basic organization fields (can be enhanced with additional settings table)
-      const updateFields = [];
-      const updateValues = [];
-      
-      if (settings.name) {
-        updateFields.push('name = ?');
-        updateValues.push(settings.name);
-      }
-      if (settings.domain) {
-        updateFields.push('domain = ?');
-        updateValues.push(settings.domain);
-      }
-      if (settings.timezone) {
-        updateFields.push('timezone = ?');
-        updateValues.push(settings.timezone);
-      }
-      if (settings.dateFormat) {
-        updateFields.push('date_format = ?');
-        updateValues.push(settings.dateFormat);
-      }
-      if (settings.currency) {
-        updateFields.push('currency = ?');
-        updateValues.push(settings.currency);
-      }
-      if (settings.plan) {
-        updateFields.push('plan = ?');
-        updateValues.push(settings.plan);
-      }
-      
-      if (updateFields.length > 0) {
-        updateFields.push('updated_at = ?');
-        updateValues.push(new Date().toISOString());
-        updateValues.push(organizationId);
-        
-        sqlite.prepare(`
-          UPDATE organizations 
-          SET ${updateFields.join(', ')} 
-          WHERE id = ?
-        `).run(...updateValues);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error updating organization settings:', error);
-      return false;
+  async updateOrganizationSettings(organizationId: number, settings: Partial<OrganizationSettings>): Promise<void> {
+    const { db } = await getSQLiteDB();
+    const [currentOrg] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, organizationId));
+
+    if (!currentOrg) {
+      throw new Error("Organization not found");
     }
+
+    const currentSettings = currentOrg.settings as any || {};
+    const updatedSettings = {
+      ...currentSettings,
+      timezone: settings.timezone || currentSettings.timezone,
+      dateFormat: settings.dateFormat || currentSettings.dateFormat,
+      currency: settings.currency || currentSettings.currency,
+      branding: { ...currentSettings.branding, ...settings.branding },
+      notifications: { ...currentSettings.notifications, ...settings.notifications }
+    };
+
+    await db
+      .update(organizations)
+      .set({
+        name: settings.name || currentOrg.name,
+        domain: settings.domain || currentOrg.domain,
+        settings: updatedSettings,
+        complianceSettings: settings.compliance ? { ...currentOrg.complianceSettings as any, ...settings.compliance } : currentOrg.complianceSettings,
+        integrationSettings: settings.integrations ? { ...currentOrg.integrationSettings as any, ...settings.integrations } : currentOrg.integrationSettings,
+        updatedAt: new Date()
+      })
+      .where(eq(organizations.id, organizationId));
   }
 
-  // Get user settings (simplified - can be enhanced with user_settings table)
-  async getUserSettings(userId: number): Promise<UserSettings | null> {
-    try {
-      // Return default settings for now (can be enhanced with database storage)
-      return {
-        theme: 'system',
-        language: 'en',
-        notifications: {
-          email: true,
-          browser: true,
-          sms: false
-        },
-        privacy: {
-          profileVisibility: 'organization',
-          activityTracking: true,
-          dataSharing: false
-        }
-      };
-    } catch (error) {
-      console.error('Error getting user settings:', error);
-      return null;
+  // User Settings
+  async getUserSettings(userId: number): Promise<UserSettings> {
+    const { db } = await getSQLiteDB();
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!user) {
+      throw new Error("User not found");
     }
+
+    const settings = user.settings as any || {};
+    return {
+      theme: settings.theme || 'system',
+      language: settings.language || 'en',
+      notifications: {
+        email: settings.notifications?.email !== false,
+        browser: settings.notifications?.browser !== false,
+        newCandidates: settings.notifications?.newCandidates !== false,
+        newMatches: settings.notifications?.newMatches !== false,
+        interviews: settings.notifications?.interviews !== false,
+        reports: settings.notifications?.reports !== false
+      },
+      dashboard: {
+        layout: settings.dashboard?.layout || 'grid',
+        widgets: settings.dashboard?.widgets || ['stats', 'recent-matches', 'upcoming-interviews']
+      },
+      privacy: {
+        profileVisible: settings.privacy?.profileVisible !== false,
+        activityVisible: settings.privacy?.activityVisible !== false
+      }
+    };
   }
 
-  // Update user settings (simplified - can be enhanced with user_settings table)
-  async updateUserSettings(userId: number, settings: Partial<UserSettings>): Promise<boolean> {
-    try {
-      // For now, just return success (can be enhanced with database storage)
-      console.log(`User ${userId} settings updated:`, settings);
-      return true;
-    } catch (error) {
-      console.error('Error updating user settings:', error);
-      return false;
+  async updateUserSettings(userId: number, settings: Partial<UserSettings>): Promise<void> {
+    const { db } = await getSQLiteDB();
+    const [currentUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!currentUser) {
+      throw new Error("User not found");
     }
+
+    const currentSettings = currentUser.settings as any || {};
+    const updatedSettings = {
+      ...currentSettings,
+      ...settings,
+      notifications: { ...currentSettings.notifications, ...settings.notifications },
+      dashboard: { ...currentSettings.dashboard, ...settings.dashboard },
+      privacy: { ...currentSettings.privacy, ...settings.privacy }
+    };
+
+    await db
+      .update(users)
+      .set({
+        settings: updatedSettings,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  // Team Settings
+  async getTeamSettings(teamId: number): Promise<TeamSettings> {
+    const { db } = await getSQLiteDB();
+    const [team] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId));
+
+    if (!team) {
+      throw new Error("Team not found");
+    }
+
+    const settings = team.settings as any || {};
+    return {
+      name: team.name,
+      description: team.description || "",
+      visibility: settings.visibility || 'public',
+      permissions: {
+        canCreateJobs: settings.permissions?.canCreateJobs !== false,
+        canManageCandidates: settings.permissions?.canManageCandidates !== false,
+        canScheduleInterviews: settings.permissions?.canScheduleInterviews !== false,
+        canViewReports: settings.permissions?.canViewReports !== false
+      },
+      workflow: {
+        autoAssignCandidates: settings.workflow?.autoAssignCandidates || false,
+        requireApprovalForMatches: settings.workflow?.requireApprovalForMatches || true,
+        interviewReminderDays: settings.workflow?.interviewReminderDays || 1
+      }
+    };
+  }
+
+  async updateTeamSettings(teamId: number, settings: Partial<TeamSettings>): Promise<void> {
+    const { db } = await getSQLiteDB();
+    const [currentTeam] = await db
+      .select()
+      .from(teams)
+      .where(eq(teams.id, teamId));
+
+    if (!currentTeam) {
+      throw new Error("Team not found");
+    }
+
+    const currentSettings = currentTeam.settings as any || {};
+    const updatedSettings = {
+      ...currentSettings,
+      visibility: settings.visibility || currentSettings.visibility,
+      permissions: { ...currentSettings.permissions, ...settings.permissions },
+      workflow: { ...currentSettings.workflow, ...settings.workflow }
+    };
+
+    await db
+      .update(teams)
+      .set({
+        name: settings.name || currentTeam.name,
+        description: settings.description || currentTeam.description,
+        settings: updatedSettings,
+        updatedAt: new Date()
+      })
+      .where(eq(teams.id, teamId));
   }
 }
 

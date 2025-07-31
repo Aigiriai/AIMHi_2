@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./sqlite-storage-simple";
-import { insertJobSchema, insertCandidateSchema, insertInterviewSchema } from "./sqlite-schema";
+import { insertJobSchema, insertCandidateSchema, insertInterviewSchema } from "@shared/schema";
 import { matchCandidateToJob, batchMatchCandidates } from "./ai-matching";
 import { extractResumeDataFromImage } from "./image-processing";
 import { JobBoardService } from "./job-board-integrations";
@@ -11,7 +11,8 @@ import authRoutes from "./auth-routes";
 import settingsRoutes from "./settings-routes";
 import pipelineRoutes from "./pipeline-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
-import { initializeSQLiteDatabase } from "./init-database";
+import { getDB } from "./db-connection";
+import { eq, and, or, desc, inArray, sql, gte } from "drizzle-orm";
 import { initializeMultiTenantSystem } from "./seed-demo";
 import multer from "multer";
 import { getDirectDomain } from "./index";
@@ -70,7 +71,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const fileStorage = new FileStorageService();
 
   // Initialize multi-tenant system on startup
-  // initializeMultiTenantSystem().catch(console.error); // Disabled to avoid drizzle conflicts
+  initializeMultiTenantSystem().catch(console.error);
 
   // Test endpoint for AI matching demonstration
   app.post('/api/test-ai-match', async (req, res) => {
@@ -136,12 +137,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const candidate of candidates) {
           try {
             // Check if match already exists
-            const sqlite = await initializeSQLiteDatabase();
-            const existingMatch = sqlite.prepare(`
-              SELECT * FROM job_matches 
-              WHERE job_id = ? AND candidate_id = ? 
-              LIMIT 1
-            `).get(job.id, candidate.id);
+            const { db, schema } = await getDB();
+            const existingMatch = await db
+              .select()
+              .from(schema.jobMatches)
+              .where(and(
+                eq(schema.jobMatches.jobId, job.id),
+                eq(schema.jobMatches.candidateId, candidate.id)
+              ))
+              .get();
 
             if (existingMatch) {
               console.log(`⏭️ BATCH GENERATE: Match already exists for job ${job.id} + candidate ${candidate.id}`);
@@ -279,36 +283,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if team with this name already exists in the organization
-      const sqlite = await initializeSQLiteDatabase();
-      const existingTeam = sqlite.prepare(`
-        SELECT * FROM teams 
-        WHERE name = ? AND organization_id = ? 
-        LIMIT 1
-      `).get(name, currentUser.organizationId!);
+      const { db, schema } = await getDB();
+      const existingTeam = await db.select()
+        .from(schema.teams)
+        .where(and(
+          eq(schema.teams.name, name),
+          eq(schema.teams.organizationId, currentUser.organizationId!)
+        ))
+        .limit(1);
 
-      if (existingTeam) {
+      if (existingTeam.length > 0) {
         return res.status(400).json({ message: `Team with name "${name}" already exists in this organization` });
       }
 
       // Create the team
-      const result = sqlite.prepare(`
-        INSERT INTO teams (organization_id, name, description, manager_id, settings, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(
-        currentUser.organizationId!,
+      const [newTeam] = await db.insert(schema.teams).values({
+        organizationId: currentUser.organizationId!,
         name,
-        description || '',
-        currentUser.id,
-        JSON.stringify({
+        description: description || '',
+        managerId: currentUser.id,
+        settings: {
           autoAssignJobs: false,
           requireApproval: true,
           defaultInterviewDuration: 60
-        }),
-        new Date().toISOString(),
-        new Date().toISOString()
-      );
-      
-      const newTeam = sqlite.prepare('SELECT * FROM teams WHERE id = ?').get(result.lastInsertRowid);
+        }
+      }).returning();
 
       res.json({
         message: 'Team created successfully',
@@ -529,44 +528,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Fetching jobs for organization: ${currentUser.organizationId}`);
       
       // Get database connection
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       
       // Role-based job filtering with detailed permission matrix
-      let jobs;
+      let jobsQuery;
       
       if (['super_admin', 'org_admin'].includes(currentUser.role)) {
         // Super admin and org admin can see all jobs in their organization
-        jobs = sqlite.prepare(`
-          SELECT * FROM jobs 
-          WHERE organization_id = ? 
-          ORDER BY created_at DESC
-        `).all(currentUser.organizationId!);
+        jobsQuery = db.select()
+          .from(schema.jobs)
+          .where(eq(schema.jobs.organizationId, currentUser.organizationId!))
+          .orderBy(desc(schema.jobs.createdAt));
       } else {
         // For Manager, Team Lead, and Recruiter: only see jobs they created or are assigned to
-        const assignedJobIds = sqlite.prepare(`
-          SELECT job_id FROM job_assignments 
-          WHERE user_id = ?
-        `).all(currentUser.id);
+        const assignedJobIds = await db.select({ jobId: schema.jobAssignments.jobId })
+          .from(schema.jobAssignments)
+          .where(eq(schema.jobAssignments.userId, currentUser.id));
         
-        const assignedIds = assignedJobIds.map((a: any) => a.job_id);
+        const assignedIds = assignedJobIds.map((a: any) => a.jobId);
         
-        if (assignedIds.length > 0) {
-          // Get jobs where user is either the creator OR has an assignment
-          const placeholders = assignedIds.map(() => '?').join(',');
-          jobs = sqlite.prepare(`
-            SELECT * FROM jobs 
-            WHERE organization_id = ? AND (created_by = ? OR id IN (${placeholders}))
-            ORDER BY created_at DESC
-          `).all(currentUser.organizationId!, currentUser.id, ...assignedIds);
-        } else {
-          // Only jobs they created
-          jobs = sqlite.prepare(`
-            SELECT * FROM jobs 
-            WHERE organization_id = ? AND created_by = ?
-            ORDER BY created_at DESC
-          `).all(currentUser.organizationId!, currentUser.id);
-        }
+        // Get jobs where user is either the creator OR has an assignment
+        jobsQuery = db.select()
+          .from(schema.jobs)
+          .where(and(
+            eq(schema.jobs.organizationId, currentUser.organizationId!),
+            or(
+              eq(schema.jobs.createdBy, currentUser.id), // Jobs they created
+              assignedIds.length > 0 ? inArray(schema.jobs.id, assignedIds) : sql`0 = 1` // Jobs they're assigned to
+            )
+          ))
+          .orderBy(desc(schema.jobs.createdAt));
       }
+      
+      const jobs = await jobsQuery.all();
       console.log(`Retrieved organization jobs: ${jobs.length}`);
       
       res.json(jobs);
@@ -985,11 +979,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
           
           // Get candidate assignments for this user
-          const sqlite = await initializeSQLiteDatabase();
-          const assignedCandidateResults = sqlite.prepare(`
-            SELECT candidate_id as candidateId FROM candidate_assignments 
-            WHERE user_id = ?
-          `).all(currentUser.id);
+          const { db, schema } = await getDB();
+          const assignedCandidateResults = await db
+            .select({ candidateId: schema.candidateAssignments.candidateId })
+            .from(schema.candidateAssignments)
+            .where(eq(schema.candidateAssignments.userId, currentUser.id))
+            .all();
           
           const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
           const assignedCandidates = allCandidates.filter(candidate => 
@@ -1012,13 +1007,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const allCandidates = await storage.getCandidatesByOrganization(organizationId);
           
           // Get candidate assignments for this user
-          const sqlite2 = await initializeSQLiteDatabase();
-          const assignedCandidateResults2 = sqlite2.prepare(`
-            SELECT candidate_id as candidateId FROM candidate_assignments 
-            WHERE user_id = ?
-          `).all(currentUser.id);
+          const { db, schema } = await getDB();
+          const assignedCandidateResults = await db
+            .select({ candidateId: schema.candidateAssignments.candidateId })
+            .from(schema.candidateAssignments)
+            .where(eq(schema.candidateAssignments.userId, currentUser.id))
+            .all();
           
-          const assignedCandidateIds = assignedCandidateResults2.map((a: any) => a.candidateId);
+          const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
           candidates = allCandidates.filter(candidate => 
             assignedCandidateIds.includes(candidate.id)
           );
@@ -1050,18 +1046,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/candidates/:id/resume', async (req, res) => {
     try {
       const candidate = await storage.getCandidate(parseInt(req.params.id));
-      if (!candidate || !candidate.resume_file_name) {
+      if (!candidate || !candidate.resumeFileName) {
         return res.status(404).json({ message: "Resume not found" });
       }
 
       // Try to get the original file from file storage first
-      const { FileStorageService } = await import('./file-storage');
-      const fileStorage = new FileStorageService();
-      const originalFile = await fileStorage.getResumeFile(candidate.id, candidate.resume_file_name);
+      const { getResumeFile } = await import('./file-storage');
+      const fileStorage = new (await import('./file-storage')).FileStorageService();
+      const originalFile = await fileStorage.getResumeFile(candidate.id, candidate.resumeFileName);
 
       if (originalFile) {
         // Serve the original file with appropriate content type
-        const fileExtension = candidate.resume_file_name.split('.').pop()?.toLowerCase();
+        const fileExtension = candidate.resumeFileName.split('.').pop()?.toLowerCase();
         let contentType = 'application/octet-stream';
         
         switch (fileExtension) {
@@ -1087,17 +1083,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resume_file_name}"`);
+        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resumeFileName}"`);
         res.send(originalFile);
       } else {
         // Fallback to text content if original file not found
-        if (!candidate.resume_content) {
+        if (!candidate.resumeContent) {
           return res.status(404).json({ message: "Resume file not found" });
         }
         
         res.setHeader('Content-Type', 'text/plain');
-        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resume_file_name}"`);
-        res.send(candidate.resume_content);
+        res.setHeader('Content-Disposition', `attachment; filename="${candidate.resumeFileName}"`);
+        res.send(candidate.resumeContent);
       }
     } catch (error) {
       console.error("Error downloading resume:", error);
@@ -1156,11 +1152,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
         
         // Get candidate assignments for this user
-        const sqlite3 = await initializeSQLiteDatabase();
-        const assignedCandidateResults = sqlite3.prepare(`
-          SELECT candidate_id as candidateId FROM candidate_assignments 
-          WHERE user_id = ?
-        `).all(currentUser.id);
+        const { db: dbConn, schema } = await getDB();
+        const assignedCandidateResults = await dbConn
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
         
         const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
         const assignedCandidates = allCandidates.filter(candidate => 
@@ -1567,28 +1564,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📊 STATS: Calculating user-specific stats for user ${currentUser.id} (${currentUser.role}) in organization ${currentUser.organizationId}`);
       
       // Get database connection for permission-based filtering
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       
       // Get user's accessible job IDs based on role and assignments
       let accessibleJobIds: number[] = [];
       
       if (['super_admin', 'org_admin'].includes(currentUser.role)) {
         // Super admin and org admin can see all jobs in their organization
-        const allJobs = sqlite.prepare(`
-          SELECT id FROM jobs WHERE organization_id = ?
-        `).all(currentUser.organizationId!);
+        const allJobs = await db.select({ id: schema.jobs.id })
+          .from(schema.jobs)
+          .where(eq(schema.jobs.organizationId, currentUser.organizationId!))
+          .all();
         accessibleJobIds = allJobs.map((job: any) => job.id);
       } else {
         // For Manager, Team Lead, and Recruiter: only jobs they created or are assigned to
-        const assignedJobIds = sqlite.prepare(`
-          SELECT job_id FROM job_assignments WHERE user_id = ?
-        `).all(currentUser.id);
+        const assignedJobIds = await db.select({ jobId: schema.jobAssignments.jobId })
+          .from(schema.jobAssignments)
+          .where(eq(schema.jobAssignments.userId, currentUser.id))
+          .all();
         
-        const createdJobs = sqlite.prepare(`
-          SELECT id FROM jobs WHERE organization_id = ? AND created_by = ?
-        `).all(currentUser.organizationId!, currentUser.id);
+        const createdJobs = await db.select({ id: schema.jobs.id })
+          .from(schema.jobs)
+          .where(and(
+            eq(schema.jobs.organizationId, currentUser.organizationId!),
+            eq(schema.jobs.createdBy, currentUser.id)
+          ))
+          .all();
         
-        const assignedIds = assignedJobIds.map((a: any) => a.job_id);
+        const assignedIds = assignedJobIds.map((a: any) => a.jobId);
         const createdIds = createdJobs.map((j: any) => j.id);
         accessibleJobIds = Array.from(new Set([...assignedIds, ...createdIds]));
       }
@@ -1609,9 +1612,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get user-specific data based on accessible jobs
-      const sqlite4 = await initializeSQLiteDatabase();
-      const jobQuery = `SELECT * FROM jobs WHERE organization_id = ? AND id IN (${accessibleJobIds.map(() => '?').join(',')})`;
-      const userJobs = sqlite4.prepare(jobQuery).all(currentUser.organizationId!, ...accessibleJobIds);
+      const userJobs = await db.select()
+        .from(schema.jobs)
+        .where(and(
+          eq(schema.jobs.organizationId, currentUser.organizationId!),
+          inArray(schema.jobs.id, accessibleJobIds)
+        ))
+        .all();
 
       // Get user-specific candidate data based on role and assignments (same logic as /api/candidates)
       let candidates;
@@ -1625,11 +1632,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
         
         // Get candidate assignments for this user
-        const sqlite5 = await initializeSQLiteDatabase();
-        const assignedCandidateResults = sqlite5.prepare(`
-          SELECT candidate_id as candidateId FROM candidate_assignments 
-          WHERE user_id = ?
-        `).all(currentUser.id);
+        const assignedCandidateResults = await db
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
         
         const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
         const assignedCandidates = allCandidates.filter(candidate => 
@@ -1782,36 +1789,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job assignment routes
   app.get('/api/jobs/:jobId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       const jobId = parseInt(req.params.jobId);
       const currentUser = req.user!;
 
       // Verify user has access to this job
-      const job = sqlite.prepare(`
-        SELECT * FROM jobs 
-        WHERE id = ? AND organization_id = ?
-      `).get(jobId, currentUser.organizationId!);
+      const job = await db.select()
+        .from(schema.jobs)
+        .where(and(
+          eq(schema.jobs.id, jobId),
+          eq(schema.jobs.organizationId, currentUser.organizationId!)
+        ))
+        .get();
 
       if (!job) {
         return res.status(404).json({ message: 'Job not found' });
       }
 
       // Get assignments with user details
-      const assignments = sqlite.prepare(`
-        SELECT 
-          ja.id,
-          ja.user_id as userId,
-          ja.role,
-          ja.assigned_by as assignedBy,
-          ja.created_at as createdAt,
-          u.first_name as firstName,
-          u.last_name as lastName,
-          u.email,
-          u.role as userRole
-        FROM job_assignments ja
-        INNER JOIN users u ON ja.user_id = u.id
-        WHERE ja.job_id = ?
-      `).all(jobId);
+      const assignments = await db.select({
+        id: schema.jobAssignments.id,
+        userId: schema.jobAssignments.userId,
+        role: schema.jobAssignments.role,
+        assignedBy: schema.jobAssignments.assignedBy,
+        createdAt: schema.jobAssignments.createdAt,
+        user: {
+          firstName: schema.users.firstName,
+          lastName: schema.users.lastName,
+          email: schema.users.email,
+          role: schema.users.role,
+        }
+      })
+      .from(schema.jobAssignments)
+      .innerJoin(schema.users, eq(schema.jobAssignments.userId, schema.users.id))
+      .where(eq(schema.jobAssignments.jobId, jobId));
 
       res.json(assignments);
     } catch (error) {
@@ -1822,7 +1833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/jobs/:jobId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       const jobId = parseInt(req.params.jobId);
       const currentUser = req.user!;
       const { userId, role } = req.body;
@@ -1838,10 +1849,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify user has permission to assign (owner, org_admin, or manager)
       if (!['super_admin', 'org_admin', 'manager'].includes(currentUser.role)) {
-        const isJobOwner = sqlite.prepare(`
-          SELECT * FROM jobs 
-          WHERE id = ? AND created_by = ?
-        `).get(jobId, currentUser.id);
+        const isJobOwner = await db.select()
+          .from(schema.jobs)
+          .where(and(
+            eq(schema.jobs.id, jobId),
+            eq(schema.jobs.createdBy, currentUser.id)
+          ))
+          .get();
 
         if (!isJobOwner) {
           return res.status(403).json({ message: 'Insufficient permissions to assign users' });
@@ -1849,36 +1863,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify target user exists and is in same organization
-      const targetUser = sqlite.prepare(`
-        SELECT * FROM users 
-        WHERE id = ? AND organization_id = ?
-      `).get(userId, currentUser.organizationId!);
+      const targetUser = await db.select()
+        .from(schema.users)
+        .where(and(
+          eq(schema.users.id, userId),
+          eq(schema.users.organizationId, currentUser.organizationId!)
+        ))
+        .get();
 
       if (!targetUser) {
         return res.status(404).json({ message: 'User not found or not in same organization' });
       }
 
       // Check if assignment already exists
-      const existingAssignment = sqlite.prepare(`
-        SELECT * FROM job_assignments 
-        WHERE job_id = ? AND user_id = ?
-      `).get(jobId, userId);
+      const existingAssignment = await db.select()
+        .from(schema.jobAssignments)
+        .where(and(
+          eq(schema.jobAssignments.jobId, jobId),
+          eq(schema.jobAssignments.userId, userId)
+        ))
+        .get();
 
       if (existingAssignment) {
         return res.status(400).json({ message: 'User is already assigned to this job' });
       }
 
       // Create assignment
-      const result = sqlite.prepare(`
-        INSERT INTO job_assignments (job_id, user_id, role, assigned_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(jobId, userId, role, currentUser.id, new Date().toISOString(), new Date().toISOString());
-      
-      const assignment = sqlite.prepare('SELECT * FROM job_assignments WHERE id = ?').get(result.lastInsertRowid);
+      const assignment = await db.insert(schema.jobAssignments)
+        .values({
+          jobId,
+          userId,
+          role,
+          assignedBy: currentUser.id,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
 
       res.json({
         message: 'User assigned successfully',
-        assignment: assignment
+        assignment: assignment[0]
       });
     } catch (error) {
       console.error('Create job assignment error:', error);
@@ -1888,16 +1911,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/jobs/:jobId/assignments/:assignmentId', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       const jobId = parseInt(req.params.jobId);
       const assignmentId = parseInt(req.params.assignmentId);
       const currentUser = req.user!;
 
       // Verify assignment exists and user has permission to remove it
-      const assignment = sqlite.prepare(`
-        SELECT * FROM job_assignments 
-        WHERE id = ? AND job_id = ?
-      `).get(assignmentId, jobId);
+      const assignment = await db.select()
+        .from(schema.jobAssignments)
+        .where(and(
+          eq(schema.jobAssignments.id, assignmentId),
+          eq(schema.jobAssignments.jobId, jobId)
+        ))
+        .get();
 
       if (!assignment) {
         return res.status(404).json({ message: 'Assignment not found' });
@@ -1906,15 +1932,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check permissions (can remove if: super_admin, org_admin, manager, job creator, or the assigned user themselves)
       const canRemove = 
         ['super_admin', 'org_admin', 'manager'].includes(currentUser.role) ||
-        assignment.assigned_by === currentUser.id ||
-        assignment.user_id === currentUser.id;
+        assignment.assignedBy === currentUser.id ||
+        assignment.userId === currentUser.id;
 
       if (!canRemove) {
         return res.status(403).json({ message: 'Insufficient permissions to remove assignment' });
       }
 
       // Delete assignment
-      sqlite.prepare('DELETE FROM job_assignments WHERE id = ?').run(assignmentId);
+      await db.delete(schema.jobAssignments)
+        .where(eq(schema.jobAssignments.id, assignmentId));
 
       res.json({ message: 'Assignment removed successfully' });
     } catch (error) {
@@ -1926,7 +1953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Candidate assignment routes with comprehensive error handling and logging
   app.get('/api/candidates/:candidateId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       const candidateId = parseInt(req.params.candidateId);
       const currentUser = req.user!;
 
@@ -1942,10 +1969,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify candidate exists and belongs to user's organization
-      const candidate = sqlite.prepare(`
-        SELECT * FROM candidates 
-        WHERE id = ? AND organization_id = ?
-      `).get(candidateId, currentUser.organizationId!);
+      const candidate = await db.select()
+        .from(schema.candidates)
+        .where(and(
+          eq(schema.candidates.id, candidateId),
+          eq(schema.candidates.organizationId, currentUser.organizationId!)
+        ))
+        .get();
 
       if (!candidate) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Candidate ${candidateId} not found in organization ${currentUser.organizationId} for user ${currentUser.id}`);
@@ -1958,23 +1988,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ CANDIDATE ASSIGNMENT: Found candidate '${candidate.name}' (ID: ${candidateId})`);
 
       // Fetch assignments with user details using proper LEFT JOIN syntax
-      const sqlite6 = await initializeSQLiteDatabase();
-      const assignments = sqlite6.prepare(`
-        SELECT 
-          ca.id,
-          ca.candidate_id as candidateId,
-          ca.user_id as userId,
-          ca.role,
-          ca.assigned_by as assignedBy,
-          ca.created_at as createdAt,
-          u.first_name as userFirstName,
-          u.last_name as userLastName,
-          u.email as userEmail,
-          u.role as userRole
-        FROM candidate_assignments ca
-        LEFT JOIN users u ON ca.user_id = u.id
-        WHERE ca.candidate_id = ?
-      `).all(candidateId);
+      const assignments = await db.select({
+        id: schema.candidateAssignments.id,
+        candidateId: schema.candidateAssignments.candidateId,
+        userId: schema.candidateAssignments.userId,
+        role: schema.candidateAssignments.role,
+        assignedBy: schema.candidateAssignments.assignedBy,
+        createdAt: schema.candidateAssignments.createdAt,
+        // User details
+        userFirstName: schema.users.firstName,
+        userLastName: schema.users.lastName,
+        userEmail: schema.users.email,
+        userRole: schema.users.role,
+      })
+      .from(schema.candidateAssignments)
+      .leftJoin(schema.users, eq(schema.candidateAssignments.userId, schema.users.id))
+      .where(eq(schema.candidateAssignments.candidateId, candidateId))
+      .all();
 
       console.log(`✅ CANDIDATE ASSIGNMENT: Found ${assignments.length} assignments for candidate ${candidateId}`);
       if (assignments.length > 0) {
@@ -2006,7 +2036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/candidates/:candidateId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       const candidateId = parseInt(req.params.candidateId);
       const currentUser = req.user!;
       const { userId, role } = req.body;
@@ -2053,11 +2083,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify candidate exists and belongs to user's organization
-      const sqlite7 = await initializeSQLiteDatabase();
-      const candidate = sqlite7.prepare(`
-        SELECT * FROM candidates 
-        WHERE id = ? AND organization_id = ?
-      `).get(candidateId, currentUser.organizationId!);
+      const candidate = await db.select()
+        .from(schema.candidates)
+        .where(and(
+          eq(schema.candidates.id, candidateId),
+          eq(schema.candidates.organizationId, currentUser.organizationId!)
+        ))
+        .get();
 
       if (!candidate) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Candidate ${candidateId} not found in organization ${currentUser.organizationId}`);
@@ -2069,11 +2101,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ CANDIDATE ASSIGNMENT: Found candidate '${candidate.name}' (ID: ${candidateId}), added by user ${candidate.addedBy}`);
 
-      // Verify target user exists and belongs to same organization  
-      const targetUser = sqlite7.prepare(`
-        SELECT * FROM users 
-        WHERE id = ? AND organization_id = ?
-      `).get(userId, currentUser.organizationId!);
+      // Verify target user exists and belongs to same organization
+      const targetUser = await db.select()
+        .from(schema.users)
+        .where(and(
+          eq(schema.users.id, userId),
+          eq(schema.users.organizationId, currentUser.organizationId!)
+        ))
+        .get();
 
       if (!targetUser) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Target user ${userId} not found in organization ${currentUser.organizationId}`);
@@ -2108,10 +2143,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if assignment already exists
-      const existingAssignment = sqlite7.prepare(`
-        SELECT * FROM candidate_assignments 
-        WHERE candidate_id = ? AND user_id = ?
-      `).get(candidateId, userId);
+      const existingAssignment = await db.select()
+        .from(schema.candidateAssignments)
+        .where(and(
+          eq(schema.candidateAssignments.candidateId, candidateId),
+          eq(schema.candidateAssignments.userId, userId)
+        ))
+        .get();
 
       if (existingAssignment) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Assignment already exists:`, {
@@ -2134,12 +2172,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedBy: currentUser.id
       });
 
-      const result = sqlite7.prepare(`
-        INSERT INTO candidate_assignments (candidate_id, user_id, role, assigned_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(candidateId, userId, role, currentUser.id, new Date().toISOString(), new Date().toISOString());
-      
-      const newAssignment = sqlite7.prepare('SELECT * FROM candidate_assignments WHERE id = ?').get(result.lastInsertRowid);
+      const [newAssignment] = await db.insert(schema.candidateAssignments).values({
+        candidateId,
+        userId,
+        role,
+        assignedBy: currentUser.id,
+      }).returning();
 
       console.log(`✅ CANDIDATE ASSIGNMENT: Successfully created assignment ${newAssignment.id} for candidate ${candidateId}`);
       console.log(`📋 CANDIDATE ASSIGNMENT: Assignment details:`, {
@@ -2172,7 +2210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/candidates/:candidateId/assignments/:assignmentId', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       const candidateId = parseInt(req.params.candidateId);
       const assignmentId = parseInt(req.params.assignmentId);
       const currentUser = req.user!;
@@ -2197,10 +2235,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify assignment exists and belongs to the candidate
-      const assignment = sqlite.prepare(`
-        SELECT * FROM candidate_assignments 
-        WHERE id = ? AND candidate_id = ?
-      `).get(assignmentId, candidateId);
+      const assignment = await db.select()
+        .from(schema.candidateAssignments)
+        .where(and(
+          eq(schema.candidateAssignments.id, assignmentId),
+          eq(schema.candidateAssignments.candidateId, candidateId)
+        ))
+        .get();
 
       if (!assignment) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Assignment ${assignmentId} not found for candidate ${candidateId}`);
@@ -2314,19 +2355,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has permission to access both candidate and job
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       
       // Check job assignment
-      const jobAssignment = sqlite.prepare(`
-        SELECT * FROM job_assignments 
-        WHERE job_id = ? AND user_id = ?
-      `).get(jobId, currentUser.id);
+      const jobAssignment = await db
+        .select()
+        .from(schema.jobAssignments)
+        .where(and(
+          eq(schema.jobAssignments.jobId, jobId),
+          eq(schema.jobAssignments.userId, currentUser.id)
+        ))
+        .get();
 
       // Check candidate assignment  
-      const candidateAssignment = sqlite.prepare(`
-        SELECT * FROM candidate_assignments 
-        WHERE candidate_id = ? AND user_id = ?
-      `).get(candidateId, currentUser.id);
+      const candidateAssignment = await db
+        .select()
+        .from(schema.candidateAssignments)
+        .where(and(
+          eq(schema.candidateAssignments.candidateId, candidateId),
+          eq(schema.candidateAssignments.userId, currentUser.id)
+        ))
+        .get();
 
       // Super admin and org admin can create applications without assignments
       const hasPermission = currentUser.role === 'super_admin' || 
@@ -2417,7 +2466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 SUGGESTIONS: Getting application suggestions for user ${currentUser.id} with min score ${minScore}%`);
 
       // Get user's assigned jobs and candidates
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       
       let accessibleJobIds: number[] = [];
       let accessibleCandidateIds: number[] = [];
@@ -2430,18 +2479,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         accessibleCandidateIds = allCandidates.map(c => c.id);
       } else {
         // Get assigned jobs and candidates
-        const jobAssignments = sqlite.prepare(`
-          SELECT job_id as jobId FROM job_assignments 
-          WHERE user_id = ?
-        `).all(currentUser.id);
+        const jobAssignments = await db
+          .select({ jobId: schema.jobAssignments.jobId })
+          .from(schema.jobAssignments)
+          .where(eq(schema.jobAssignments.userId, currentUser.id))
+          .all();
         
-        const candidateAssignments = sqlite.prepare(`
-          SELECT candidate_id as candidateId FROM candidate_assignments 
-          WHERE user_id = ?
-        `).all(currentUser.id);
+        const candidateAssignments = await db
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
 
-        accessibleJobIds = jobAssignments.map((ja: any) => ja.jobId);
-        accessibleCandidateIds = candidateAssignments.map((ca: any) => ca.candidateId);
+        accessibleJobIds = jobAssignments.map(ja => ja.jobId);
+        accessibleCandidateIds = candidateAssignments.map(ca => ca.candidateId);
       }
 
       if (accessibleJobIds.length === 0 || accessibleCandidateIds.length === 0) {
@@ -2526,30 +2577,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = currentUser.organizationId!;
 
       // Get user's accessible jobs
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       
       let accessibleJobs: any[] = [];
 
       if (currentUser.role === 'super_admin' || currentUser.role === 'org_admin') {
         accessibleJobs = await storage.getJobsByOrganization(organizationId);
       } else {
-        const jobAssignments = sqlite.prepare(`
-          SELECT job_id as jobId FROM job_assignments 
-          WHERE user_id = ?
-        `).all(currentUser.id);
+        const jobAssignments = await db
+          .select({ jobId: schema.jobAssignments.jobId })
+          .from(schema.jobAssignments)
+          .where(eq(schema.jobAssignments.userId, currentUser.id))
+          .all();
         
-        const jobIds = jobAssignments.map((ja: any) => ja.jobId);
+        const jobIds = jobAssignments.map(ja => ja.jobId);
         if (jobIds.length > 0) {
-          const jobQuery = `SELECT * FROM jobs WHERE id IN (${jobIds.map(() => '?').join(',')}) AND organization_id = ?`;
-          accessibleJobs = sqlite.prepare(jobQuery).all(...jobIds, organizationId);
+          accessibleJobs = await db
+            .select()
+            .from(schema.jobs)
+            .where(and(
+              inArray(schema.jobs.id, jobIds),
+              eq(schema.jobs.organizationId, organizationId)
+            ))
+            .all();
         }
       }
 
       // Filter out jobs that already have applications for this candidate
-      const existingApplications = sqlite.prepare(`
-        SELECT job_id as jobId FROM applications 
-        WHERE candidate_id = ? AND organization_id = ?
-      `).all(parseInt(candidateId), organizationId);
+      const existingApplications = await db
+        .select({ jobId: schema.applications.jobId })
+        .from(schema.applications)
+        .where(and(
+          eq(schema.applications.candidateId, parseInt(candidateId)),
+          eq(schema.applications.organizationId, organizationId)
+        ))
+        .all();
 
       const existingJobIds = new Set(existingApplications.map(app => app.jobId));
       const availableJobs = accessibleJobs.filter(job => !existingJobIds.has(job.id));
@@ -2570,30 +2632,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = currentUser.organizationId!;
 
       // Get user's accessible candidates
-      const sqlite = await initializeSQLiteDatabase();
+      const { db, schema } = await getDB();
       
       let accessibleCandidates: any[] = [];
 
       if (currentUser.role === 'super_admin' || currentUser.role === 'org_admin') {
         accessibleCandidates = await storage.getCandidatesByOrganization(organizationId);
       } else {
-        const candidateAssignments = sqlite.prepare(`
-          SELECT candidate_id as candidateId FROM candidate_assignments 
-          WHERE user_id = ?
-        `).all(currentUser.id);
+        const candidateAssignments = await db
+          .select({ candidateId: schema.candidateAssignments.candidateId })
+          .from(schema.candidateAssignments)
+          .where(eq(schema.candidateAssignments.userId, currentUser.id))
+          .all();
         
-        const candidateIds = candidateAssignments.map((ca: any) => ca.candidateId);
+        const candidateIds = candidateAssignments.map(ca => ca.candidateId);
         if (candidateIds.length > 0) {
-          const candidateQuery = `SELECT * FROM candidates WHERE id IN (${candidateIds.map(() => '?').join(',')}) AND organization_id = ?`;
-          accessibleCandidates = sqlite.prepare(candidateQuery).all(...candidateIds, organizationId);
+          accessibleCandidates = await db
+            .select()
+            .from(schema.candidates)
+            .where(and(
+              inArray(schema.candidates.id, candidateIds),
+              eq(schema.candidates.organizationId, organizationId)
+            ))
+            .all();
         }
       }
 
       // Filter out candidates that already have applications for this job
-      const existingApplications = sqlite.prepare(`
-        SELECT candidate_id as candidateId FROM applications 
-        WHERE job_id = ? AND organization_id = ?
-      `).all(parseInt(jobId), organizationId);
+      const existingApplications = await db
+        .select({ candidateId: schema.applications.candidateId })
+        .from(schema.applications)
+        .where(and(
+          eq(schema.applications.jobId, parseInt(jobId)),
+          eq(schema.applications.organizationId, organizationId)
+        ))
+        .all();
 
       const existingCandidateIds = new Set(existingApplications.map(app => app.candidateId));
       const availableCandidates = accessibleCandidates.filter(candidate => !existingCandidateIds.has(candidate.id));
@@ -2603,93 +2676,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('❌ AVAILABLE CANDIDATES ERROR:', error);
       res.status(500).json({ message: "Failed to get available candidates" });
-    }
-  });
-
-  // Database Management Endpoints (Super Admin Only)
-  app.post('/api/admin/database/reset-development', authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      // Check if user is super admin
-      if (!req.user || req.user.role !== 'super_admin') {
-        return res.status(403).json({ message: 'Super admin access required' });
-      }
-
-      const devDbPath = path.join(process.cwd(), 'data', 'development.db');
-      const devDbShmPath = path.join(process.cwd(), 'data', 'development.db-shm');
-      const devDbWalPath = path.join(process.cwd(), 'data', 'development.db-wal');
-
-      // Create backup with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupPath = path.join(process.cwd(), 'data', `development.db.backup.${timestamp}`);
-
-      try {
-        if (fs.existsSync(devDbPath)) {
-          fs.copyFileSync(devDbPath, backupPath);
-          console.log(`📋 Development database backed up to ${backupPath}`);
-          
-          // Delete database files
-          fs.unlinkSync(devDbPath);
-          if (fs.existsSync(devDbShmPath)) fs.unlinkSync(devDbShmPath);
-          if (fs.existsSync(devDbWalPath)) fs.unlinkSync(devDbWalPath);
-          
-          console.log('🗑️ Development database files deleted');
-        }
-        
-        res.json({ 
-          message: 'Development database reset successfully',
-          backup: backupPath,
-          requiresRestart: true
-        });
-      } catch (error) {
-        console.error('❌ Failed to reset development database:', error);
-        res.status(500).json({ message: 'Failed to reset development database' });
-      }
-    } catch (error) {
-      console.error('❌ Database reset error:', error);
-      res.status(500).json({ message: 'Database reset failed' });
-    }
-  });
-
-  app.post('/api/admin/database/reset-production', authenticateToken, async (req: AuthRequest, res) => {
-    try {
-      // Check if user is super admin
-      if (!req.user || req.user.role !== 'super_admin') {
-        return res.status(403).json({ message: 'Super admin access required' });
-      }
-
-      const prodDbPath = path.join(process.cwd(), 'data', 'production.db');
-      const prodDbShmPath = path.join(process.cwd(), 'data', 'production.db-shm');
-      const prodDbWalPath = path.join(process.cwd(), 'data', 'production.db-wal');
-
-      // Create backup with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupPath = path.join(process.cwd(), 'data', `production.db.backup.${timestamp}`);
-
-      try {
-        if (fs.existsSync(prodDbPath)) {
-          fs.copyFileSync(prodDbPath, backupPath);
-          console.log(`📋 Production database backed up to ${backupPath}`);
-          
-          // Delete database files
-          fs.unlinkSync(prodDbPath);
-          if (fs.existsSync(prodDbShmPath)) fs.unlinkSync(prodDbShmPath);
-          if (fs.existsSync(prodDbWalPath)) fs.unlinkSync(prodDbWalPath);
-          
-          console.log('🗑️ Production database files deleted');
-        }
-        
-        res.json({ 
-          message: 'Production database reset successfully',
-          backup: backupPath,
-          requiresRestart: true
-        });
-      } catch (error) {
-        console.error('❌ Failed to reset production database:', error);
-        res.status(500).json({ message: 'Failed to reset production database' });
-      }
-    } catch (error) {
-      console.error('❌ Database reset error:', error);
-      res.status(500).json({ message: 'Database reset failed' });
     }
   });
 

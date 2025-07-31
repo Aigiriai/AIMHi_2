@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import ProtectedRoute from "@/components/auth/protected-route";
 import Navbar from "@/components/navigation/navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,8 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
 import { 
   Building2, 
   Users, 
@@ -20,14 +18,9 @@ import {
   MoreHorizontal,
   Eye,
   Settings,
-  CreditCard,
-  Database,
-  Trash2,
-  AlertTriangle,
-  RefreshCw
+  CreditCard
 } from "lucide-react";
 import { authService } from "@/lib/auth";
-import { apiRequest } from "@/lib/queryClient";
 
 interface Organization {
   id: number;
@@ -46,8 +39,6 @@ export default function SuperAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   // Fetch organizations with pagination
   const { data: organizationsData, isLoading: orgsLoading } = useQuery({
@@ -94,68 +85,13 @@ export default function SuperAdminDashboard() {
   const organizations = organizationsData?.organizations || [];
   const allOrganizations = allOrganizationsData?.organizations || [];
 
-  // Database reset mutations
-  const resetDevelopmentDB = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/admin/database/reset-development');
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Development Database Reset",
-        description: `Database reset successfully. Backup created: ${data.backup}`,
-      });
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries();
-      // Suggest page refresh since database was reset
-      toast({
-        title: "Page Refresh Required",
-        description: "Please refresh the page to see the changes.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Reset Failed",
-        description: error.message || "Failed to reset development database",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const resetProductionDB = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/admin/database/reset-production');
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Production Database Reset",
-        description: `Database reset successfully. Backup created: ${data.backup}`,
-      });
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries();
-      // Suggest page refresh since database was reset
-      toast({
-        title: "Page Refresh Required",
-        description: "Please refresh the page to see the changes.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Reset Failed",
-        description: error.message || "Failed to reset production database",
-        variant: "destructive",
-      });
-    },
-  });
-
   const filteredOrganizations = organizations.filter((org: Organization) =>
     org.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     org.domain?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Use pagination totalOrganizations for accurate counts
-  const totalOrganizations = organizationsData?.pagination?.totalOrganizations || 0;
+  // Use pagination total for accurate counts
+  const totalOrganizations = organizationsData?.pagination?.total || 0;
   const activeOrganizations = allOrganizations.filter((org: Organization) => org.status === 'active').length;
   const totalUsers = allOrganizations.reduce((sum: number, org: Organization) => sum + org.userCount, 0);
   const totalRevenue = totalOrganizations * 500; // Use total organizations for revenue calculation
@@ -234,143 +170,6 @@ export default function SuperAdminDashboard() {
 
             {/* Monthly Revenue and Platform Growth cards removed */}
           </div>
-
-          {/* Database Management Section */}
-          <Card className="mb-8">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Database className="h-5 w-5" />
-                    Database Management
-                  </CardTitle>
-                  <CardDescription>
-                    Reset development or production databases (creates backup before deletion)
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Development Database Reset */}
-                <div className="border rounded-lg p-4 bg-blue-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Database className="h-4 w-4 text-blue-600" />
-                    <h3 className="font-medium text-blue-900">Development Database</h3>
-                  </div>
-                  <p className="text-sm text-blue-700 mb-4">
-                    Resets the development database. Safe for testing and development work.
-                  </p>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="border-blue-300 text-blue-700 hover:bg-blue-100"
-                        disabled={resetDevelopmentDB.isPending}
-                      >
-                        {resetDevelopmentDB.isPending ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            Resetting...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Reset Development DB
-                          </>
-                        )}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                          <AlertTriangle className="h-5 w-5 text-orange-500" />
-                          Reset Development Database?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete the development database and create a fresh one. 
-                          A backup will be created automatically before deletion. This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => resetDevelopmentDB.mutate()}
-                          className="bg-orange-600 hover:bg-orange-700"
-                        >
-                          Reset Development Database
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-
-                {/* Production Database Reset */}
-                <div className="border rounded-lg p-4 bg-red-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Database className="h-4 w-4 text-red-600" />
-                    <h3 className="font-medium text-red-900">Production Database</h3>
-                  </div>
-                  <p className="text-sm text-red-700 mb-4">
-                    ⚠️ DANGER: Resets the production database. All live data will be lost!
-                  </p>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        disabled={resetProductionDB.isPending}
-                      >
-                        {resetProductionDB.isPending ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            Resetting...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Reset Production DB
-                          </>
-                        )}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2 text-red-600">
-                          <AlertTriangle className="h-5 w-5" />
-                          DANGER: Reset Production Database?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="text-red-800">
-                          <div>
-                            <strong>This will permanently delete ALL production data including:</strong>
-                            <ul className="list-disc list-inside mt-2 space-y-1">
-                              <li>All organizations and users</li>
-                              <li>All job postings and candidates</li>
-                              <li>All AI matches and applications</li>
-                              <li>All settings and configurations</li>
-                            </ul>
-                            <div className="mt-3 font-semibold">
-                              A backup will be created, but this action is IRREVERSIBLE.
-                            </div>
-                          </div>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => resetProductionDB.mutate()}
-                          className="bg-red-600 hover:bg-red-700"
-                        >
-                          I understand - Reset Production Database
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Organizations Table */}
           <Card>
