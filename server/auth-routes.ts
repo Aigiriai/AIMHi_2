@@ -261,17 +261,16 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
     const totalResult = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get() as any;
     const totalOrganizations = totalResult.count;
 
-    // Get additional stats
+    // Get additional stats (removed o.description column that doesn't exist)
     const statsResult = sqlite.prepare(`
       SELECT 
         o.id,
         o.name,
-        o.description,
         COUNT(u.id) as user_count
       FROM organizations o
       LEFT JOIN users u ON o.id = u.organization_id
       WHERE o.id IN (${organizations.map(() => '?').join(',')})
-      GROUP BY o.id, o.name, o.description
+      GROUP BY o.id, o.name
     `).all(organizations.map(org => (org as any).id));
 
     const organizationsWithStats = organizations.map(org => {

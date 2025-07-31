@@ -1,4 +1,4 @@
-import { organizationManager } from './organization-manager';
+// Fixed import for organizationManager
 import { initializeSQLiteDatabase } from './init-database';
 import { hashPassword } from './auth';
 
@@ -68,6 +68,8 @@ export async function createSuperAdmin() {
       return sqlite.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
     } else {
       console.log('🏢 Creating super admin organization...');
+      // Import organizationManager dynamically to avoid circular dependencies
+      const { organizationManager } = await import('./organization-manager');
       superAdminOrg = await organizationManager.createOrganization({
         name: 'AIM Hi System',
         domain: 'platform.aimhi.app',
