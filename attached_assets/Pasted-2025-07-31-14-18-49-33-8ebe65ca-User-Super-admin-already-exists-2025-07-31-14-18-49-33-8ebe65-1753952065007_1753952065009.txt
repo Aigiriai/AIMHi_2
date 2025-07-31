@@ -1,0 +1,160 @@
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+✓ Super admin already exists
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+✓ Demo organization seeding skipped - clean system ready
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+✅ Multi-tenant system initialized successfully
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+=== Login Credentials ===
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Super Admin:
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Email: superadmin@aimhi.app
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Password: SuperAdmin123!@#
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Demo Organization Admin:
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Email: admin@aimhidemo.com
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Password: Demo123!@#
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+========================
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+8:48:49 AM [express] Server running on port 5000 with AI calling support
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+8:48:49 AM [express] Direct webhook domain: aimhi.aigiri.ai
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+✅ SQLite database initialized successfully
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+✅ Added original_file_name column to jobs table
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+✓ Initial data already exists
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+=== Login Credentials ===
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Super Admin:
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Email: superadmin@aimhi.app
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Password: SuperAdmin123!@#
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Demo Organization Admin:
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Email: admin@aimhidemo.com
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+Password: Demo123!@#
+2025-07-31 14:18:49.33
+8ebe65ca
+User
+========================
+2025-07-31 14:19:57.68
+8ebe65ca
+User
+8:49:57 AM [express] POST /api/auth/login 200 in 88ms :: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXV…
+2025-07-31 14:19:58.97
+8ebe65ca
+User
+8:49:58 AM [express] GET /api/auth/me 200 in 7ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:19:59.33
+8ebe65ca
+User
+8:49:59 AM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:19:59.64
+8ebe65ca
+User
+8:49:59 AM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:19:59.99
+8ebe65ca
+User
+8:49:59 AM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:20:00.01
+8ebe65ca
+User
+8:50:00 AM [express] GET /api/auth/organizations 200 in 9ms :: {"organizations":[{"id":3,"name":"Aig…
+2025-07-31 14:20:00.02
+8ebe65ca
+User
+8:50:00 AM [express] GET /api/auth/organizations 200 in 6ms :: {"organizations":[{"id":3,"name":"Aig…
+2025-07-31 14:20:08.48
+8ebe65ca
+User
+8:50:08 AM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:20:11.96
+8ebe65ca
+User
+8:50:11 AM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:20:21.82
+8ebe65ca
+User
+8:50:21 AM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:20:21.82
+8ebe65ca
+User
+8:50:21 AM [express] GET /api/settings/user 304 in 3ms :: {"theme":"system","language":"en","notific…
+2025-07-31 14:20:21.86
+8ebe65ca
+User
+8:50:21 AM [express] GET /api/users 200 in 3ms :: {"users":[{"id":1,"email":"superadmin@aimhi.app","…
+2025-07-31 14:20:22.22
+8ebe65ca
+User
+8:50:22 AM [express] GET /api/auth/me 200 in 2ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:20:27.53
+8ebe65ca
+User
+8:50:27 AM [express] GET /api/auth/me 200 in 5ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:20:34.53
+8ebe65ca
+User
+8:50:34 AM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-07-31 14:21:26.05
+e885aa4b
+System
+system: received signal terminated
