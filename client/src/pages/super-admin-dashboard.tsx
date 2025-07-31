@@ -96,7 +96,10 @@ export default function SuperAdminDashboard() {
 
   // Database reset mutations
   const resetDevelopmentDB = useMutation({
-    mutationFn: () => apiRequest('/api/admin/database/reset-development', 'POST'),
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/admin/database/reset-development');
+      return await response.json();
+    },
     onSuccess: (data) => {
       toast({
         title: "Development Database Reset",
@@ -120,7 +123,10 @@ export default function SuperAdminDashboard() {
   });
 
   const resetProductionDB = useMutation({
-    mutationFn: () => apiRequest('/api/admin/database/reset-production', 'POST'),
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/admin/database/reset-production');
+      return await response.json();
+    },
     onSuccess: (data) => {
       toast({
         title: "Production Database Reset",
@@ -336,16 +342,18 @@ export default function SuperAdminDashboard() {
                           DANGER: Reset Production Database?
                         </AlertDialogTitle>
                         <AlertDialogDescription className="text-red-800">
-                          <strong>This will permanently delete ALL production data including:</strong>
-                          <ul className="list-disc list-inside mt-2 space-y-1">
-                            <li>All organizations and users</li>
-                            <li>All job postings and candidates</li>
-                            <li>All AI matches and applications</li>
-                            <li>All settings and configurations</li>
-                          </ul>
-                          <p className="mt-3 font-semibold">
-                            A backup will be created, but this action is IRREVERSIBLE.
-                          </p>
+                          <div>
+                            <strong>This will permanently delete ALL production data including:</strong>
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                              <li>All organizations and users</li>
+                              <li>All job postings and candidates</li>
+                              <li>All AI matches and applications</li>
+                              <li>All settings and configurations</li>
+                            </ul>
+                            <div className="mt-3 font-semibold">
+                              A backup will be created, but this action is IRREVERSIBLE.
+                            </div>
+                          </div>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
