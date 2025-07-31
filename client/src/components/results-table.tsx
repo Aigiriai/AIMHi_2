@@ -91,11 +91,34 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentMatches = matches.slice(startIndex, endIndex);
 
+  // Helper function to extract skillAnalysis from matchCriteria
+  const extractSkillAnalysis = (match: any) => {
+    if (!match.matchCriteria) return null;
+    
+    try {
+      const criteria = typeof match.matchCriteria === 'string' 
+        ? JSON.parse(match.matchCriteria) 
+        : match.matchCriteria;
+      return criteria.skillAnalysis || null;
+    } catch (error) {
+      console.error('Error parsing matchCriteria for skillAnalysis:', error);
+      return null;
+    }
+  };
+
   // Parse criteria scores from match_criteria data (preferred) or AI reasoning (fallback)
   const parseCriteriaScores = (match: any, reasoning: string): CriteriaScore[] => {
     // First try to get data from match_criteria (structured data)
     if (match.matchCriteria) {
-      const criteria = match.matchCriteria;
+      let criteria;
+      try {
+        criteria = typeof match.matchCriteria === 'string' 
+          ? JSON.parse(match.matchCriteria) 
+          : match.matchCriteria;
+      } catch (error) {
+        console.error('Error parsing matchCriteria JSON:', error);
+        return [];
+      }
       const weights = {
         skills: 30,
         experience: 20,
@@ -636,7 +659,7 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
                                     professionalDepth: criteriaScores.find(c => c.name === 'Professional Depth')?.points || 0,
                                     domainExperience: criteriaScores.find(c => c.name === 'Domain Experience')?.points || 0,
                                   }}
-                                  skillAnalysis={(match as any).skillAnalysis}
+                                  skillAnalysis={extractSkillAnalysis(match)}
                                 />
                               </div>
                             </DialogContent>
