@@ -1609,13 +1609,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get user-specific data based on accessible jobs
-      const userJobs = await db.select()
-        .from(schema.jobs)
-        .where(and(
-          eq(schema.jobs.organizationId, currentUser.organizationId!),
-          inArray(schema.jobs.id, accessibleJobIds)
-        ))
-        .all();
+      const sqlite4 = await initializeSQLiteDatabase();
+      const jobQuery = `SELECT * FROM jobs WHERE organization_id = ? AND id IN (${accessibleJobIds.map(() => '?').join(',')})`;
+      const userJobs = sqlite4.prepare(jobQuery).all(currentUser.organizationId!, ...accessibleJobIds);
 
       // Get user-specific candidate data based on role and assignments (same logic as /api/candidates)
       let candidates;
@@ -1629,11 +1625,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
         
         // Get candidate assignments for this user
-        const assignedCandidateResults = await db
-          .select({ candidateId: schema.candidateAssignments.candidateId })
-          .from(schema.candidateAssignments)
-          .where(eq(schema.candidateAssignments.userId, currentUser.id))
-          .all();
+        const sqlite5 = await initializeSQLiteDatabase();
+        const assignedCandidateResults = sqlite5.prepare(`
+          SELECT candidate_id as candidateId FROM candidate_assignments 
+          WHERE user_id = ?
+        `).all(currentUser.id);
         
         const assignedCandidateIds = assignedCandidateResults.map((a: any) => a.candidateId);
         const assignedCandidates = allCandidates.filter(candidate => 
@@ -1962,23 +1958,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ CANDIDATE ASSIGNMENT: Found candidate '${candidate.name}' (ID: ${candidateId})`);
 
       // Fetch assignments with user details using proper LEFT JOIN syntax
-      const assignments = await db.select({
-        id: schema.candidateAssignments.id,
-        candidateId: schema.candidateAssignments.candidateId,
-        userId: schema.candidateAssignments.userId,
-        role: schema.candidateAssignments.role,
-        assignedBy: schema.candidateAssignments.assignedBy,
-        createdAt: schema.candidateAssignments.createdAt,
-        // User details
-        userFirstName: schema.users.firstName,
-        userLastName: schema.users.lastName,
-        userEmail: schema.users.email,
-        userRole: schema.users.role,
-      })
-      .from(schema.candidateAssignments)
-      .leftJoin(schema.users, eq(schema.candidateAssignments.userId, schema.users.id))
-      .where(eq(schema.candidateAssignments.candidateId, candidateId))
-      .all();
+      const sqlite6 = await initializeSQLiteDatabase();
+      const assignments = sqlite6.prepare(`
+        SELECT 
+          ca.id,
+          ca.candidate_id as candidateId,
+          ca.user_id as userId,
+          ca.role,
+          ca.assigned_by as assignedBy,
+          ca.created_at as createdAt,
+          u.first_name as userFirstName,
+          u.last_name as userLastName,
+          u.email as userEmail,
+          u.role as userRole
+        FROM candidate_assignments ca
+        LEFT JOIN users u ON ca.user_id = u.id
+        WHERE ca.candidate_id = ?
+      `).all(candidateId);
 
       console.log(`✅ CANDIDATE ASSIGNMENT: Found ${assignments.length} assignments for candidate ${candidateId}`);
       if (assignments.length > 0) {
@@ -2057,13 +2053,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify candidate exists and belongs to user's organization
-      const candidate = await db.select()
-        .from(schema.candidates)
-        .where(and(
-          eq(schema.candidates.id, candidateId),
-          eq(schema.candidates.organizationId, currentUser.organizationId!)
-        ))
-        .get();
+      const sqlite7 = await initializeSQLiteDatabase();
+      const candidate = sqlite7.prepare(`
+        SELECT * FROM candidates 
+        WHERE id = ? AND organization_id = ?
+      `).get(candidateId, currentUser.organizationId!);
 
       if (!candidate) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Candidate ${candidateId} not found in organization ${currentUser.organizationId}`);
@@ -2075,14 +2069,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ CANDIDATE ASSIGNMENT: Found candidate '${candidate.name}' (ID: ${candidateId}), added by user ${candidate.addedBy}`);
 
-      // Verify target user exists and belongs to same organization
-      const targetUser = await db.select()
-        .from(schema.users)
-        .where(and(
-          eq(schema.users.id, userId),
-          eq(schema.users.organizationId, currentUser.organizationId!)
-        ))
-        .get();
+      // Verify target user exists and belongs to same organization  
+      const targetUser = sqlite7.prepare(`
+        SELECT * FROM users 
+        WHERE id = ? AND organization_id = ?
+      `).get(userId, currentUser.organizationId!);
 
       if (!targetUser) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Target user ${userId} not found in organization ${currentUser.organizationId}`);
@@ -2117,13 +2108,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if assignment already exists
-      const existingAssignment = await db.select()
-        .from(schema.candidateAssignments)
-        .where(and(
-          eq(schema.candidateAssignments.candidateId, candidateId),
-          eq(schema.candidateAssignments.userId, userId)
-        ))
-        .get();
+      const existingAssignment = sqlite7.prepare(`
+        SELECT * FROM candidate_assignments 
+        WHERE candidate_id = ? AND user_id = ?
+      `).get(candidateId, userId);
 
       if (existingAssignment) {
         console.log(`❌ CANDIDATE ASSIGNMENT: Assignment already exists:`, {
@@ -2146,12 +2134,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedBy: currentUser.id
       });
 
-      const [newAssignment] = await db.insert(schema.candidateAssignments).values({
-        candidateId,
-        userId,
-        role,
-        assignedBy: currentUser.id,
-      }).returning();
+      const result = sqlite7.prepare(`
+        INSERT INTO candidate_assignments (candidate_id, user_id, role, assigned_by, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(candidateId, userId, role, currentUser.id, new Date().toISOString(), new Date().toISOString());
+      
+      const newAssignment = sqlite7.prepare('SELECT * FROM candidate_assignments WHERE id = ?').get(result.lastInsertRowid);
 
       console.log(`✅ CANDIDATE ASSIGNMENT: Successfully created assignment ${newAssignment.id} for candidate ${candidateId}`);
       console.log(`📋 CANDIDATE ASSIGNMENT: Assignment details:`, {
