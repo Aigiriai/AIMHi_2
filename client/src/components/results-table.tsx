@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { JobMatchResult } from "@shared/schema";
+import { authService } from "@/lib/auth";
 import {
   Table,
   TableBody,
@@ -68,6 +69,22 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [selectedCandidates, setSelectedCandidates] = useState<Set<number>>(new Set());
   const [isBatchCalling, setIsBatchCalling] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Get current user role for Call icon visibility
+  useEffect(() => {
+    const getCurrentUserRole = async () => {
+      try {
+        if (authService.isAuthenticated()) {
+          const user = await authService.getCurrentUser();
+          setUserRole(user.role);
+        }
+      } catch (error) {
+        console.error('Failed to get user role:', error);
+      }
+    };
+    getCurrentUserRole();
+  }, []);
 
   const totalPages = Math.ceil(matches.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -447,23 +464,25 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
               </Button>
             </div>
             <div className="flex gap-2">
-              <Button
-                onClick={initiateBatchCalling}
-                disabled={isBatchCalling || isBatchApplying}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {isBatchCalling ? (
-                  <>
-                    <PhoneCall className="mr-2 h-4 w-4 animate-pulse" />
-                    Calling ({selectedCandidates.size})
-                  </>
-                ) : (
-                  <>
-                    <PhoneCall className="mr-2 h-4 w-4" />
-                    Call Selected ({selectedCandidates.size})
-                  </>
-                )}
-              </Button>
+              {userRole === 'super_admin' && (
+                <Button
+                  onClick={initiateBatchCalling}
+                  disabled={isBatchCalling || isBatchApplying}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isBatchCalling ? (
+                    <>
+                      <PhoneCall className="mr-2 h-4 w-4 animate-pulse" />
+                      Calling ({selectedCandidates.size})
+                    </>
+                  ) : (
+                    <>
+                      <PhoneCall className="mr-2 h-4 w-4" />
+                      Call Selected ({selectedCandidates.size})
+                    </>
+                  )}
+                </Button>
+              )}
               <Button
                 onClick={initiateBatchApplications}
                 disabled={isBatchApplying || isBatchCalling}
@@ -551,15 +570,17 @@ export default function ResultsTable({ matches, isLoading }: ResultsTableProps) 
                       <div className="text-sm text-gray-900">{match.candidate.email}</div>
                       <div className="flex items-center space-x-2">
                         <span className="text-sm text-gray-500">{match.candidate.phone}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => initiateAICall(match.candidate.phone, match.candidate.name, match.job.id)}
-                          className="p-1 h-6 w-6 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                          title="Start AI Interview Call"
-                        >
-                          <PhoneIcon className="h-4 w-4" />
-                        </Button>
+                        {userRole === 'super_admin' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => initiateAICall(match.candidate.phone, match.candidate.name, match.job.id)}
+                            className="p-1 h-6 w-6 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                            title="Start AI Interview Call"
+                          >
+                            <PhoneIcon className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
