@@ -1,15 +1,132 @@
-import { getSQLiteDB } from './sqlite-db';
-import { 
-  jobs, candidates, jobMatches, interviews, users, organizations,
-  teams, userTeams, auditLogs, usageMetrics
-} from './sqlite-schema';
-import { eq, desc, and, gte } from 'drizzle-orm';
+import { initializeSQLiteDatabase } from './init-database';
 
-// Import types from SQLite schema
-import type { 
-  Job, Candidate, JobMatch, Interview, User, Organization,
-  InsertJob, InsertCandidate, InsertJobMatch, InsertInterview, InsertUser, InsertOrganization
-} from './sqlite-schema';
+// Type definitions for SQLite storage
+interface Job {
+  id: number;
+  title: string;
+  description: string;
+  requirements?: string;
+  experience_level: string;
+  job_type: string;
+  keywords: string;
+  location?: string;
+  organization_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsertJob {
+  title: string;
+  description: string;
+  requirements?: string;
+  experience_level: string;
+  job_type: string;
+  keywords: string;
+  location?: string;
+  organization_id: number;
+}
+
+interface Candidate {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  experience: number;
+  resume_content: string;
+  resume_file_name: string;
+  organization_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsertCandidate {
+  name: string;
+  email: string;
+  phone: string;
+  experience: number;
+  resume_content: string;
+  resume_file_name: string;
+  organization_id: number;
+}
+
+interface JobMatch {
+  id: number;
+  job_id: number;
+  candidate_id: number;
+  match_percentage: number;
+  ai_reasoning?: string;
+  organization_id: number;
+  created_at: string;
+}
+
+interface InsertJobMatch {
+  job_id: number;
+  candidate_id: number;
+  match_percentage: number;
+  ai_reasoning?: string;
+  organization_id: number;
+}
+
+interface Interview {
+  id: number;
+  job_id: number;
+  candidate_id: number;
+  scheduled_at: string;
+  status: string;
+  notes?: string;
+  organization_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsertInterview {
+  job_id: number;
+  candidate_id: number;
+  scheduled_at: string;
+  status: string;
+  notes?: string;
+  organization_id: number;
+}
+
+interface User {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  organization_id: number;
+  is_active: boolean;
+  permissions?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsertUser {
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  organization_id: number;
+  is_active?: boolean;
+  permissions?: string;
+}
+
+interface Organization {
+  id: number;
+  name: string;
+  domain?: string;
+  plan: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface InsertOrganization {
+  name: string;
+  domain?: string;
+  plan: string;
+  status?: string;
+}
 
 export interface IStorage {
   // Jobs
@@ -60,7 +177,6 @@ export interface IStorage {
 
 
 export class SQLiteStorage implements IStorage {
-  private db: any;
   private sqlite: any;
 
   constructor() {
@@ -69,9 +185,7 @@ export class SQLiteStorage implements IStorage {
 
   private async initializeConnection() {
     try {
-      const dbInstance = await getSQLiteDB();
-      this.db = dbInstance.db;
-      this.sqlite = dbInstance.sqlite;
+      this.sqlite = await initializeSQLiteDatabase();
     } catch (error) {
       console.error('Failed to initialize SQLite connection:', error);
     }

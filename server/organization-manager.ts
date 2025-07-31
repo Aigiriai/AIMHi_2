@@ -44,317 +44,225 @@ export class OrganizationManager {
       subdomain = `${subdomain}${Date.now().toString().slice(-6)}`;
     }
 
-    // Handle domain - make it null if empty to avoid unique constraint issues
-    const finalDomain = domain && domain.trim() ? domain.trim() : null;
-    
-    // Validate domain uniqueness if provided
-    if (finalDomain) {
-      const existingDomain = sqlite.prepare(`
-        SELECT id FROM organizations WHERE domain = ? LIMIT 1
-      `).get(finalDomain);
-      
-      if (existingDomain) {
-        throw new Error(`Organization with domain ${finalDomain} already exists`);
-      }
-    }
-
     // CRITICAL: Validate organization name uniqueness (globally required for login)
-    const existingOrgName = sqlite.prepare(`
+    const existingOrgByName = sqlite.prepare(`
       SELECT id FROM organizations WHERE name = ? LIMIT 1
     `).get(name);
 
-    if (existingOrgName) {
-      throw new Error(`Organization with name "${name}" already exists. Organization names must be globally unique.`);
+    if (existingOrgByName) {
+      throw new Error(`Organization with name "${name}" already exists. Please choose a different name.`);
     }
-
-    // Create organization using raw SQL
-    const organizationResult = sqlite.prepare(`
-      INSERT INTO organizations (
-        name, domain, subdomain, plan, status, timezone, date_format, currency,
-        settings, billing_settings, compliance_settings, integration_settings,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      name,
-      finalDomain,
-      subdomain,
-      plan,
-      'active',
-      'UTC',
-      'MM/DD/YYYY',
-      'USD',
-      JSON.stringify({
-        theme: 'default',
-        timezone: 'UTC',
-        dateFormat: 'MM/DD/YYYY',
-        currency: 'USD'
-      }),
-      JSON.stringify({
-        pricingModel: 'per_user',
-        pricePerUser: 50,
-        pricePerResume: 2,
-        pricePerInterview: 5,
-        billingCycle: 'monthly'
-      }),
-      JSON.stringify({
-        dataRetentionDays: 2555, // 7 years
-        gdprCompliant: true,
-        ccpaCompliant: true,
-        auditLogRetentionDays: 2555
-      }),
-      JSON.stringify({
-        allowedIntegrations: ['linkedin', 'indeed', 'greenhouse', 'workday'],
-        apiRateLimit: 1000,
-        webhookEnabled: true
-      }),
-      new Date().toISOString(),
-      new Date().toISOString()
-    );
-
-    const organizationId = organizationResult.lastInsertRowid;
 
     console.log(`👤 ORG MANAGER: About to create admin user in organization manager`);
     console.log(`📊 ORG MANAGER: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
     console.log(`📧 ORG MANAGER: Admin email = ${adminEmail}`);
-    console.log(`🏢 ORG MANAGER: Organization ID = ${organizationId}`);
-    
-    // Create admin user using raw SQL
-    const passwordHash = await hashPassword(adminPassword);
-    const adminUserResult = sqlite.prepare(`
-      INSERT INTO users (
-        organization_id, email, password_hash, first_name, last_name, role,
-        is_active, permissions, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      organizationId,
-      adminEmail,
-      passwordHash,
-      adminFirstName,
-      adminLastName,
-      'org_admin',
-      1, // is_active
-      JSON.stringify({
-        users: ['create', 'read', 'update', 'delete'],
-        teams: ['create', 'read', 'update', 'delete'],
-        jobs: ['create', 'read', 'update', 'delete'],
-        candidates: ['create', 'read', 'update', 'delete'],
-        interviews: ['create', 'read', 'update', 'delete'],
-        settings: ['read', 'update'],
-        billing: ['read', 'update'],
-        analytics: ['read']
-      }),
-      new Date().toISOString(),
-      new Date().toISOString()
-    );
 
-    const adminUserId = adminUserResult.lastInsertRowid;
-    
-    console.log(`✅ ORG MANAGER: Admin user created successfully with ID = ${adminUserId}`);
-    console.log(`📁 ORG MANAGER: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
-
-    return {
-      organization: {
-        id: organizationId,
+    try {
+      // Create organization
+      const orgResult = sqlite.prepare(`
+        INSERT INTO organizations (
+          name, subdomain, domain, plan, status, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(
         name,
-        domain: finalDomain,
         subdomain,
+        domain || '',
         plan,
-        status: 'active',
-        createdAt: new Date().toISOString()
-      },
-      adminUser: {
-        id: adminUserId,
-        email: adminEmail,
-        firstName: adminFirstName,
-        lastName: adminLastName,
-        role: 'org_admin'
-      },
-      teams: []
-    };
-  }
+        'active',
+        new Date().toISOString(),
+        new Date().toISOString()
+      );
 
-  // Get organization with statistics
-  async getOrganizationWithStats(orgId: number) {
-    const { initializeSQLiteDatabase } = await import('./init-database');
-    const sqlite = await initializeSQLiteDatabase();
-    
-    // Get organization data
-    const org = sqlite.prepare('SELECT * FROM organizations WHERE id = ? LIMIT 1').get(orgId);
-    
-    if (!org) return null;
+      const organizationId = orgResult.lastInsertRowid as number;
+      console.log(`🏢 ORG MANAGER: Organization ID = ${organizationId}`);
 
-    // Get admin user (organization admin or super admin for platform org)
-    const adminUser = sqlite.prepare(`
-      SELECT * FROM users 
-      WHERE organization_id = ? 
-        AND (role = 'org_admin' OR role = 'super_admin')
-        AND is_active = 1
-      LIMIT 1
-    `).get(orgId);
+      // Hash the admin password
+      const hashedPassword = await hashPassword(adminPassword);
 
-    // Get counts
-    const userCount = sqlite.prepare(`
-      SELECT COUNT(*) as count FROM users 
-      WHERE organization_id = ? AND is_active = 1
-    `).get(orgId);
+      // Create admin user
+      const userResult = sqlite.prepare(`
+        INSERT INTO users (
+          organization_id, email, first_name, last_name, password_hash, 
+          role, is_active, permissions, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        organizationId,
+        adminEmail,
+        adminFirstName,
+        adminLastName,
+        hashedPassword,
+        'org_admin',
+        1, // is_active
+        JSON.stringify({
+          users: ['create', 'read', 'update', 'delete'],
+          teams: ['create', 'read', 'update', 'delete'],
+          jobs: ['create', 'read', 'update', 'delete'],
+          candidates: ['create', 'read', 'update', 'delete'],
+          interviews: ['create', 'read', 'update', 'delete'],
+          settings: ['read', 'update'],
+          billing: ['read', 'update'],
+          analytics: ['read']
+        }),
+        new Date().toISOString(),
+        new Date().toISOString()
+      );
 
-    const teamCount = sqlite.prepare(`
-      SELECT COUNT(*) as count FROM teams 
-      WHERE organization_id = ?
-    `).get(orgId);
+      const adminUserId = userResult.lastInsertRowid as number;
+      console.log(`✅ ORG MANAGER: Admin user created successfully with ID = ${adminUserId}`);
 
-    // Get current month usage
-    const currentMonth = new Date().toISOString().substring(0, 7); // YYYY-MM
-    const monthlyUsage = sqlite.prepare(`
-      SELECT * FROM usage_metrics 
-      WHERE organization_id = ? AND billing_period = ?
-    `).all(orgId, currentMonth);
+      // Get the created organization and user data
+      const organization = sqlite.prepare(`
+        SELECT * FROM organizations WHERE id = ?
+      `).get(organizationId);
 
-    return {
-      ...org,
-      adminUser: adminUser ? {
-        id: adminUser.id,
-        email: adminUser.email,
-        firstName: adminUser.first_name,
-        lastName: adminUser.last_name,
-        lastLoginAt: adminUser.last_login_at
-      } : null,
-      userCount: Number(userCount.count),
-      teamCount: Number(teamCount.count),
-      monthlyUsage
-    };
-  }
+      const adminUser = sqlite.prepare(`
+        SELECT * FROM users WHERE id = ?
+      `).get(adminUserId);
 
-  // Track usage for billing
-  async trackUsage(
-    organizationId: number,
-    userId: number | null,
-    metricType: string,
-    metricValue: number = 1,
-    metadata: any = {}
-  ) {
-    const billingPeriod = new Date().toISOString().substring(0, 7); // YYYY-MM
-    const db = await getDB();
+      console.log(`📁 ORG MANAGER: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
 
-    await db.insert(usageMetrics).values({
-      organizationId,
-      userId,
-      metricType,
-      metricValue,
-      metadata: JSON.stringify(metadata),
-      billingPeriod
-    });
-  }
-
-  // Get hierarchical user structure
-  async getOrganizationHierarchy(orgId: number) {
-    const sqlite = await getSQLite();
-    const allUsers = sqlite.prepare(`
-      SELECT * FROM users 
-      WHERE organization_id = ? AND is_active = 1
-    `).all(orgId);
-
-    // Build hierarchy tree
-    const userMap = new Map(allUsers.map((user: any) => [user.id, { ...user, subordinates: [] as any[] }]));
-    const hierarchy: any[] = [];
-
-    allUsers.forEach((user: any) => {
-      const userWithSubs = userMap.get(user.id)!;
-      if (user.manager_id) {
-        const manager = userMap.get(user.manager_id);
-        if (manager) {
-          manager.subordinates.push(userWithSubs);
-        } else {
-          hierarchy.push(userWithSubs);
+      return {
+        organization: {
+          id: organizationId,
+          name: (organization as any).name,
+          subdomain: (organization as any).subdomain,
+          domain: (organization as any).domain,
+          plan: (organization as any).plan,
+          status: (organization as any).status
+        },
+        adminUser: {
+          id: adminUserId,
+          email: (adminUser as any).email,
+          firstName: (adminUser as any).first_name,
+          lastName: (adminUser as any).last_name,
+          role: (adminUser as any).role
         }
-      } else {
-        hierarchy.push(userWithSubs);
-      }
-    });
-
-    return hierarchy;
+      };
+    } catch (error) {
+      console.error('Failed to create organization:', error);
+      throw error;
+    }
   }
 
-  // Get monthly billing summary
-  async getMonthlyBilling(orgId: number, billingPeriod?: string) {
-    const period = billingPeriod || new Date().toISOString().substring(0, 7);
-    const db = await getDB();
-    
-    const [org] = await db
-      .select()
-      .from(organizations)
-      .where(eq(organizations.id, orgId))
-      .limit(1);
+  // Get organization by ID
+  async getOrganization(orgId: number) {
+    try {
+      const sqlite = await getSQLite();
+      
+      const organization = sqlite.prepare(`
+        SELECT * FROM organizations WHERE id = ? LIMIT 1
+      `).get(orgId);
 
-    if (!org) return null;
+      return organization;
+    } catch (error) {
+      console.error('Failed to get organization:', error);
+      throw error;
+    }
+  }
 
-    const usage = await db
-      .select({
-        metricType: usageMetrics.metricType,
-        totalValue: sql`sum(${usageMetrics.metricValue})`,
-        count: sql`count(*)`
-      })
-      .from(usageMetrics)
-      .where(and(
-        eq(usageMetrics.organizationId, orgId),
-        eq(usageMetrics.billingPeriod, period)
-      ))
-      .groupBy(usageMetrics.metricType);
+  // Get organization metrics for billing cycle analysis (simplified)
+  async getOrganizationMetrics(orgId: number, period: string) {
+    try {
+      const sqlite = await getSQLite();
+      
+      // Get organization details
+      const organization = sqlite.prepare(`
+        SELECT * FROM organizations WHERE id = ? LIMIT 1
+      `).get(orgId);
 
-    const billingSettings = org.billingSettings as any;
-    let totalCost = 0;
-    const breakdown: any[] = [];
-
-    // Calculate costs based on pricing model
-    usage.forEach(metric => {
-      let cost = 0;
-      const quantity = Number(metric.totalValue);
-
-      switch (metric.metricType) {
-        case 'resume_processed':
-          cost = quantity * (billingSettings.pricePerResume || 2);
-          break;
-        case 'interview_scheduled':
-          cost = quantity * (billingSettings.pricePerInterview || 5);
-          break;
-        case 'ai_match_run':
-          cost = quantity * (billingSettings.pricePerMatch || 1);
-          break;
+      if (!organization) {
+        throw new Error('Organization not found');
       }
 
-      totalCost += cost;
-      breakdown.push({
-        metric: metric.metricType,
-        quantity,
-        rate: cost / quantity || 0,
-        total: cost
-      });
-    });
+      // Get current usage metrics for the period (simplified)
+      const usageMetrics = sqlite.prepare(`
+        SELECT * FROM usage_metrics 
+        WHERE organization_id = ? AND billing_period = ? 
+        LIMIT 1
+      `).get(orgId, period);
 
-    // Add user-based pricing if applicable
-    if (billingSettings.pricingModel === 'per_user' || billingSettings.pricingModel === 'hybrid') {
-      const [userCount] = await db
-        .select({ count: sql`count(*)` })
-        .from(users)
-        .where(and(eq(users.organizationId, orgId), eq(users.isActive, true)));
+      // Calculate total active users
+      const totalUsersResult = sqlite.prepare(`
+        SELECT COUNT(*) as count FROM users 
+        WHERE organization_id = ? AND is_active = 1
+      `).get(orgId) as any;
 
-      const userCost = Number(userCount.count) * (billingSettings.pricePerUser || 50);
-      totalCost += userCost;
-      breakdown.push({
-        metric: 'active_users',
-        quantity: Number(userCount.count),
-        rate: billingSettings.pricePerUser || 50,
-        total: userCost
-      });
+      return {
+        organization,
+        usageMetrics: usageMetrics || {
+          organization_id: orgId,
+          billing_period: period,
+          ai_calls_count: 0,
+          tokens_used: 0,
+          storage_used: 0,
+          cost_usd: 0,
+          last_calculated: new Date().toISOString()
+        },
+        totalUsers: totalUsersResult.count
+      };
+    } catch (error) {
+      console.error('Failed to get organization metrics:', error);
+      throw error;
     }
+  }
 
-    return {
-      organization: org.name,
-      billingPeriod: period,
-      totalCost,
-      breakdown,
-      billingSettings
-    };
+  // Update organization settings
+  async updateOrganization(orgId: number, updates: any) {
+    try {
+      const sqlite = await getSQLite();
+      
+      const updateFields = [];
+      const updateValues = [];
+      
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined) {
+          updateFields.push(`${key} = ?`);
+          updateValues.push(value);
+        }
+      });
+      
+      if (updateFields.length > 0) {
+        updateFields.push('updated_at = ?');
+        updateValues.push(new Date().toISOString());
+        updateValues.push(orgId);
+        
+        sqlite.prepare(`
+          UPDATE organizations 
+          SET ${updateFields.join(', ')} 
+          WHERE id = ?
+        `).run(...updateValues);
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to update organization:', error);
+      throw error;
+    }
+  }
+
+  // Delete organization (simplified)
+  async deleteOrganization(orgId: number) {
+    try {
+      const sqlite = await getSQLite();
+      
+      // Safety checks
+      const organization = sqlite.prepare(`
+        SELECT * FROM organizations WHERE id = ? LIMIT 1
+      `).get(orgId);
+
+      if (!organization) {
+        throw new Error('Organization not found');
+      }
+
+      // Delete organization and related data
+      sqlite.prepare('DELETE FROM users WHERE organization_id = ?').run(orgId);
+      sqlite.prepare('DELETE FROM organizations WHERE id = ?').run(orgId);
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to delete organization:', error);
+      throw error;
+    }
   }
 }
 

@@ -1,21 +1,15 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { initializeSQLiteDatabase } from './init-database';
+import { generateToken, verifyPassword, hashPassword, authenticateToken, requireSuperAdmin, type AuthRequest } from './auth';
+import { organizationManager } from './organization-manager';
 
-// Database connection helper  
-async function getDB() {
-  // For now, use raw SQLite instead of drizzle to avoid schema conflicts
-  return await getSQLite();
-}
+const router = Router();
 
 // SQLite database helper for raw queries
 async function getSQLite() {
   return await initializeSQLiteDatabase();
 }
-import { generateToken, verifyPassword, hashPassword, authenticateToken, requireSuperAdmin, logAuditEvent, type AuthRequest } from './auth';
-import { organizationManager } from './organization-manager';
-
-const router = Router();
 
 // Login schema - Organization identification is now mandatory
 const loginSchema = z.object({
@@ -49,19 +43,11 @@ const updateUserSchema = z.object({
   lastName: z.string().min(1).max(50).optional(),
   email: z.string().email().optional(),
   phone: z.string().optional(),
-  role: z.enum(['recruiter', 'team_lead', 'manager', 'org_admin']).optional(),
+  role: z.enum(['super_admin', 'org_admin', 'manager', 'team_lead', 'recruiter']).optional(),
+  isActive: z.boolean().optional(),
 });
 
-// Password change schema
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string()
-    .min(8, "Password must be at least 8 characters")
-    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
-      "Password must contain uppercase, lowercase, number, and special character"),
-});
-
-// POST /auth/login
+// POST /auth/login - Authenticate user
 router.post('/login', async (req, res) => {
   try {
     const { email, password, organizationName } = loginSchema.parse(req.body);
@@ -81,23 +67,14 @@ router.post('/login', async (req, res) => {
         AND o.status = 'active'
         AND o.name = ?
       LIMIT 1
-    `).get(email, organizationName);
+    `).get(email, organizationName) as any;
 
     if (!result) {
       return res.status(401).json({ message: 'Invalid credentials or organization' });
     }
 
-    const user = result;
-    const organization = {
-      id: result.org_id,
-      name: result.organization_name,
-      domain: result.domain,
-      plan: result.plan,
-      status: result.status
-    };
-
     // Verify password using bcrypt verification
-    const isValidPassword = await verifyPassword(password, user.password_hash);
+    const isValidPassword = await verifyPassword(password, result.password_hash);
     
     if (!isValidPassword) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -105,46 +82,34 @@ router.post('/login', async (req, res) => {
 
     // Generate token
     const token = generateToken({
-      id: user.id,
-      organizationId: user.organization_id,
-      email: user.email,
-      firstName: user.first_name,
-      lastName: user.last_name,
-      role: user.role,
-      permissions: user.permissions,
+      id: result.id,
+      organizationId: result.organization_id,
+      email: result.email,
+      firstName: result.first_name,
+      lastName: result.last_name,
+      role: result.role,
+      permissions: result.permissions,
     });
-
-    // Update last login (skip for SQLite compatibility)
-    // await db.update(users)
-    //   .set({ lastLoginAt: new Date().toISOString() })
-    //   .where(eq(users.id, user.id));
-
-    // Log audit event (skip for SQLite compatibility)
-    // await db.insert(auditLogs).values({
-    //   organizationId: user.organizationId,
-    //   userId: user.id,
-    //   action: 'user_login',
-    //   details: JSON.stringify({ email, organizationName }),
-    //   ipAddress: req.ip || 'unknown',
-    //   userAgent: req.get('User-Agent') || 'unknown',
-    //   createdAt: new Date().toISOString(),
-    // });
 
     res.json({
       token,
       user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        role: user.role,
-        organizationId: user.organization_id,
-        organizationName: organization.name,
-      },
+        id: result.id,
+        email: result.email,
+        firstName: result.first_name,
+        lastName: result.last_name,
+        role: result.role,
+        organizationId: result.organization_id,
+        organizationName: result.organization_name
+      }
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(400).json({ message: 'Invalid request' });
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ message: 'Invalid login data', errors: error.errors });
+    } else {
+      res.status(500).json({ message: 'Internal server error' });
+    }
   }
 });
 
@@ -153,39 +118,30 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const sqlite = await getSQLite();
     
-    // Get user with organization data using raw SQL join
+    // Get user with organization info using raw SQL join
     const result = sqlite.prepare(`
       SELECT 
-        u.id, u.email, u.first_name, u.last_name, u.role, 
-        u.permissions, u.organization_id,
-        o.name as organization_name, o.domain, o.plan, o.status,
+        u.id, u.email, u.first_name, u.last_name, u.role, u.permissions, 
+        u.organization_id,
+        o.name as organization_name, o.domain, o.plan, o.status, 
         o.timezone, o.date_format, o.currency
       FROM users u
       INNER JOIN organizations o ON u.organization_id = o.id
-      WHERE u.id = ?
+      WHERE u.id = ? AND u.is_active = 1
       LIMIT 1
-    `).get(req.user!.id);
+    `).get(req.user!.id) as any;
 
     if (!result) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    // Set cache control headers to prevent caching issues
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    });
 
     res.json({
       id: result.id,
       email: result.email,
       firstName: result.first_name,
       lastName: result.last_name,
-      phone: null,
       role: result.role,
-      permissions: result.permissions,
-      settings: "{}",
+      permissions: JSON.parse(result.permissions || '{}'),
       organizationId: result.organization_id,
       organizationName: result.organization_name,
       organizationPlan: result.plan,
@@ -209,48 +165,69 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
 // PUT /auth/profile - Update user profile
 router.put('/profile', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
+    const sqlite = await getSQLite();
     const userId = req.user!.id;
     const updateData = updateProfileSchema.parse(req.body);
 
     // Check if email is being changed and if it already exists
     if (updateData.email) {
-      const existingUser = await db.select()
-        .from(users)
-        .where(and(
-          eq(users.email, updateData.email),
-          ne(users.id, userId)
-        ))
-        .limit(1);
+      const existingUser = sqlite.prepare(`
+        SELECT id FROM users 
+        WHERE email = ? AND id != ? AND organization_id = ?
+        LIMIT 1
+      `).get(updateData.email, userId, req.user!.organizationId);
 
-      if (existingUser.length > 0) {
+      if (existingUser) {
         return res.status(400).json({ message: 'Email already exists' });
       }
     }
 
-    // Update user profile
-    const [updatedUser] = await db.update(users)
-      .set({
-        firstName: updateData.firstName,
-        lastName: updateData.lastName,
-        email: updateData.email,
-        phone: updateData.phone,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(users.id, userId))
-      .returning();
+    // Build dynamic update query
+    const updateFields = [];
+    const updateValues = [];
+    
+    if (updateData.firstName) {
+      updateFields.push('first_name = ?');
+      updateValues.push(updateData.firstName);
+    }
+    if (updateData.lastName) {
+      updateFields.push('last_name = ?');
+      updateValues.push(updateData.lastName);
+    }
+    if (updateData.email) {
+      updateFields.push('email = ?');
+      updateValues.push(updateData.email);
+    }
+    if (updateData.phone) {
+      updateFields.push('phone = ?');
+      updateValues.push(updateData.phone);
+    }
+    
+    updateFields.push('updated_at = ?');
+    updateValues.push(new Date().toISOString());
+    updateValues.push(userId);
 
-    await logAuditEvent(req, 'profile_updated', 'user', userId, {
-      updatedFields: Object.keys(updateData),
-    });
+    // Update user profile
+    sqlite.prepare(`
+      UPDATE users 
+      SET ${updateFields.join(', ')}
+      WHERE id = ?
+    `).run(...updateValues);
+
+    // Get updated user data
+    const updatedUser = sqlite.prepare(`
+      SELECT id, email, first_name, last_name, phone 
+      FROM users 
+      WHERE id = ?
+    `).get(userId) as any;
 
     res.json({
       success: true,
       message: 'Profile updated successfully',
       user: {
         id: updatedUser.id,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
+        firstName: updatedUser.first_name,
+        lastName: updatedUser.last_name,
         email: updatedUser.email,
         phone: updatedUser.phone,
       }
@@ -260,113 +237,12 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res) => {
     if (error instanceof z.ZodError) {
       res.status(400).json({ message: 'Invalid profile data', errors: error.errors });
     } else {
-      res.status(500).json({ message: 'Failed to update profile' });
+      res.status(500).json({ message: 'Internal server error' });
     }
   }
 });
 
-// PUT /auth/change-password - Change user password
-router.put('/change-password', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const db = await getDB();
-    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
-    const userId = req.user!.id;
-
-    // Get current user data
-    const [currentUser] = await db.select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-
-    if (!currentUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Verify current password
-    let isCurrentPasswordValid = false;
-    if (currentUser.hasTemporaryPassword && currentUser.temporaryPassword) {
-      // For temporary passwords, compare directly
-      isCurrentPasswordValid = currentPassword === currentUser.temporaryPassword;
-    } else {
-      // For regular passwords, use bcrypt verification
-      isCurrentPasswordValid = await verifyPassword(currentPassword, currentUser.passwordHash);
-    }
-
-    if (!isCurrentPasswordValid) {
-      return res.status(400).json({ message: 'Current password is incorrect' });
-    }
-
-    // Hash new password
-    const hashedNewPassword = await hashPassword(newPassword);
-
-    // Update password and clear temporary password flags
-    await db.update(users)
-      .set({
-        passwordHash: hashedNewPassword,
-        hasTemporaryPassword: false,
-        temporaryPassword: null,
-        updatedAt: new Date().toISOString()
-      })
-      .where(eq(users.id, userId));
-
-    await logAuditEvent(req, 'password_changed', 'user', userId, {
-      userId: userId
-    });
-
-    res.json({
-      success: true,
-      message: 'Password changed successfully'
-    });
-  } catch (error) {
-    console.error('Password change error:', error);
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ message: 'Invalid password data', errors: error.errors });
-    } else {
-      res.status(500).json({ message: 'Failed to change password' });
-    }
-  }
-});
-
-// POST /auth/organizations - Create new organization (Super Admin only)
-router.post('/organizations', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
-  try {
-    const db = await getDB();
-    const orgData = createOrgSchema.parse(req.body);
-
-    const result = await organizationManager.createOrganization(orgData);
-
-    await logAuditEvent(req, 'organization_created', 'organization', result.organization.id, {
-      organizationName: result.organization.name,
-      adminEmail: orgData.adminEmail,
-    });
-
-    res.status(201).json({
-      message: 'Organization created successfully',
-      organization: {
-        id: result.organization.id,
-        name: result.organization.name,
-        subdomain: result.organization.subdomain,
-        plan: result.organization.plan,
-      },
-      adminUser: {
-        id: result.adminUser.id,
-        email: result.adminUser.email,
-        firstName: result.adminUser.firstName,
-        lastName: result.adminUser.lastName,
-      },
-      teams: result.teams.map(team => ({
-        id: team.id,
-        name: team.name,
-        description: team.description,
-      })),
-    });
-  } catch (error) {
-    console.error('Create organization error:', error);
-    res.status(400).json({ message: 'Invalid request' });
-  }
-});
-
-// GET /auth/organizations - List all organizations (Super Admin only)
+// GET /auth/organizations - Get all organizations (Super Admin only)
 router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
     const sqlite = await getSQLite();
@@ -374,127 +250,99 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
-    // Get total count first
-    const totalResult = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get();
-    const totalOrgs = totalResult.count;
-
-    // Get organizations with pagination
-    const orgs = sqlite.prepare(`
+    // Get paginated organizations
+    const organizations = sqlite.prepare(`
       SELECT * FROM organizations 
       ORDER BY id DESC 
       LIMIT ? OFFSET ?
     `).all(limit, offset);
 
-    const orgStats = await Promise.all(
-      orgs.map(async (org) => {
-        const stats = await organizationManager.getOrganizationWithStats(org.id);
-        
-        // Get stored credentials for this organization using raw SQL
-        const credentials = sqlite.prepare(`
-          SELECT * FROM organization_credentials 
-          WHERE organization_id = ? 
-          LIMIT 1
-        `).get(org.id);
+    // Get total count
+    const totalResult = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get() as any;
+    const totalOrganizations = totalResult.count;
 
-        return {
-          ...stats,
-          temporaryCredentials: credentials ? {
-            email: credentials.email,
-            password: credentials.temporary_password,
-            loginUrl: `${req.protocol}://${req.get('host')}/login`,
-            isPasswordChanged: credentials.is_password_changed
-          } : null
-        };
-      })
-    );
+    // Get additional stats
+    const statsResult = sqlite.prepare(`
+      SELECT 
+        o.id,
+        o.name,
+        o.description,
+        COUNT(u.id) as user_count
+      FROM organizations o
+      LEFT JOIN users u ON o.id = u.organization_id
+      WHERE o.id IN (${organizations.map(() => '?').join(',')})
+      GROUP BY o.id, o.name, o.description
+    `).all(organizations.map(org => (org as any).id));
+
+    const organizationsWithStats = organizations.map(org => {
+      const stats = statsResult.find(s => (s as any).id === (org as any).id);
+      return {
+        ...(org as any),
+        userCount: stats ? (stats as any).user_count : 0
+      };
+    });
 
     res.json({
-      organizations: orgStats,
+      organizations: organizationsWithStats,
       pagination: {
-        page,
-        limit,
-        total: totalOrgs,
-        totalPages: Math.ceil(totalOrgs / limit),
-        hasNext: page < Math.ceil(totalOrgs / limit),
-        hasPrev: page > 1,
-      },
+        currentPage: page,
+        totalPages: Math.ceil(totalOrganizations / limit),
+        totalOrganizations,
+        hasNext: page * limit < totalOrganizations,
+        hasPrev: page > 1
+      }
     });
   } catch (error) {
-    console.error('List organizations error:', error);
+    console.error('Get organizations error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// PUT /auth/organizations/:id - Update organization details (Super Admin only)
-router.put('/organizations/:id', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
+// GET /auth/organizations/:id/credentials - Get organization admin credentials (Super Admin only)
+router.get('/organizations/:id/credentials', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
     const sqlite = await getSQLite();
-    const organizationId = parseInt(req.params.id);
-    const updateData = z.object({
-      name: z.string().optional(),
-      domain: z.string().optional(),
-      timezone: z.string().optional(),
-      dateFormat: z.string().optional(),
-      currency: z.string().optional(),
-    }).parse(req.body);
+    const orgId = parseInt(req.params.id);
 
-    // Build dynamic update query
-    const updates = [];
-    const values = [];
-    
-    if (updateData.name) {
-      updates.push('name = ?');
-      values.push(updateData.name);
-    }
-    if (updateData.domain) {
-      updates.push('domain = ?');
-      values.push(updateData.domain);
-    }
-    if (updateData.timezone) {
-      updates.push('timezone = ?');
-      values.push(updateData.timezone);
-    }
-    if (updateData.dateFormat) {
-      updates.push('date_format = ?');
-      values.push(updateData.dateFormat);
-    }
-    if (updateData.currency) {
-      updates.push('currency = ?');
-      values.push(updateData.currency);
-    }
-    
-    if (updates.length === 0) {
-      return res.status(400).json({ message: 'No valid update fields provided' });
-    }
-    
-    updates.push('updated_at = ?');
-    values.push(new Date().toISOString());
-    values.push(organizationId);
+    const credentials = sqlite.prepare(`
+      SELECT email, temporary_password, is_password_changed
+      FROM organization_credentials 
+      WHERE organization_id = ?
+      LIMIT 1
+    `).get(orgId) as any;
 
-    // Update organization using raw SQL
-    const result = sqlite.prepare(`
-      UPDATE organizations 
-      SET ${updates.join(', ')} 
-      WHERE id = ?
-    `).run(...values);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ message: 'Organization not found' });
+    if (!credentials) {
+      return res.status(404).json({ message: 'Organization credentials not found' });
     }
-
-    // Get updated organization
-    const updatedOrg = sqlite.prepare('SELECT * FROM organizations WHERE id = ?').get(organizationId);
 
     res.json({
-      message: 'Organization updated successfully',
-      organization: updatedOrg
+      email: credentials.email,
+      temporaryPassword: credentials.temporary_password,
+      isPasswordChanged: Boolean(credentials.is_password_changed)
     });
   } catch (error) {
-    console.error('Update organization error:', error);
+    console.error('Get credentials error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /auth/organizations - Create new organization (Super Admin only)
+router.post('/organizations', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
+  try {
+    const orgData = createOrgSchema.parse(req.body);
+    const result = await organizationManager.createOrganization(orgData);
+    
+    res.status(201).json({
+      message: 'Organization created successfully',
+      organization: result.organization,
+      adminUser: result.adminUser
+    });
+  } catch (error) {
+    console.error('Create organization error:', error);
     if (error instanceof z.ZodError) {
-      res.status(400).json({ message: 'Invalid update data', errors: error.errors });
+      res.status(400).json({ message: 'Invalid organization data', errors: error.errors });
     } else {
-      res.status(500).json({ message: 'Failed to update organization' });
+      res.status(500).json({ message: 'Failed to create organization' });
     }
   }
 });
@@ -504,11 +352,7 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
   try {
     const sqlite = await getSQLite();
     const orgId = parseInt(req.params.id);
-    const { transferUsersToOrg, deleteUserData = false } = req.body;
-    
-    if (isNaN(orgId)) {
-      return res.status(400).json({ message: 'Invalid organization ID' });
-    }
+    const { transferUsersToOrg, deleteUserData } = req.body;
 
     // CRITICAL SAFETY CHECK: Never allow deletion of super admin organization
     const targetOrg = sqlite.prepare('SELECT * FROM organizations WHERE id = ? LIMIT 1').get(orgId);
@@ -517,12 +361,9 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
       return res.status(404).json({ message: 'Organization not found' });
     }
 
-    if (targetOrg.domain === 'platform.aimhi.app' || targetOrg.domain === 'aimhi.app') {
+    if ((targetOrg as any).domain === 'platform.aimhi.app' || (targetOrg as any).domain === 'aimhi.app') {
       return res.status(403).json({ message: 'Cannot delete super admin organization' });
     }
-
-    // Check if the requesting user belongs to this organization
-    const isUserDeletingOwnOrg = req.user!.organizationId === orgId;
 
     // CRITICAL SAFETY CHECK: Never allow deletion of super admin user
     const superAdminsInOrg = sqlite.prepare(`
@@ -535,12 +376,10 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
     }
 
     // Check if organization has active users
-    const activeUsers = await db.select()
-      .from(users)
-      .where(and(
-        eq(users.organizationId, orgId),
-        eq(users.isActive, true)
-      ));
+    const activeUsers = sqlite.prepare(`
+      SELECT id FROM users 
+      WHERE organization_id = ? AND is_active = 1
+    `).all(orgId);
 
     if (activeUsers.length > 0 && !transferUsersToOrg && !deleteUserData) {
       return res.status(400).json({ 
@@ -553,235 +392,16 @@ router.delete('/organizations/:id', authenticateToken, requireSuperAdmin, async 
       });
     }
 
-    if (isUserDeletingOwnOrg) {
-      // Log the user out first by invalidating their session
-      res.clearCookie('auth-token');
-      // Note: In a full implementation, you'd also invalidate the JWT in a blacklist
-    }
-
-    // Delete in proper order to avoid foreign key constraint violations
-    console.log(`🗑️ ORGANIZATION DELETE: Starting deletion of organization ${orgId}`);
-    
-    // Get users in the organization first (needed for foreign key cleanup)
-    const orgUsers = await db.select({ id: users.id })
-      .from(users)
-      .where(eq(users.organizationId, orgId));
-    
-    const userIds = orgUsers.map(user => user.id);
-    console.log(`🗑️ ORGANIZATION DELETE: Found ${userIds.length} users to handle`);
-
-    // Get jobs in the organization (needed for foreign key cleanup)
-    const orgJobs = await db.select({ id: jobs.id })
-      .from(jobs)
-      .where(eq(jobs.organizationId, orgId));
-    
-    const jobIds = orgJobs.map(job => job.id);
-    console.log(`🗑️ ORGANIZATION DELETE: Found ${jobIds.length} jobs to delete`);
-
-    // Get candidates in the organization (needed for foreign key cleanup)
-    const orgCandidates = await db.select({ id: candidates.id })
-      .from(candidates)
-      .where(eq(candidates.organizationId, orgId));
-    
-    const candidateIds = orgCandidates.map(candidate => candidate.id);
-    console.log(`🗑️ ORGANIZATION DELETE: Found ${candidateIds.length} candidates to delete`);
-
-    // Get direct SQLite access for raw queries
-    const sqliteDB = await getSQLite();
-    
-    // 1. Delete applications first (references org, jobs, candidates, users - NO CASCADE)
-    sqliteDB.prepare('DELETE FROM applications WHERE organization_id = ?').run(orgId);
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted applications`);
-
-    // 2. Delete job assignments (references jobs, users - NO CASCADE)  
-    if (jobIds.length > 0) {
-      const placeholders = jobIds.map(() => '?').join(',');
-      sqliteDB.prepare(`DELETE FROM job_assignments WHERE job_id IN (${placeholders})`).run(...jobIds);
-      console.log(`🗑️ ORGANIZATION DELETE: Deleted job assignments`);
-    }
-
-    // 3. Delete candidate assignments (references candidates, users - NO CASCADE)
-    if (candidateIds.length > 0) {
-      const placeholders = candidateIds.map(() => '?').join(',');
-      sqliteDB.prepare(`DELETE FROM candidate_assignments WHERE candidate_id IN (${placeholders})`).run(...candidateIds);
-      console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate assignments`);
-    }
-
-    // 4. Delete status history (may reference candidates/jobs/users)
-    sqliteDB.prepare('DELETE FROM status_history WHERE organization_id = ?').run(orgId);
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted status history`);
-
-    // 5. Delete candidate submissions (may reference candidates/users)
-    if (candidateIds.length > 0) {
-      try {
-        // Check what columns exist in candidate_submissions table
-        const tableInfo = sqlite.prepare("PRAGMA table_info(candidate_submissions)").all();
-        const hasOrgId = tableInfo.some((col: any) => col.name === 'organization_id');
-        const hasCandidateId = tableInfo.some((col: any) => col.name === 'candidate_id');
-        
-        if (hasOrgId) {
-          sqlite.prepare('DELETE FROM candidate_submissions WHERE organization_id = ?').run(orgId);
-          console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate submissions (by org_id)`);
-        } else if (hasCandidateId) {
-          const placeholders = candidateIds.map(() => '?').join(',');
-          sqlite.prepare(`DELETE FROM candidate_submissions WHERE candidate_id IN (${placeholders})`).run(...candidateIds);
-          console.log(`🗑️ ORGANIZATION DELETE: Deleted candidate submissions (by candidate_id)`);
-        } else {
-          console.log(`🗑️ ORGANIZATION DELETE: Candidate submissions table has unexpected schema, skipping`);
-        }
-      } catch (error) {
-        console.log(`🗑️ ORGANIZATION DELETE: Candidate submissions table may not exist, skipping`);
-      }
-    }
-
-    // 6. Delete report templates (reference users)
-    if (userIds.length > 0) {
-      try {
-        const placeholders = userIds.map(() => '?').join(',');
-        sqlite.prepare(`DELETE FROM report_templates WHERE user_id IN (${placeholders})`).run(...userIds);
-        console.log(`🗑️ ORGANIZATION DELETE: Deleted report templates`);
-      } catch (error) {
-        console.log(`🗑️ ORGANIZATION DELETE: Report templates table may not exist, skipping`);
-      }
-    }
-
-    // 7. Delete interviews (references jobs, candidates, users)
-    await db.delete(interviews)
-      .where(eq(interviews.organizationId, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted interviews`);
-
-    // 8. Delete job matches (references jobs and candidates)
-    await db.delete(jobMatches)
-      .where(eq(jobMatches.organizationId, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted job matches`);
-
-    // 9. Delete job templates (reference jobs)
-    if (jobIds.length > 0) {
-      const placeholders = jobIds.map(() => '?').join(',');
-      sqlite.prepare(`DELETE FROM job_templates WHERE job_id IN (${placeholders})`).run(...jobIds);
-      console.log(`🗑️ ORGANIZATION DELETE: Deleted job templates`);
-    }
-
-    // 10. Delete candidates (now safe after removing all references)
-    await db.delete(candidates)
-      .where(eq(candidates.organizationId, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted candidates`);
-
-    // 11. Delete jobs (now safe after removing all references)
-    await db.delete(jobs)
-      .where(eq(jobs.organizationId, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted jobs`);
-
-    // 12. Delete user teams for users in this organization
-    if (userIds.length > 0) {
-      await db.delete(userTeams)
-        .where(inArray(userTeams.userId, userIds));
-      console.log(`🗑️ ORGANIZATION DELETE: Deleted user teams`);
-    }
-
-    // 13. Delete user credentials
-    sqlite.prepare('DELETE FROM user_credentials WHERE organization_id = ?').run(orgId);
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted user credentials`);
-
-    // 14. Delete organization credentials
-    await db.delete(organizationCredentials)
-      .where(eq(organizationCredentials.organizationId, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted organization credentials`);
-
-    // 15. Delete usage metrics
-    await db.delete(usageMetrics)
-      .where(eq(usageMetrics.organizationId, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted usage metrics`);
-
-    // 16. Delete audit logs for users in this organization (references users)
-    if (userIds.length > 0) {
-      await db.delete(auditLogs)
-        .where(inArray(auditLogs.userId, userIds));
-      console.log(`🗑️ ORGANIZATION DELETE: Deleted user audit logs`);
-    }
-
-    // 17. Delete audit logs for the organization
-    await db.delete(auditLogs)
-      .where(eq(auditLogs.organizationId, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted organization audit logs`);
-
-    // 18. Delete teams (may reference users as managers) - do this before deleting users
-    await db.delete(teams)
-      .where(eq(teams.organizationId, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted teams`);
-
-    // Handle users based on specified action
-    if (transferUsersToOrg) {
-      // Transfer users to another organization
-      const targetOrgId = parseInt(transferUsersToOrg);
-      const [targetOrgExists] = await db.select()
-        .from(organizations)
-        .where(eq(organizations.id, targetOrgId))
-        .limit(1);
-
-      if (!targetOrgExists) {
-        return res.status(400).json({ message: 'Target organization for user transfer not found' });
-      }
-
-      // Transfer users (deactivate and reassign)
-      await db.update(users)
-        .set({ 
-          organizationId: targetOrgId,
-          isActive: false, // Deactivate for admin review
-          role: 'user' // Reset role for security
-        })
-        .where(eq(users.organizationId, orgId));
-
-      // Log audit event before deleting organization
-      await logAuditEvent(req, 'organization_deleted', 'organization', orgId, {
-        organizationId: orgId,
-        action: 'users_transferred',
-        targetOrganizationId: targetOrgId,
-        userCount: activeUsers.length
-      });
-    } else if (deleteUserData) {
-      // Log audit event before deleting users (while user still exists)
-      await logAuditEvent(req, 'organization_deleted', 'organization', orgId, {
-        organizationId: orgId,
-        action: 'users_deleted',
-        userCount: activeUsers.length
-      });
-
-      // 19. Delete all users in the organization (only if explicitly requested)
-      await db.delete(users)
-        .where(eq(users.organizationId, orgId));
-      console.log(`🗑️ ORGANIZATION DELETE: Deleted ${userIds.length} users`);
-    }
-
-    // 20. Finally delete the organization
-    await db.delete(organizations)
-      .where(eq(organizations.id, orgId));
-    console.log(`🗑️ ORGANIZATION DELETE: Deleted organization ${orgId}`);
+    // Delete organization and related data
+    sqlite.prepare('DELETE FROM organization_credentials WHERE organization_id = ?').run(orgId);
+    sqlite.prepare('DELETE FROM usage_metrics WHERE organization_id = ?').run(orgId);
+    sqlite.prepare('DELETE FROM users WHERE organization_id = ?').run(orgId);
+    sqlite.prepare('DELETE FROM organizations WHERE id = ?').run(orgId);
 
     res.json({ message: 'Organization deleted successfully' });
   } catch (error) {
     console.error('Delete organization error:', error);
     res.status(500).json({ message: 'Failed to delete organization' });
-  }
-});
-
-// GET /auth/usage/:orgId - Get organization usage (Super Admin only)
-router.get('/usage/:orgId', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
-  try {
-    const db = await getDB();
-    const orgId = parseInt(req.params.orgId);
-    const billingPeriod = req.query.period as string;
-
-    const billing = await organizationManager.getMonthlyBilling(orgId, billingPeriod);
-
-    if (!billing) {
-      return res.status(404).json({ message: 'Organization not found' });
-    }
-
-    res.json(billing);
-  } catch (error) {
-    console.error('Get usage error:', error);
-    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -835,12 +455,6 @@ router.post('/invite-organization-admin', authenticateToken, requireSuperAdmin, 
       new Date().toISOString()
     );
 
-    // Skip audit logging for now to avoid drizzle dependencies
-    // await logAuditEvent(req, 'organization_created', 'organization', result.organization.id, {
-    //   organizationName: result.organization.name,
-    //   adminEmail: email,
-    // });
-
     res.status(200).json({
       message: 'Organization created and admin invited successfully',
       organization: {
@@ -854,7 +468,6 @@ router.post('/invite-organization-admin', authenticateToken, requireSuperAdmin, 
         firstName: result.adminUser.firstName,
         lastName: result.adminUser.lastName,
       },
-      // Include temporary credentials for manual sharing
       temporaryCredentials: {
         email: email,
         password: tempPassword,
@@ -865,241 +478,6 @@ router.post('/invite-organization-admin', authenticateToken, requireSuperAdmin, 
   } catch (error) {
     console.error('Invite organization admin error:', error);
     res.status(500).json({ message: 'Failed to create organization and invite admin' });
-  }
-});
-
-// POST /auth/invite-user - Invite a user to organization (Hierarchical permissions)
-router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const db = await getDB();
-    const { email, firstName, lastName, role, phone } = req.body;
-    const invitingUser = req.user!;
-
-    console.log('📧 Invite user request received:', { email, firstName, lastName, role, phone, invitingUserRole: invitingUser.role });
-    console.log(`👤 USER INVITATION: About to create user via invite-user endpoint`);
-    console.log(`📊 USER INVITATION: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
-    console.log(`📧 USER INVITATION: User email = ${email}`);
-    console.log(`🏢 USER INVITATION: Organization ID = ${invitingUser.organizationId}`);
-
-    // Validate required fields
-    if (!email || !firstName || !lastName || !role) {
-      console.error('❌ Missing required fields:', { email: !!email, firstName: !!firstName, lastName: !!lastName, role: !!role });
-      return res.status(400).json({ 
-        message: 'Missing required fields',
-        details: {
-          email: !email ? 'Email is required' : null,
-          firstName: !firstName ? 'First name is required' : null,
-          lastName: !lastName ? 'Last name is required' : null,
-          role: !role ? 'Role is required' : null
-        }
-      });
-    }
-
-    // Check if user with this email already exists in this organization
-    const existingUser = await db.select()
-      .from(users)
-      .where(and(
-        eq(users.email, email),
-        eq(users.organizationId, invitingUser.organizationId!)
-      ))
-      .limit(1);
-
-    if (existingUser.length > 0) {
-      return res.status(400).json({ message: `User with email ${email} already exists in this organization` });
-    }
-
-    // Validate hierarchical permissions
-    const allowedRoles: Record<string, string[]> = {
-      'super_admin': ['org_admin', 'manager', 'team_lead', 'recruiter'],
-      'org_admin': ['manager', 'team_lead', 'recruiter'],
-      'manager': ['team_lead', 'recruiter'], 
-      'team_lead': ['recruiter']
-    };
-
-    const userAllowedRoles = allowedRoles[invitingUser.role] || [];
-    if (!userAllowedRoles.includes(role)) {
-      return res.status(403).json({ message: `You cannot invite users with role: ${role}` });
-    }
-
-    // Generate secure temporary password
-    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase() + '123!';
-    const passwordHash = await hashPassword(tempPassword);
-
-    console.log(`👤 USER INVITATION: About to insert user into database via direct SQL insert`);
-    console.log(`📁 USER INVITATION: Database file determined by NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
-    
-    // Create the user with proper JSON serialization for SQLite
-    const [newUser] = await db.insert(users).values({
-      organizationId: invitingUser.organizationId!,
-      email: email,
-      passwordHash: passwordHash,
-      firstName: firstName,
-      lastName: lastName,
-      role: role,
-      managerId: invitingUser.id,
-      isActive: 1,
-      hasTemporaryPassword: 1,
-      temporaryPassword: tempPassword,
-      settings: JSON.stringify({
-        theme: 'system',
-        notifications: {
-          email: true,
-          browser: true,
-          newCandidates: true,
-          interviewReminders: true
-        }
-      }),
-      permissions: JSON.stringify({
-        users: role === 'manager' ? ['read', 'create'] : ['read'],
-        teams: role === 'manager' ? ['read', 'create'] : ['read'],
-        jobs: ['create', 'read', 'update'],
-        candidates: ['create', 'read', 'update'],
-        interviews: ['create', 'read', 'update'],
-        settings: ['read']
-      }),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }).returning();
-
-    console.log(`✅ USER INVITATION: User created successfully via invite-user with ID = ${newUser.id}`);
-    console.log(`📁 USER INVITATION: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
-
-    await logAuditEvent(req, 'user_invited', 'user', newUser.id, {
-      invitedEmail: email,
-      role: role
-    });
-
-    res.json({
-      message: 'User invited successfully',
-      email: newUser.email,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      role: newUser.role,
-      temporaryPassword: tempPassword,
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        role: newUser.role
-      },
-      temporaryCredentials: {
-        email: email,
-        password: tempPassword,
-        loginUrl: `${req.protocol}://${req.get('host')}/login`
-      }
-    });
-  } catch (error) {
-    console.error('Invite user error:', error);
-    res.status(500).json({ message: 'Failed to invite user' });
-  }
-});
-
-// PUT /auth/users/:id - Update user information (for admins)
-router.put('/users/:id', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const db = await getDB();
-    const userId = parseInt(req.params.id);
-    const updateData = updateUserSchema.parse(req.body);
-    
-    if (!req.user?.organizationId) {
-      return res.status(400).json({ message: 'Organization context required' });
-    }
-
-    // Verify user exists in the same organization
-    const [existingUser] = await db.select()
-      .from(users)
-      .where(and(
-        eq(users.id, userId),
-        eq(users.organizationId, req.user.organizationId)
-      ))
-      .limit(1);
-
-    if (!existingUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Update user
-    const [updatedUser] = await db.update(users)
-      .set({
-        ...updateData,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
-      .returning();
-
-    await logAuditEvent(req, 'user_updated', 'user', userId, {
-      changes: updateData,
-    });
-
-    res.json({
-      message: 'User updated successfully',
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        role: updatedUser.role,
-        phone: updatedUser.phone,
-      },
-    });
-  } catch (error) {
-    console.error('Update user error:', error);
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ message: 'Invalid user data', errors: error.errors });
-    } else {
-      res.status(500).json({ message: 'Failed to update user' });
-    }
-  }
-});
-
-// DELETE /auth/users/:id - Delete user (for admins)
-router.delete('/users/:id', authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const db = await getDB();
-    const userId = parseInt(req.params.id);
-    
-    if (!req.user?.organizationId) {
-      return res.status(400).json({ message: 'Organization context required' });
-    }
-
-    // Verify user exists in the same organization
-    const [existingUser] = await db.select()
-      .from(users)
-      .where(and(
-        eq(users.id, userId),
-        eq(users.organizationId, req.user.organizationId)
-      ))
-      .limit(1);
-
-    if (!existingUser) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Prevent deleting yourself
-    if (userId === req.user.id) {
-      return res.status(400).json({ message: 'Cannot delete your own account' });
-    }
-
-    // Delete user
-    await db.delete(users)
-      .where(eq(users.id, userId));
-
-    await logAuditEvent(req, 'user_deleted', 'user', userId, {
-      deletedUser: {
-        email: existingUser.email,
-        firstName: existingUser.firstName,
-        lastName: existingUser.lastName,
-        role: existingUser.role
-      }
-    });
-
-    res.json({
-      message: 'User deleted successfully'
-    });
-  } catch (error) {
-    console.error('Delete user error:', error);
-    res.status(500).json({ message: 'Failed to delete user' });
   }
 });
 
