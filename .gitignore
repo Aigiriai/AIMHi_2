@@ -5,8 +5,11 @@ server/public
 vite.config.ts.*
 *.tar.gz
 
-# Database files - production data should not be committed
+# Database files - production and development data should not be committed
 data/production.db*
+data/development.db*
+*.sqlite
+*.db
 
 
 # Sensitive files with API keys and secrets
