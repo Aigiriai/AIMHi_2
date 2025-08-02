@@ -1,0 +1,156 @@
+2025-08-02 16:26:50.84
+e1221707
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-08-02 16:26:52.93
+e1221707
+User
+> rest-express@1.0.0 start
+2025-08-02 16:26:52.93
+e1221707
+User
+> NODE_ENV=production node dist/index.js
+2025-08-02 16:26:55.45
+e1221707
+User
+10:56:55 AM [express] Initializing consolidated Node.js backend...
+2025-08-02 16:26:55.45
+e1221707
+User
+10:56:55 AM [express] 📦 Initializing SQLite database...
+2025-08-02 16:26:55.45
+e1221707
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-02 16:26:55.48
+e1221707
+User
+✅ SQLite database initialized successfully
+2025-08-02 16:26:55.48
+e1221707
+User
+✅ Organizations table has timezone column
+2025-08-02 16:26:55.48
+e1221707
+User
+10:56:55 AM [express] 🔗 AI calling configured for direct webhooks (no tunnel required)
+2025-08-02 16:26:55.48
+e1221707
+User
+🔄 Initializing call context on app startup...
+2025-08-02 16:26:55.49
+e1221707
+User
+📂 Call context loaded from disk
+2025-08-02 16:26:55.49
+e1221707
+User
+✅ Restored context for Sudhir from previous session
+2025-08-02 16:26:55.49
+e1221707
+User
+📂 Multiple call contexts loaded from disk (1 candidates)
+2025-08-02 16:26:55.49
+e1221707
+User
+📂 Loaded 1 candidate contexts for AI calling
+2025-08-02 16:26:55.49
+e1221707
+User
+• Sudhir (98%)
+2025-08-02 16:26:55.49
+e1221707
+User
+🚀 Initializing multi-tenant system...
+2025-08-02 16:26:55.49
+e1221707
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-02 16:26:55.49
+e1221707
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-02 16:26:55.49
+e1221707
+User
+✅ SQLite database initialized successfully
+2025-08-02 16:26:55.49
+e1221707
+User
+✅ Organizations table has timezone column
+2025-08-02 16:26:55.50
+e1221707
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-02 16:26:55.51
+e1221707
+User
+Failed to create super admin: SqliteError: no such column: "phone" - should this be a string literal in single-quotes?
+2025-08-02 16:26:55.51
+e1221707
+User
+at Database.prepare (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/wrappers.js:5:21)
+2025-08-02 16:26:55.51
+e1221707
+User
+at BetterSQLiteSession.prepareQuery (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:20:30)
+2025-08-02 16:26:55.51
+e1221707
+User
+at BetterSQLiteSession.prepareOneTimeQuery (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/session.js:65:17)
+2025-08-02 16:26:55.51
+e1221707
+User
+at SQLiteSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:572:88)
+2025-08-02 16:26:55.51
+e1221707
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:17)
+2025-08-02 16:26:55.51
+e1221707
+User
+at SQLiteSelectBase.execute (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:597:17)
+2025-08-02 16:26:55.51
+e1221707
+User
+at SQLiteSelectBase.then (file:///home/runner/workspace/node_modules/drizzle-orm/query-promise.js:21:17) {
+2025-08-02 16:26:55.51
+e1221707
+User
+code: 'SQLITE_ERROR'
+2025-08-02 16:26:55.51
+e1221707
+User
+}
+2025-08-02 16:26:55.51
+e1221707
+User
+❌ Failed to initialize multi-tenant system: SqliteError: no such column: "phone" - should this be a string literal in single-quotes?
+2025-08-02 16:26:55.51
+e1221707
+User
+at Database.prepare (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/wrappers.js:5:21)
+2025-08-02 16:26:55.51
+e1221707
+User
+at BetterSQLiteSession.prepareQuery (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:20:30)
+2025-08-02 16:26:55.51
+e1221707
+User
+at BetterSQLiteSession.prepareOneTimeQuery (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/session.js:65:17)
+2025-08-02 16:26:55.51
+e1221707
+User
+at SQLiteSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:572:88)
+2025-08-02 16:26:55.51
+e1221707
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:17)
+2025-08-02 16:26:55.51
+e1221707
+User
+at SQLiteSelectBase.execute (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:597:17)
+2025-08-02 16:26:55.51
+e1221707
+User
+at SQLiteSelectBase.then (file:///home/runner/workspace/node_modules/drizzle-orm/query-promise.js:21:17) {
