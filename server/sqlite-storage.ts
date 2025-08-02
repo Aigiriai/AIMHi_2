@@ -1,15 +1,41 @@
 import { getSQLiteDB } from './sqlite-db';
+import * as schema from './sqlite-schema';
 import { 
   jobs, candidates, jobMatches, interviews, users, organizations,
   teams, userTeams, auditLogs, usageMetrics
 } from './sqlite-schema';
 import { eq, desc, and, gte } from 'drizzle-orm';
+import { backupService } from './backup-integration';
 
 // Import types from SQLite schema
 import type { 
   Job, Candidate, JobMatch, Interview, User, Organization,
   InsertJob, InsertCandidate, InsertJobMatch, InsertInterview, InsertUser, InsertOrganization
 } from './sqlite-schema';
+
+// Additional types needed
+export interface JobMatchResult {
+  id: number;
+  organizationId: number;
+  jobId: number;
+  candidateId: number;
+  matchPercentage: number;
+  status: string;
+  aiReasoning: string;
+  matchCriteria: string;
+  skillAnalysis?: string;
+  criteriaScores?: string;
+  weightedScores?: string;
+  matchedBy: number;
+  createdAt: string;
+  job: Job;
+  candidate: Candidate;
+}
+
+export interface InterviewWithDetails extends Interview {
+  jobTitle?: string;
+  candidateName?: string;
+}
 
 export interface IStorage {
   // Jobs
@@ -118,6 +144,10 @@ export class SQLiteStorage implements IStorage {
       // Fetch the created job
       const job = this.sqlite.prepare('SELECT * FROM jobs WHERE id = ?').get(result.lastInsertRowid);
       console.log('Job created successfully:', job);
+      
+      // Trigger auto-backup for production
+      await backupService.onJobCreated(job);
+      
       return job;
     } catch (error) {
       console.error('Error creating job:', error);
@@ -161,6 +191,10 @@ export class SQLiteStorage implements IStorage {
   async createCandidate(insertCandidate: InsertCandidate): Promise<Candidate> {
     await this.ensureConnection();
     const [candidate] = await this.db.insert(schema.candidates).values(insertCandidate).returning();
+    
+    // Trigger auto-backup for production
+    await backupService.onCandidateCreated(candidate);
+    
     return candidate;
   }
 
