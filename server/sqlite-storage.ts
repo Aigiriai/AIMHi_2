@@ -315,36 +315,37 @@ export class SQLiteStorage implements IStorage {
         weightedScores,
         matchedBy: result.matchedBy,
         createdAt: result.createdAt,
-      job: {
-        id: result.jobId_ref,
-        organizationId: result.jobOrganizationId,
-        createdBy: result.jobCreatedBy,
-        title: result.jobTitle,
-        description: result.jobDescription,
-        experienceLevel: result.jobExperienceLevel,
-        jobType: result.jobType,
-        keywords: result.jobKeywords,
-        status: result.jobStatus,
-        createdAt: result.jobCreatedAt,
-        updatedAt: result.jobUpdatedAt
-      },
-      candidate: {
-        id: result.candidateId_ref,
-        organizationId: result.candidateOrganizationId,
-        addedBy: result.candidateAddedBy,
-        name: result.candidateName,
-        email: result.candidateEmail,
-        phone: result.candidatePhone,
-        experience: result.candidateExperience,
-        resumeContent: result.candidateResumeContent,
-        resumeFileName: result.candidateResumeFileName,
-        source: result.candidateSource,
-        tags: result.candidateTags,
-        status: result.candidateStatus,
-        createdAt: result.candidateCreatedAt,
-        updatedAt: result.candidateUpdatedAt
-      }
-    }));
+        job: {
+          id: result.jobId_ref,
+          organizationId: result.jobOrganizationId,
+          createdBy: result.jobCreatedBy,
+          title: result.jobTitle,
+          description: result.jobDescription,
+          experienceLevel: result.jobExperienceLevel,
+          jobType: result.jobType,
+          keywords: result.jobKeywords,
+          status: result.jobStatus,
+          createdAt: result.jobCreatedAt,
+          updatedAt: result.jobUpdatedAt
+        },
+        candidate: {
+          id: result.candidateId_ref,
+          organizationId: result.candidateOrganizationId,
+          addedBy: result.candidateAddedBy,
+          name: result.candidateName,
+          email: result.candidateEmail,
+          phone: result.candidatePhone,
+          experience: result.candidateExperience,
+          resumeContent: result.candidateResumeContent,
+          resumeFileName: result.candidateResumeFileName,
+          source: result.candidateSource,
+          tags: result.candidateTags,
+          status: result.candidateStatus,
+          createdAt: result.candidateCreatedAt,
+          updatedAt: result.candidateUpdatedAt
+        }
+      };
+    });
   }
 
   async deleteJobMatchesByJobId(jobId: number): Promise<void> {
