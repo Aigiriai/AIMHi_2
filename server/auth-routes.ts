@@ -17,6 +17,7 @@ async function getSQLite() {
 }
 import { generateToken, verifyPassword, hashPassword, authenticateToken, requireSuperAdmin, logAuditEvent, type AuthRequest } from './auth';
 import { organizationManager } from './organization-manager';
+import { backupService } from './backup-integration';
 
 const router = Router();
 
@@ -920,6 +921,9 @@ router.post('/invite-user', authenticateToken, async (req: AuthRequest, res) => 
 
     console.log(`✅ USER INVITATION: User created successfully via invite-user with ID = ${newUser.id}`);
     console.log(`📁 USER INVITATION: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+
+    // Trigger auto-backup for production (user creation)
+    await backupService.onUserCreated(newUser);
 
     await logAuditEvent(req, 'user_invited', 'user', newUser.id, {
       invitedEmail: email,
