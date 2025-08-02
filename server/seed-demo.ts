@@ -80,9 +80,9 @@ export async function createSuperAdmin() {
 
       // Update the admin user to super_admin role
       const [superAdmin] = await db
-        .update(users)
+        .update(schema.users)
         .set({ role: 'super_admin' })
-        .where(eq(users.id, superAdminOrg.adminUser.id))
+        .where(eq(schema.users.id, superAdminOrg.adminUser.id))
         .returning();
 
       console.log('✓ Super admin created successfully');
