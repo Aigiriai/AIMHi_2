@@ -2,6 +2,7 @@ import { getSQLiteDB } from './sqlite-db';
 import { organizations, users, teams, userTeams, usageMetrics } from './sqlite-schema';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
 import { hashPassword } from './auth';
+import { backupService } from './backup-integration';
 import type { InsertOrganization, InsertUser, InsertTeam, Organization, User, Team } from './sqlite-schema';
 
 // Get the database instance
@@ -155,6 +156,12 @@ export class OrganizationManager {
     
     console.log(`✅ ORG MANAGER: Admin user created successfully with ID = ${adminUser.id}`);
     console.log(`📁 ORG MANAGER: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+
+    // Trigger auto-backup for production (organization creation is high priority)
+    await backupService.onOrganizationCreated(organization);
+    
+    // Trigger auto-backup for user creation  
+    await backupService.onUserCreated(adminUser);
 
     return {
       organization,
