@@ -1064,4 +1064,45 @@ router.delete('/users/:id', authenticateToken, async (req: AuthRequest, res) => 
   }
 });
 
+// POST /auth/backup-database - Manual database backup (Authenticated users)
+router.post('/backup-database', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    console.log(`🔄 MANUAL BACKUP: User ${req.user?.email} (${req.user?.role}) requested manual database backup`);
+    console.log(`📊 MANUAL BACKUP: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
+    console.log(`🏢 MANUAL BACKUP: Organization ID = ${req.user?.organizationId}`);
+    
+    // Trigger manual backup with high priority
+    const success = await backupService.scheduleAutoBackup(
+      `manual_backup_by_${req.user?.email}`,
+      'high'
+    );
+    
+    if (success) {
+      await logAuditEvent(req, 'manual_backup_requested', 'system', undefined, {
+        requestedBy: req.user?.email,
+        organizationId: req.user?.organizationId
+      });
+      
+      res.json({
+        success: true,
+        message: 'Database backup completed successfully',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: 'Backup was skipped (backup in progress, too recent, or development environment)',
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Manual backup error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to create database backup',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

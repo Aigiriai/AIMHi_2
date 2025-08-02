@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertTriangle } from "lucide-react";
-import { BrainIcon, BriefcaseIcon, UsersIcon, PercentIcon, BellIcon, SearchIcon, DownloadIcon, PlusIcon, UploadIcon, ExternalLinkIcon, CalendarIcon, Trash2Icon, LayoutDashboard, Users, Calendar, BarChart3, FileBarChart } from "lucide-react";
+import { BrainIcon, BriefcaseIcon, UsersIcon, PercentIcon, BellIcon, SearchIcon, DownloadIcon, PlusIcon, UploadIcon, ExternalLinkIcon, CalendarIcon, Trash2Icon, LayoutDashboard, Users, Calendar, BarChart3, FileBarChart, CloudIcon } from "lucide-react";
 import JobPostingModal from "@/components/job-posting-modal";
 import ResumeUploadModal from "@/components/resume-upload-modal";
 import JobBoardIntegration from "@/components/job-board-integration";
@@ -713,6 +713,50 @@ function RecruitmentDashboard() {
     }
   };
 
+  const handleBackupDatabase = async () => {
+    try {
+      const response = await fetch("/api/auth/backup-database", {
+        method: "POST",
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        if (result.message?.includes('development environment')) {
+          toast({
+            title: "Development Environment",
+            description: "Database backups are only available in production environment.",
+            variant: "default",
+          });
+        } else if (result.message?.includes('too recent')) {
+          toast({
+            title: "Backup Skipped",
+            description: "A backup was recently created. Please wait a few minutes before requesting another backup.",
+            variant: "default",
+          });
+        } else {
+          throw new Error(result.message || "Failed to create backup");
+        }
+        return;
+      }
+      
+      toast({
+        title: "Backup Successful",
+        description: "Database backup has been created and saved to cloud storage.",
+      });
+    } catch (error) {
+      toast({
+        title: "Backup Failed",
+        description: error instanceof Error ? error.message : "Failed to create database backup.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const tabs = [
     { value: "overview", label: "Overview", icon: LayoutDashboard },
     { value: "jobs", label: "Job Postings", icon: BriefcaseIcon },
@@ -884,8 +928,45 @@ function RecruitmentDashboard() {
               </Card>
               */}
 
-              {/* ATS DASHBOARD SPACE - Ready for high-level statistics, KPIs, charts, and graphs */}
+              {/* System Management */}
               <div className="space-y-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">System Management</h3>
+                        <p className="text-sm text-gray-600">
+                          Database backup and system maintenance tools
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+                        onClick={handleBackupDatabase}
+                      >
+                        <CloudIcon className="mr-2 h-4 w-4" />
+                        Backup Database
+                      </Button>
+                    </div>
+                    
+                    <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                      <div className="flex">
+                        <div className="ml-3">
+                          <p className="text-sm text-blue-700">
+                            <strong>Database Backup:</strong> Create a secure backup of your recruitment data to cloud storage. 
+                            This ensures your data is safely stored and can be restored if needed.
+                          </p>
+                          <p className="text-xs text-blue-600 mt-1">
+                            Note: Backups are only available in production environment and are automatically created during critical operations.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* ATS DASHBOARD SPACE - Ready for high-level statistics, KPIs, charts, and graphs */}
                 <Card>
                   <CardContent className="p-8 text-center">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">ATS Dashboard</h2>
