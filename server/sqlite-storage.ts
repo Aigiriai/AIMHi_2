@@ -528,6 +528,10 @@ export class SQLiteStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     await this.ensureConnection();
     const [user] = await this.db.insert(schema.users).values(insertUser).returning();
+    
+    // Trigger auto-backup for production
+    await backupService.onUserCreated(user);
+    
     return user;
   }
 
@@ -557,6 +561,10 @@ export class SQLiteStorage implements IStorage {
   async createOrganization(insertOrg: InsertOrganization): Promise<Organization> {
     await this.ensureConnection();
     const [org] = await this.db.insert(schema.organizations).values(insertOrg).returning();
+    
+    // Trigger auto-backup for production
+    await backupService.onOrganizationCreated(org);
+    
     return org;
   }
 
