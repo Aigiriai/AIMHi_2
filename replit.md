@@ -71,6 +71,7 @@ Preferred communication style: Simple, everyday language.
 - **Deployment Persistence**: Solves the critical data loss issue where Replit deployments reset filesystem between updates.
 - **Production Environment Protection**: Enhanced data persistence manager with cloud-based backup storage.
 - **Build Compatibility**: Fixed dynamic require() statements for proper ES module bundling in production deployments.
+- **Critical Backup Timing Fix**: Resolved data loss issue where initialization backups were overwriting user data during deployment restarts.
 
 ## External Dependencies
 

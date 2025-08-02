@@ -64,6 +64,13 @@ export class BackupIntegrationService {
       return false;
     }
 
+    // CRITICAL: Don't backup immediately after startup if database was just restored
+    // This prevents overwriting good backups with empty/incomplete data
+    if (reason.includes('initialization') || reason.includes('startup')) {
+      console.log(`🛡️ Auto-backup skipped (system initialization): ${reason}`);
+      return false;
+    }
+
     // Validate reason parameter
     if (!reason || typeof reason !== 'string') {
       console.error('❌ Auto-backup failed: invalid reason parameter');

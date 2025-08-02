@@ -101,20 +101,26 @@ export async function initializeMultiTenantSystem() {
   console.log('🚀 Initializing multi-tenant system...');
   
   try {
-    // PRODUCTION DATA PROTECTION: Create backup before any modifications
+    // PRODUCTION DATA PROTECTION: Only create backup if we're about to make changes
     if (process.env.NODE_ENV === 'production') {
       const { dataPersistence } = await import('./data-persistence');
       const stats = await dataPersistence.getDatabaseStats();
       
       if (stats.exists && stats.records) {
         console.log('📊 Existing production data found:');
-        console.log(`   Organizations: ${stats.records.organizations}`);
-        console.log(`   Users: ${stats.records.users}`);
-        console.log(`   Jobs: ${stats.records.jobs}`);
-        console.log(`   Candidates: ${stats.records.candidates}`);
+        console.log(`Organizations: ${stats.records.organizations}`);
+        console.log(`Users: ${stats.records.users}`);
+        console.log(`Jobs: ${stats.records.jobs}`);
+        console.log(`Candidates: ${stats.records.candidates}`);
         
-        // Create backup before any modifications
-        await dataPersistence.createBackup();
+        // CRITICAL: Never backup during initialization - this could overwrite good data
+        // The system should only backup when users explicitly trigger it or when operations complete
+        console.log('🛡️ Initialization backup skipped - existing data preserved');
+        
+        // Log the data state for verification
+        if (stats.records.organizations > 1 || stats.records.users > 2) {
+          console.log('✅ User data detected - system ready with existing data');
+        }
       }
     }
     
