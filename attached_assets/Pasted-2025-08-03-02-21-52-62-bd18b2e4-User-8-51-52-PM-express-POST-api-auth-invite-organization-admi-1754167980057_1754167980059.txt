@@ -1,0 +1,156 @@
+2025-08-03 02:21:52.62
+bd18b2e4
+User
+8:51:52 PM [express] POST /api/auth/invite-organization-admin 200 in 554ms :: {"message":"Organizati…
+2025-08-03 02:21:52.96
+bd18b2e4
+User
+8:51:52 PM [express] GET /api/auth/organizations 200 in 8ms :: {"organizations":[{"id":3,"name":"abc…
+2025-08-03 02:22:04.54
+bd18b2e4
+User
+🔍 ROUTE: Getting matches with user-level filtering for user 1 (super_admin)
+2025-08-03 02:22:04.55
+bd18b2e4
+User
+🔍 ROUTE: Got 0 matches for user 1 with role super_admin
+2025-08-03 02:22:04.55
+bd18b2e4
+User
+8:52:04 PM [express] GET /api/matches 304 in 3ms :: []
+2025-08-03 02:22:04.55
+bd18b2e4
+User
+Fetching jobs for organization: 1
+2025-08-03 02:22:04.55
+bd18b2e4
+User
+Retrieved organization jobs: 0
+2025-08-03 02:22:04.55
+bd18b2e4
+User
+8:52:04 PM [express] GET /api/jobs 304 in 3ms :: []
+2025-08-03 02:22:04.56
+bd18b2e4
+User
+8:52:04 PM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-03 02:22:04.56
+bd18b2e4
+User
+🔍 CANDIDATES: Fetching candidates for user 1 (super_admin) in org 1
+2025-08-03 02:22:04.56
+bd18b2e4
+User
+👑 CANDIDATES: User has super_admin role - showing all candidates
+2025-08-03 02:22:04.56
+bd18b2e4
+User
+8:52:04 PM [express] GET /api/candidates 304 in 3ms :: []
+2025-08-03 02:22:04.56
+bd18b2e4
+User
+📊 STATS: Calculating user-specific stats for user 1 (super_admin) in organization 1
+2025-08-03 02:22:04.56
+bd18b2e4
+User
+📊 STATS: User has access to 0 jobs: []
+2025-08-03 02:22:04.56
+bd18b2e4
+User
+📊 STATS: User has no accessible jobs, returning empty stats
+2025-08-03 02:22:04.56
+bd18b2e4
+User
+8:52:04 PM [express] GET /api/stats 304 in 3ms :: {"activeJobs":0,"totalCandidates":0,"aiMatches":0,…
+2025-08-03 02:22:04.57
+bd18b2e4
+User
+8:52:04 PM [express] GET /api/interviews 304 in 1ms :: []
+2025-08-03 02:22:04.86
+bd18b2e4
+User
+8:52:04 PM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-03 02:22:04.88
+bd18b2e4
+User
+8:52:04 PM [express] GET /api/job-boards/credentials 304 in 1ms :: {"linkedIn":false,"indeed":false}
+2025-08-03 02:22:07.48
+bd18b2e4
+User
+🔄 MANUAL BACKUP: User superadmin@aimhi.app (super_admin) requested manual database backup
+2025-08-03 02:22:07.48
+bd18b2e4
+User
+📊 MANUAL BACKUP: NODE_ENV = production
+2025-08-03 02:22:07.48
+bd18b2e4
+User
+🏢 MANUAL BACKUP: Organization ID = 1
+2025-08-03 02:22:07.48
+bd18b2e4
+User
+🔄 Auto-backup triggered (high): manual_backup_by_superadmin@aimhi.app
+2025-08-03 02:22:07.48
+bd18b2e4
+User
+🔄 Auto-backup triggered: manual_backup_by_superadmin@aimhi.app
+2025-08-03 02:22:07.48
+bd18b2e4
+User
+☁️ Uploading database backup: production-backup-2025-08-02T20-52-07-487Z.db (4KB)
+2025-08-03 02:22:07.57
+bd18b2e4
+User
+✅ Database backup uploaded successfully: production-backup-2025-08-02T20-52-07-487Z.db
+2025-08-03 02:22:07.57
+bd18b2e4
+User
+☁️ Uploading database backup: production-backup.db (4KB)
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+✅ Database backup uploaded successfully: production-backup.db
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+✅ Database backup created in Object Storage: production-backup-2025-08-02T20-52-07-487Z.db
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+✅ Auto-backup completed: production-backup-2025-08-02T20-52-07-487Z.db
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+✅ Auto-backup completed: manual_backup_by_superadmin@aimhi.app
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+Audit event (disabled): {
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+organizationId: 1,
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+userId: 1,
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+action: 'manual_backup_requested',
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+resourceType: 'system',
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+resourceId: undefined,
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+details: { requestedBy: 'superadmin@aimhi.app', organizationId: 1 }
+2025-08-03 02:22:07.67
+bd18b2e4
+User
+}
