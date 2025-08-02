@@ -101,10 +101,27 @@ export async function initializeMultiTenantSystem() {
   console.log('🚀 Initializing multi-tenant system...');
   
   try {
+    // PRODUCTION DATA PROTECTION: Create backup before any modifications
+    if (process.env.NODE_ENV === 'production') {
+      const { dataPersistence } = await import('./data-persistence');
+      const stats = await dataPersistence.getDatabaseStats();
+      
+      if (stats.exists && stats.records) {
+        console.log('📊 Existing production data found:');
+        console.log(`   Organizations: ${stats.records.organizations}`);
+        console.log(`   Users: ${stats.records.users}`);
+        console.log(`   Jobs: ${stats.records.jobs}`);
+        console.log(`   Candidates: ${stats.records.candidates}`);
+        
+        // Create backup before any modifications
+        await dataPersistence.createBackup();
+      }
+    }
+    
     // Create super admin
     await createSuperAdmin();
     
-    // Create demo organization
+    // Create demo organization (only if none exist)
     await seedDemoOrganization();
     
     console.log('✅ Multi-tenant system initialized successfully');

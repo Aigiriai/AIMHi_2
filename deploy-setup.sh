@@ -23,7 +23,27 @@ rm -f data/development.db
 rm -f data/development.db-shm
 rm -f data/development.db-wal
 
-# Initialize SQLite database with proper schema for production (only if doesn't exist)
+# CRITICAL DATA PROTECTION: Check for backup restoration first
+if [ ! -f "data/production.db" ]; then
+  echo "⚠️  Production database missing - checking for backup restoration..."
+  
+  # Try to restore from backup first
+  if [ -d "backups" ] && [ -n "$(ls backups/production_*.db 2>/dev/null)" ]; then
+    echo "🔄 Backup found - attempting restoration..."
+    ./restore-database.sh
+    
+    # Check if restoration was successful
+    if [ -f "data/production.db" ]; then
+      echo "✅ Database restored from backup - skipping new database creation"
+    else
+      echo "❌ Backup restoration failed - creating new database"
+    fi
+  else
+    echo "📦 No backups found - creating new SQLite database for production..."
+  fi
+fi
+
+# Only create new database if no existing database and no successful restoration
 if [ ! -f "data/production.db" ]; then
   echo "📦 Creating new SQLite database for production..."
   sqlite3 data/production.db <<EOF

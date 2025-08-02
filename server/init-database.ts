@@ -6,6 +6,9 @@ import path from 'path';
 // Initialize SQLite database with proper schema
 export async function initializeSQLiteDatabase() {
   try {
+    // Import data persistence manager for production safety
+    const { dataPersistence } = await import('./data-persistence');
+    
     // Ensure data directory exists
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
@@ -17,7 +20,11 @@ export async function initializeSQLiteDatabase() {
     const dbPath = path.join(dataDir, dbName);
     console.log(`📁 Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV || 'undefined'})`);
 
-
+    // PRODUCTION DATA PROTECTION: Check for backup restoration
+    if (process.env.NODE_ENV === 'production' && !fs.existsSync(dbPath)) {
+      console.log('🛡️  Production database missing - attempting restoration...');
+      await dataPersistence.protectDataBeforeDeployment();
+    }
 
     const sqlite = new Database(dbPath);
     
