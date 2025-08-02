@@ -179,7 +179,7 @@ export class DatabaseBackupService {
       
       // Get file metadata for logging
       const [metadata] = await file.getMetadata();
-      const fileSize = metadata.size ? Math.round(parseInt(metadata.size) / 1024) : 'unknown';
+      const fileSize = metadata.size ? Math.round(parseInt(metadata.size.toString()) / 1024) : 'unknown';
       
       console.log(`☁️ Downloading database backup: ${backupName} (${fileSize}KB)`);
       
