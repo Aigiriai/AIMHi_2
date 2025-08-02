@@ -1,6 +1,7 @@
 import { Storage, File } from "@google-cloud/storage";
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 const REPLIT_SIDECAR_ENDPOINT = process.env.REPLIT_SIDECAR_ENDPOINT || "http://127.0.0.1:1106";
 
@@ -84,7 +85,6 @@ export class DatabaseBackupService {
   // Calculate MD5 checksum for file integrity verification
   private async calculateFileChecksum(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const crypto = require('crypto');
       const hash = crypto.createHash('md5');
       const stream = fs.createReadStream(filePath);
       

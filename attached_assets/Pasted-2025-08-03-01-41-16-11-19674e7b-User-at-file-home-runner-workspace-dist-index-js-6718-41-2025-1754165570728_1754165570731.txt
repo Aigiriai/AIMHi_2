@@ -1,0 +1,120 @@
+2025-08-03 01:41:16.11
+19674e7b
+User
+at file:///home/runner/workspace/dist/index.js:6718:41
+2025-08-03 01:41:16.11
+19674e7b
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at authenticateToken (file:///home/runner/workspace/dist/index.js:5568:5)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-08-03 01:41:16.11
+19674e7b
+User
+☁️ Uploading database backup: production-backup-2025-08-02T20-11-16-115Z.db (4KB)
+2025-08-03 01:41:16.11
+19674e7b
+User
+❌ Failed to create backup: _ObjectStorageUploadError: Failed to upload database backup 'production-backup-2025-08-02T20-11-16-115Z.db': Dynamic require of "crypto" is not supported
+2025-08-03 01:41:16.11
+19674e7b
+User
+at DatabaseBackupService.uploadDatabaseBackup (file:///home/runner/workspace/dist/index.js:135:17)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at async DatabaseBackupService.createTimestampedBackup (file:///home/runner/workspace/dist/index.js:220:9)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at async DataPersistenceManager.createBackup (file:///home/runner/workspace/dist/index.js:287:37)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at async DataPersistenceManager.autoBackupIfNeeded (file:///home/runner/workspace/dist/index.js:426:28)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at async _BackupIntegrationService.scheduleAutoBackup (file:///home/runner/workspace/dist/index.js:5641:7)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at async file:///home/runner/workspace/dist/index.js:6718:21 {
+2025-08-03 01:41:16.11
+19674e7b
+User
+originalError: Error: Dynamic require of "crypto" is not supported
+2025-08-03 01:41:16.11
+19674e7b
+User
+at file:///home/runner/workspace/dist/index.js:7:9
+2025-08-03 01:41:16.11
+19674e7b
+User
+at file:///home/runner/workspace/dist/index.js:87:26
+2025-08-03 01:41:16.11
+19674e7b
+User
+at new Promise ()
+2025-08-03 01:41:16.11
+19674e7b
+User
+at DatabaseBackupService.calculateFileChecksum (file:///home/runner/workspace/dist/index.js:86:16)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at DatabaseBackupService.uploadDatabaseBackup (file:///home/runner/workspace/dist/index.js:122:41)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at DatabaseBackupService.createTimestampedBackup (file:///home/runner/workspace/dist/index.js:220:20)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at DataPersistenceManager.createBackup (file:///home/runner/workspace/dist/index.js:287:67)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at DataPersistenceManager.autoBackupIfNeeded (file:///home/runner/workspace/dist/index.js:426:39)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at _BackupIntegrationService.scheduleAutoBackup (file:///home/runner/workspace/dist/index.js:5641:29)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at file:///home/runner/workspace/dist/index.js:6718:41
+2025-08-03 01:41:16.11
+19674e7b
+User
+at Layer.handle [as handle_request] (/home/runner/workspace/node_modules/express/lib/router/layer.js:95:5)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at next (/home/runner/workspace/node_modules/express/lib/router/route.js:149:13)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at authenticateToken (file:///home/runner/workspace/dist/index.js:5568:5)
+2025-08-03 01:41:16.11
+19674e7b
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-08-03 01:41:16.11
+19674e7b
+User
+}
