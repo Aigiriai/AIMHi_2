@@ -187,7 +187,7 @@ export async function initializeSQLiteDatabase() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
         name TEXT NOT NULL,
-        description TEXT DEFAULT '',
+        description TEXT,
         manager_id INTEGER,
         settings TEXT DEFAULT '{}',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -233,12 +233,15 @@ export async function initializeSQLiteDatabase() {
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS user_teams (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         team_id INTEGER NOT NULL,
         role TEXT NOT NULL DEFAULT 'member',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
         FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (team_id) REFERENCES teams(id)
+        FOREIGN KEY (team_id) REFERENCES teams(id),
+        UNIQUE(user_id, team_id)
       );
     `);
 
