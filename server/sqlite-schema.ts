@@ -41,7 +41,7 @@ export const users = sqliteTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   phone: text("phone"),
-  role: text("role").notNull(),
+  role: text("role").notNull().default("recruiter"),
   managerId: integer("manager_id"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   lastLoginAt: text("last_login_at"),
@@ -280,6 +280,40 @@ export const statusHistory = sqliteTable("status_history", {
   changedAt: text("changed_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
+// Job templates for AI matching - Enhanced AI templates
+export const jobTemplates = sqliteTable("job_templates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  jobId: integer("job_id").references(() => jobs.id).notNull(),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  positionTitle: text("position_title").notNull(),
+  seniorityLevel: text("seniority_level").notNull(),
+  department: text("department"),
+  mandatorySkills: text("mandatory_skills").default("[]"),
+  preferredSkills: text("preferred_skills").default("[]"),
+  skillProficiencyLevels: text("skill_proficiency_levels").default("{}"),
+  primaryTechnologies: text("primary_technologies").default("[]"),
+  secondaryTechnologies: text("secondary_technologies").default("[]"),
+  technologyCategories: text("technology_categories").default("{}"),
+  minimumYearsRequired: integer("minimum_years_required").default(0),
+  specificDomainExperience: text("specific_domain_experience").default("[]"),
+  industryBackground: text("industry_background").default("[]"),
+  technicalTasksPercentage: integer("technical_tasks_percentage").default(70),
+  leadershipTasksPercentage: integer("leadership_tasks_percentage").default(20),
+  domainTasksPercentage: integer("domain_tasks_percentage").default(10),
+  skillsMatchWeight: integer("skills_match_weight").default(25),
+  experienceWeight: integer("experience_weight").default(15),
+  keywordWeight: integer("keyword_weight").default(35),
+  technicalDepthWeight: integer("technical_depth_weight").default(10),
+  domainKnowledgeWeight: integer("domain_knowledge_weight").default(15),
+  rawJobDescription: text("raw_job_description").notNull(),
+  aiGeneratedData: text("ai_generated_data").default("{}"),
+  templateVersion: text("template_version").default("1.0"),
+  status: text("status").default("generated"),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
 // Create insert schemas for validation
 export const insertOrganizationSchema = createInsertSchema(organizations);
 export const insertOrganizationCredentialsSchema = createInsertSchema(organizationCredentials);
@@ -298,6 +332,7 @@ export const insertJobAssignmentSchema = createInsertSchema(jobAssignments);
 export const insertCandidateAssignmentSchema = createInsertSchema(candidateAssignments);
 export const insertCandidateSubmissionSchema = createInsertSchema(candidateSubmissions);
 export const insertStatusHistorySchema = createInsertSchema(statusHistory);
+export const insertJobTemplateSchema = createInsertSchema(jobTemplates);
 
 // Types
 export type Organization = typeof organizations.$inferSelect;
@@ -330,8 +365,12 @@ export type JobAssignment = typeof jobAssignments.$inferSelect;
 export type InsertJobAssignment = typeof jobAssignments.$inferInsert;
 export type CandidateAssignment = typeof candidateAssignments.$inferSelect;
 export type InsertCandidateAssignment = typeof candidateAssignments.$inferInsert;
+export type CandidateSubmission = typeof candidateSubmissions.$inferSelect;
+export type InsertCandidateSubmission = typeof candidateSubmissions.$inferInsert;
 export type StatusHistory = typeof statusHistory.$inferSelect;
 export type InsertStatusHistory = typeof statusHistory.$inferInsert;
+export type JobTemplate = typeof jobTemplates.$inferSelect;
+export type InsertJobTemplate = typeof jobTemplates.$inferInsert;
 
 // Result types for joined queries
 export interface JobMatchResult extends JobMatch {

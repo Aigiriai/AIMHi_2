@@ -76,8 +76,20 @@ export async function initializeSQLiteDB() {
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (manager_id) REFERENCES users(id),
-        UNIQUE(organization_id, email)
+        FOREIGN KEY (manager_id) REFERENCES users(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS user_teams (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        team_id INTEGER NOT NULL,
+        role TEXT DEFAULT 'member',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
+        UNIQUE(user_id, team_id)
       );
 
       CREATE TABLE IF NOT EXISTS jobs (

@@ -50,29 +50,7 @@ export async function initializeSQLiteDatabase() {
       );
     `);
 
-    // Add timezone column if it doesn't exist (for existing databases)
-    try {
-      sqlite.exec(`ALTER TABLE organizations ADD COLUMN timezone TEXT DEFAULT 'UTC';`);
-    } catch (error) {
-      // Column already exists, which is fine
-    }
-
-    // Add other missing columns if they don't exist
-    const missingColumns = [
-      'date_format TEXT DEFAULT \'MM/DD/YYYY\'',
-      'currency TEXT DEFAULT \'USD\'',
-      'billing_settings TEXT DEFAULT \'{}\'',
-      'compliance_settings TEXT DEFAULT \'{}\'',
-      'integration_settings TEXT DEFAULT \'{}\''
-    ];
-
-    for (const column of missingColumns) {
-      try {
-        sqlite.exec(`ALTER TABLE organizations ADD COLUMN ${column};`);
-      } catch (error) {
-        // Column already exists, which is fine
-      }
-    }
+    // All fields now included in CREATE TABLE statement above - no ALTER needed
 
     // Create other required tables
     sqlite.exec(`
@@ -404,6 +382,45 @@ export async function initializeSQLiteDatabase() {
         changed_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (organization_id) REFERENCES organizations(id),
         FOREIGN KEY (changed_by) REFERENCES users(id)
+      );
+    `);
+
+    // Create job templates table for AI matching
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS job_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id INTEGER NOT NULL,
+        organization_id INTEGER NOT NULL,
+        position_title TEXT NOT NULL,
+        seniority_level TEXT NOT NULL,
+        department TEXT,
+        mandatory_skills TEXT DEFAULT '[]',
+        preferred_skills TEXT DEFAULT '[]',
+        skill_proficiency_levels TEXT DEFAULT '{}',
+        primary_technologies TEXT DEFAULT '[]',
+        secondary_technologies TEXT DEFAULT '[]',
+        technology_categories TEXT DEFAULT '{}',
+        minimum_years_required INTEGER DEFAULT 0,
+        specific_domain_experience TEXT DEFAULT '[]',
+        industry_background TEXT DEFAULT '[]',
+        technical_tasks_percentage INTEGER DEFAULT 70,
+        leadership_tasks_percentage INTEGER DEFAULT 20,
+        domain_tasks_percentage INTEGER DEFAULT 10,
+        skills_match_weight INTEGER DEFAULT 25,
+        experience_weight INTEGER DEFAULT 15,
+        keyword_weight INTEGER DEFAULT 35,
+        technical_depth_weight INTEGER DEFAULT 10,
+        domain_knowledge_weight INTEGER DEFAULT 15,
+        raw_job_description TEXT NOT NULL,
+        ai_generated_data TEXT DEFAULT '{}',
+        template_version TEXT DEFAULT '1.0',
+        status TEXT DEFAULT 'generated',
+        reviewed_by INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (reviewed_by) REFERENCES users(id)
       );
     `);
 
