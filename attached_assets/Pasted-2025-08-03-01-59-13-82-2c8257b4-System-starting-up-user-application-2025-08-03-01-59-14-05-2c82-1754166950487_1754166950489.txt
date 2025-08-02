@@ -1,0 +1,116 @@
+2025-08-03 01:59:13.82
+2c8257b4
+System
+starting up user application
+2025-08-03 01:59:14.05
+2c8257b4
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-08-03 02:00:26.99
+2598a824
+System
+system: received signal terminated
+2025-08-03 02:02:05.34
+2c8257b4
+User
+🔍 CANDIDATES: Fetching candidates for user 1 (super_admin) in org 1
+2025-08-03 02:02:05.34
+2c8257b4
+User
+👑 CANDIDATES: User has super_admin role - showing all candidates
+2025-08-03 02:02:05.34
+2c8257b4
+User
+8:32:05 PM [express] GET /api/candidates 304 in 2ms :: []
+2025-08-03 02:02:05.34
+2c8257b4
+User
+8:32:05 PM [express] GET /api/interviews 304 in 1ms :: []
+2025-08-03 02:02:05.63
+2c8257b4
+User
+8:32:05 PM [express] GET /api/job-boards/credentials 304 in 1ms :: {"linkedIn":false,"indeed":false}
+2025-08-03 02:02:29.44
+2c8257b4
+User
+8:32:29 PM [express] GET /api/auth/me 200 in 6ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-03 02:02:29.73
+2c8257b4
+User
+8:32:29 PM [express] GET /api/auth/me 200 in 3ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-03 02:02:35.65
+2c8257b4
+User
+8:32:35 PM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-03 02:03:00.23
+2c8257b4
+User
+👤 ORG ADMIN CREATION: About to create organization admin via invite-organization-admin endpoint
+2025-08-03 02:03:00.23
+2c8257b4
+User
+📊 ORG ADMIN CREATION: NODE_ENV = production
+2025-08-03 02:03:00.23
+2c8257b4
+User
+📧 ORG ADMIN CREATION: Admin email = orgone@gmail.com
+2025-08-03 02:03:00.23
+2c8257b4
+User
+🏢 ORG ADMIN CREATION: Organization name = Org1
+2025-08-03 02:03:00.23
+2c8257b4
+User
+👤 ORG MANAGER: About to create admin user in organization manager
+2025-08-03 02:03:00.23
+2c8257b4
+User
+📊 ORG MANAGER: NODE_ENV = production
+2025-08-03 02:03:00.23
+2c8257b4
+User
+📧 ORG MANAGER: Admin email = orgone@gmail.com
+2025-08-03 02:03:00.23
+2c8257b4
+User
+🏢 ORG MANAGER: Organization ID = 3
+2025-08-03 02:03:00.53
+2c8257b4
+User
+✅ ORG MANAGER: Admin user created successfully with ID = 3
+2025-08-03 02:03:00.53
+2c8257b4
+User
+📁 ORG MANAGER: Data written to database file based on NODE_ENV = production
+2025-08-03 02:03:00.53
+2c8257b4
+User
+🔄 Auto-backup triggered (high): organization_created_Org1
+2025-08-03 02:03:00.53
+2c8257b4
+User
+🔄 Auto-backup triggered: organization_created_Org1
+2025-08-03 02:03:00.53
+2c8257b4
+User
+☁️ Uploading database backup: production-backup-2025-08-02T20-33-00-534Z.db (4KB)
+2025-08-03 02:03:00.63
+2c8257b4
+User
+✅ Database backup uploaded successfully: production-backup-2025-08-02T20-33-00-534Z.db
+2025-08-03 02:03:00.63
+2c8257b4
+User
+☁️ Uploading database backup: production-backup.db (4KB)
+2025-08-03 02:03:00.71
+2c8257b4
+User
+✅ Database backup uploaded successfully: production-backup.db
+2025-08-03 02:03:00.71
+2c8257b4
+User
+✅ Database backup created in Object Storage: production-backup-2025-08-02T20-33-00-534Z.db
+2025-08-03 02:03:00.71
+2c8257b4
+User
+✅ Auto-backup completed: production-backup-2025-08-02T20-33-00-534Z.db
