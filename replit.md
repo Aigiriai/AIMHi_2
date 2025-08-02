@@ -66,9 +66,11 @@ Preferred communication style: Simple, everyday language.
 #### Data Protection System
 - **Object Storage Integration**: Complete database persistence using Replit Object Storage for deployments.
 - **Automatic Cloud Backups**: Real-time backup creation to Object Storage after critical operations (job creation, candidate addition, user creation).
+- **Manual Database Backup**: User-accessible backup button in Recruitment → Overview for on-demand backups.
 - **Smart Restoration**: Automatic database restoration from Object Storage when missing in production deployments.
 - **Deployment Persistence**: Solves the critical data loss issue where Replit deployments reset filesystem between updates.
 - **Production Environment Protection**: Enhanced data persistence manager with cloud-based backup storage.
+- **Build Compatibility**: Fixed dynamic require() statements for proper ES module bundling in production deployments.
 
 ## External Dependencies
 

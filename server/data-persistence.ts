@@ -1,6 +1,7 @@
 // Data persistence manager for production database protection using Object Storage
 import fs from 'fs';
 import path from 'path';
+import Database from 'better-sqlite3';
 import { DatabaseBackupService } from './objectStorage';
 
 export class DataPersistenceManager {
@@ -151,14 +152,13 @@ export class DataPersistenceManager {
     try {
       const stats = fs.statSync(prodDbPath);
       
-      // Get record counts using sqlite3 command
-      const sqlite3 = require('better-sqlite3');
-      const db = sqlite3(prodDbPath, { readonly: true });
+      // Get record counts using better-sqlite3
+      const db = new Database(prodDbPath, { readonly: true });
       
-      const orgCount = db.prepare('SELECT COUNT(*) as count FROM organizations').get()?.count || 0;
-      const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get()?.count || 0;
-      const jobCount = db.prepare('SELECT COUNT(*) as count FROM jobs').get()?.count || 0;
-      const candidateCount = db.prepare('SELECT COUNT(*) as count FROM candidates').get()?.count || 0;
+      const orgCount = (db.prepare('SELECT COUNT(*) as count FROM organizations').get() as any)?.count || 0;
+      const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any)?.count || 0;
+      const jobCount = (db.prepare('SELECT COUNT(*) as count FROM jobs').get() as any)?.count || 0;
+      const candidateCount = (db.prepare('SELECT COUNT(*) as count FROM candidates').get() as any)?.count || 0;
       
       db.close();
 
