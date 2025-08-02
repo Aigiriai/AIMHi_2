@@ -41,14 +41,20 @@ export async function initializeSQLiteDB() {
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS organizations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
         domain TEXT,
         subdomain TEXT,
+        plan TEXT NOT NULL DEFAULT 'trial',
+        status TEXT NOT NULL DEFAULT 'active',
+        timezone TEXT DEFAULT 'UTC',
+        date_format TEXT DEFAULT 'MM/DD/YYYY',
+        currency TEXT DEFAULT 'USD',
         settings TEXT DEFAULT '{}',
-        plan TEXT DEFAULT 'free',
-        status TEXT DEFAULT 'active',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        billing_settings TEXT DEFAULT '{}',
+        compliance_settings TEXT DEFAULT '{}',
+        integration_settings TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
       );
 
       CREATE TABLE IF NOT EXISTS users (
@@ -59,16 +65,16 @@ export async function initializeSQLiteDB() {
         first_name TEXT NOT NULL,
         last_name TEXT NOT NULL,
         phone TEXT,
-        role TEXT DEFAULT 'user',
+        role TEXT NOT NULL DEFAULT 'recruiter',
         manager_id INTEGER,
-        is_active INTEGER DEFAULT 1,
+        is_active INTEGER NOT NULL DEFAULT 1,
         permissions TEXT DEFAULT '{}',
-        settings TEXT DEFAULT '{}',
-        has_temporary_password INTEGER DEFAULT 1,
+        has_temporary_password INTEGER NOT NULL DEFAULT 0,
         temporary_password TEXT,
+        settings TEXT DEFAULT '{}',
         last_login_at TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
         FOREIGN KEY (manager_id) REFERENCES users(id),
         UNIQUE(organization_id, email)
@@ -84,13 +90,26 @@ export async function initializeSQLiteDB() {
         experience_level TEXT NOT NULL,
         job_type TEXT NOT NULL,
         keywords TEXT NOT NULL,
-        status TEXT DEFAULT 'active',
+        requirements TEXT NOT NULL DEFAULT 'Requirements not specified',
+        location TEXT NOT NULL DEFAULT 'Location not specified',
+        salary_min INTEGER,
+        salary_max INTEGER,
+        original_file_name TEXT,
+        status TEXT NOT NULL DEFAULT 'draft',
+        approved_by INTEGER,
+        approved_at TEXT,
+        closed_at TEXT,
+        filled_at TEXT,
+        requires_approval INTEGER NOT NULL DEFAULT 1,
+        auto_publish_at TEXT,
+        application_deadline TEXT,
         settings TEXT DEFAULT '{}',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
         FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL,
-        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
       );
 
       CREATE TABLE IF NOT EXISTS candidates (
@@ -200,6 +219,93 @@ export async function initializeSQLiteDB() {
         FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE CASCADE
       );
 
+      CREATE TABLE IF NOT EXISTS applications (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        job_id INTEGER NOT NULL,
+        candidate_id INTEGER NOT NULL,
+        applied_by INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'new',
+        substatus TEXT,
+        current_stage TEXT NOT NULL DEFAULT 'new',
+        applied_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        match_percentage REAL,
+        source TEXT DEFAULT 'manual',
+        notes TEXT DEFAULT '',
+        last_stage_change_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        last_stage_changed_by INTEGER,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+        FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
+        FOREIGN KEY (applied_by) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (last_stage_changed_by) REFERENCES users(id) ON DELETE SET NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS job_assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        job_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        assigned_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS candidate_assignments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        candidate_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        role TEXT NOT NULL,
+        assigned_by INTEGER NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE
+      );
+
+      CREATE TABLE IF NOT EXISTS candidate_submissions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        submitted_by INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT NOT NULL,
+        experience INTEGER NOT NULL,
+        resume_content TEXT NOT NULL,
+        resume_file_name TEXT NOT NULL,
+        source TEXT DEFAULT 'manual',
+        tags TEXT DEFAULT '[]',
+        status TEXT NOT NULL DEFAULT 'pending',
+        submission_notes TEXT,
+        reviewed_by INTEGER,
+        reviewed_at TEXT,
+        review_notes TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+        FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS status_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER NOT NULL,
+        old_status TEXT,
+        new_status TEXT NOT NULL,
+        changed_by INTEGER NOT NULL,
+        reason TEXT,
+        notes TEXT,
+        changed_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+        FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE CASCADE
+      );
+
       CREATE TABLE IF NOT EXISTS job_templates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         job_id INTEGER NOT NULL,
@@ -254,25 +360,7 @@ export async function initializeSQLiteDB() {
       CREATE INDEX IF NOT EXISTS idx_interviews_org ON interviews(organization_id);
     `);
 
-    // Explicitly create candidates table if it doesn't exist
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS candidates (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        organization_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        email TEXT NOT NULL,
-        phone TEXT NOT NULL,
-        experience INTEGER DEFAULT 0,
-        status TEXT DEFAULT 'active',
-        source TEXT,
-        resume_content TEXT NOT NULL,
-        resume_file_name TEXT NOT NULL,
-        tags TEXT DEFAULT '[]',
-        added_by INTEGER NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+    // All tables now created in main block above
 
     console.log('✅ SQLite database initialized successfully');
     

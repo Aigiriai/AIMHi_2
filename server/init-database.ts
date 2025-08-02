@@ -83,10 +83,14 @@ export async function initializeSQLiteDatabase() {
         first_name TEXT NOT NULL,
         last_name TEXT NOT NULL,
         password_hash TEXT NOT NULL,
+        phone TEXT,
         role TEXT NOT NULL DEFAULT 'recruiter',
         manager_id INTEGER,
         is_active INTEGER NOT NULL DEFAULT 1,
         permissions TEXT DEFAULT '{}',
+        has_temporary_password INTEGER NOT NULL DEFAULT 0,
+        temporary_password TEXT,
+        settings TEXT DEFAULT '{}',
         last_login_at TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -110,6 +114,7 @@ export async function initializeSQLiteDatabase() {
         location TEXT NOT NULL DEFAULT 'Location not specified',
         salary_min INTEGER,
         salary_max INTEGER,
+        original_file_name TEXT,
         
         -- ATS Pipeline fields
         status TEXT NOT NULL DEFAULT 'draft',
@@ -149,6 +154,53 @@ export async function initializeSQLiteDatabase() {
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         FOREIGN KEY (organization_id) REFERENCES organizations(id),
         FOREIGN KEY (added_by) REFERENCES users(id)
+      );
+    `);
+
+    // Create job_matches table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS job_matches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        job_id INTEGER NOT NULL,
+        candidate_id INTEGER NOT NULL,
+        matched_by INTEGER NOT NULL,
+        match_percentage REAL NOT NULL,
+        ai_reasoning TEXT,
+        match_criteria TEXT DEFAULT '{}',
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (matched_by) REFERENCES users(id)
+      );
+    `);
+
+    // Create interviews table
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS interviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        job_id INTEGER NOT NULL,
+        candidate_id INTEGER NOT NULL,
+        match_id INTEGER,
+        scheduled_by INTEGER NOT NULL,
+        scheduled_date_time TEXT NOT NULL,
+        duration INTEGER NOT NULL DEFAULT 60,
+        status TEXT NOT NULL DEFAULT 'scheduled',
+        interview_type TEXT NOT NULL DEFAULT 'video',
+        meeting_link TEXT,
+        notes TEXT,
+        feedback TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (match_id) REFERENCES job_matches(id),
+        FOREIGN KEY (scheduled_by) REFERENCES users(id)
       );
     `);
 
@@ -355,24 +407,7 @@ export async function initializeSQLiteDatabase() {
       );
     `);
 
-    // Add ATS columns to existing jobs table if they don't exist
-    const jobsColumns = [
-      'approved_by INTEGER',
-      'approved_at TEXT',
-      'closed_at TEXT',
-      'filled_at TEXT',
-      'requires_approval INTEGER NOT NULL DEFAULT 1',
-      'auto_publish_at TEXT',
-      'application_deadline TEXT'
-    ];
-
-    for (const column of jobsColumns) {
-      try {
-        sqlite.exec(`ALTER TABLE jobs ADD COLUMN ${column};`);
-      } catch (error) {
-        // Column already exists, which is fine
-      }
-    }
+    // All fields now included in CREATE TABLE statements above
 
     // Check if timezone column exists and is working
     const result = sqlite.prepare("PRAGMA table_info(organizations)").all();
