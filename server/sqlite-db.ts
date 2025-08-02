@@ -105,10 +105,10 @@ export async function initializeSQLiteDB() {
         settings TEXT DEFAULT '{}',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL,
-        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (team_id) REFERENCES teams(id),
+        FOREIGN KEY (created_by) REFERENCES users(id),
+        FOREIGN KEY (approved_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS candidates (
@@ -126,8 +126,8 @@ export async function initializeSQLiteDB() {
         added_by INTEGER NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (added_by) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (added_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS job_matches (
@@ -139,13 +139,13 @@ export async function initializeSQLiteDB() {
         match_percentage REAL NOT NULL,
         ai_reasoning TEXT,
         match_criteria TEXT DEFAULT '{}',
-        status TEXT DEFAULT 'pending',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-        FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
-        FOREIGN KEY (matched_by) REFERENCES users(id) ON DELETE CASCADE
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (matched_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS interviews (
@@ -153,17 +153,22 @@ export async function initializeSQLiteDB() {
         organization_id INTEGER NOT NULL,
         job_id INTEGER NOT NULL,
         candidate_id INTEGER NOT NULL,
-        interviewer_id INTEGER NOT NULL,
-        scheduled_at TEXT NOT NULL,
-        duration INTEGER DEFAULT 60,
-        status TEXT DEFAULT 'scheduled',
+        match_id INTEGER,
+        scheduled_by INTEGER NOT NULL,
+        scheduled_date_time TEXT NOT NULL,
+        duration INTEGER NOT NULL DEFAULT 60,
+        status TEXT NOT NULL DEFAULT 'scheduled',
+        interview_type TEXT NOT NULL DEFAULT 'video',
+        meeting_link TEXT,
         notes TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-        FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
-        FOREIGN KEY (interviewer_id) REFERENCES users(id) ON DELETE CASCADE
+        feedback TEXT DEFAULT '{}',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (match_id) REFERENCES job_matches(id),
+        FOREIGN KEY (scheduled_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS teams (
@@ -197,14 +202,14 @@ export async function initializeSQLiteDB() {
         organization_id INTEGER NOT NULL,
         user_id INTEGER,
         action TEXT NOT NULL,
-        resource_type TEXT,
-        resource_id INTEGER,
+        entity_type TEXT NOT NULL,
+        entity_id INTEGER NOT NULL,
         details TEXT DEFAULT '{}',
         ip_address TEXT,
         user_agent TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS organization_credentials (
@@ -250,11 +255,11 @@ export async function initializeSQLiteDB() {
         last_stage_changed_by INTEGER,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-        FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
-        FOREIGN KEY (applied_by) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (last_stage_changed_by) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (applied_by) REFERENCES users(id),
+        FOREIGN KEY (last_stage_changed_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS job_assignments (
@@ -264,9 +269,9 @@ export async function initializeSQLiteDB() {
         role TEXT NOT NULL,
         assigned_by INTEGER NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (assigned_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS candidate_assignments (
@@ -276,9 +281,9 @@ export async function initializeSQLiteDB() {
         role TEXT NOT NULL,
         assigned_by INTEGER NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (candidate_id) REFERENCES candidates(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (candidate_id) REFERENCES candidates(id),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (assigned_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS candidate_submissions (
@@ -300,9 +305,9 @@ export async function initializeSQLiteDB() {
         review_notes TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (submitted_by) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (submitted_by) REFERENCES users(id),
+        FOREIGN KEY (reviewed_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS status_history (
@@ -316,8 +321,8 @@ export async function initializeSQLiteDB() {
         reason TEXT,
         notes TEXT,
         changed_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (changed_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS job_templates (
@@ -351,19 +356,22 @@ export async function initializeSQLiteDB() {
         reviewed_by INTEGER,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
+        FOREIGN KEY (job_id) REFERENCES jobs(id),
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (reviewed_by) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS usage_metrics (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
+        user_id INTEGER,
         metric_type TEXT NOT NULL,
         metric_value REAL NOT NULL,
+        billing_period TEXT NOT NULL,
         metadata TEXT DEFAULT '{}',
-        recorded_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
       );
 
       CREATE INDEX IF NOT EXISTS idx_users_org_email ON users(organization_id, email);
