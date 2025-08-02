@@ -56,13 +56,21 @@ sqlite3 data/production.db "SELECT COUNT(*) FROM organizations; SELECT COUNT(*) 
 ```
 
 ### Before Future Deployments:
-```bash
-# Always create a backup first
-./backup-database.sh
+**IMPORTANT:** You cannot run shell commands directly in Replit's production deployment environment.
 
-# Deploy your application
-# The system will automatically try to restore if needed
+**The protection works automatically:**
+1. The enhanced `deploy-setup.sh` runs during deployment
+2. It automatically checks for existing backups
+3. Restores your data if database is missing
+4. Creates backups before any modifications
+
+**In Development (Optional):**
+```bash
+# Create a backup in your development environment
+./backup-database.sh
 ```
+
+**The system protects your production data automatically - no manual intervention needed.**
 
 ## 🚀 Prevention for Future Deployments
 
