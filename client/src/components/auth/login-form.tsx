@@ -81,7 +81,7 @@ export default function LoginForm() {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">AIM Hi System</h1>
-          <p className="text-gray-600">AI-Powered Recruitment Platform</p>
+          <p className="text-gray-600">AI-Powered Recruitment Platform <span className="text-gray-400">version 0.0.1</span></p>
         </div>
 
         {/* Login Card */}
