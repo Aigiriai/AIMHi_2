@@ -61,9 +61,9 @@ export async function initializeSQLiteDB() {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         organization_id INTEGER NOT NULL,
         email TEXT NOT NULL,
-        password_hash TEXT NOT NULL,
         first_name TEXT NOT NULL,
         last_name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
         phone TEXT,
         role TEXT NOT NULL DEFAULT 'recruiter',
         manager_id INTEGER,
@@ -75,21 +75,8 @@ export async function initializeSQLiteDB() {
         last_login_at TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
         FOREIGN KEY (manager_id) REFERENCES users(id)
-      );
-
-      CREATE TABLE IF NOT EXISTS user_teams (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        organization_id INTEGER NOT NULL,
-        user_id INTEGER NOT NULL,
-        team_id INTEGER NOT NULL,
-        role TEXT DEFAULT 'member',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-        UNIQUE(user_id, team_id)
       );
 
       CREATE TABLE IF NOT EXISTS jobs (
@@ -186,20 +173,23 @@ export async function initializeSQLiteDB() {
         description TEXT,
         manager_id INTEGER,
         settings TEXT DEFAULT '{}',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
         FOREIGN KEY (manager_id) REFERENCES users(id)
       );
 
       CREATE TABLE IF NOT EXISTS user_teams (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
         user_id INTEGER NOT NULL,
         team_id INTEGER NOT NULL,
         role TEXT DEFAULT 'member',
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (team_id) REFERENCES teams(id),
+        UNIQUE(user_id, team_id)
       );
 
       CREATE TABLE IF NOT EXISTS audit_logs (
@@ -223,12 +213,24 @@ export async function initializeSQLiteDB() {
         admin_user_id INTEGER NOT NULL,
         email TEXT NOT NULL,
         temporary_password TEXT NOT NULL,
-        is_password_changed INTEGER DEFAULT 0,
+        is_password_changed INTEGER NOT NULL DEFAULT 0,
         expires_at TEXT,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-        FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE CASCADE
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id),
+        FOREIGN KEY (admin_user_id) REFERENCES users(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS user_credentials (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organization_id INTEGER NOT NULL,
+        email TEXT NOT NULL,
+        temporary_password TEXT NOT NULL,
+        is_password_changed INTEGER NOT NULL DEFAULT 0,
+        expires_at TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+        FOREIGN KEY (organization_id) REFERENCES organizations(id)
       );
 
       CREATE TABLE IF NOT EXISTS applications (
@@ -401,7 +403,7 @@ export async function initializeSQLiteDB() {
   return { db, sqlite };
 }
 
-async function seedInitialData(db: any, sqlite: Database) {
+async function seedInitialData(db: any, sqlite: any) {
   try {
     // Check if super admin exists
     const existingSuperAdmin = sqlite.prepare('SELECT id FROM organizations WHERE name = ?').get('AIM Hi System');
@@ -461,7 +463,7 @@ async function seedInitialData(db: any, sqlite: Database) {
   }
 }
 
-let dbInstance: { db: any; sqlite: Database } | null = null;
+let dbInstance: { db: any; sqlite: any } | null = null;
 
 export async function getSQLiteDB() {
   if (!dbInstance) {
