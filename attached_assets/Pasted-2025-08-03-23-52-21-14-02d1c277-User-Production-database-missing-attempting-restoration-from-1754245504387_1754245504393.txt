@@ -1,0 +1,108 @@
+2025-08-03 23:52:21.14
+02d1c277
+User
+🔄 Production database missing - attempting restoration from latest backup...
+2025-08-03 23:52:21.14
+02d1c277
+User
+🛡️ Starting pre-deployment data protection...
+2025-08-03 23:52:21.14
+02d1c277
+User
+⚠️ No production database found
+2025-08-03 23:52:21.14
+02d1c277
+User
+🔄 Attempting automatic restoration from latest backup...
+2025-08-03 23:52:21.14
+02d1c277
+User
+☁️ Attempting to restore from Object Storage...
+2025-08-03 23:52:21.14
+02d1c277
+User
+🛡️ Attempting to restore database from Object Storage...
+2025-08-03 23:52:21.21
+02d1c277
+User
+✅ SQLite database initialized successfully
+2025-08-03 23:52:21.21
+02d1c277
+User
+🌱 Seeding super admin...
+2025-08-03 23:52:21.33
+02d1c277
+User
+✓ Super admin seeded successfully
+2025-08-03 23:52:21.33
+02d1c277
+User
+✅ Multi-tenant system initialized successfully
+2025-08-03 23:52:21.33
+02d1c277
+User
+=== Login Credentials ===
+2025-08-03 23:52:21.33
+02d1c277
+User
+Super Admin:
+2025-08-03 23:52:21.33
+02d1c277
+User
+Email: superadmin@aimhi.app
+2025-08-03 23:52:21.33
+02d1c277
+User
+Password: SuperAdmin123!@#
+2025-08-03 23:52:21.33
+02d1c277
+User
+========================
+2025-08-03 23:52:21.56
+02d1c277
+User
+📋 Found 20 backup files, checking most recent:
+2025-08-03 23:52:21.56
+02d1c277
+User
+1. production-backup.db (modified: 2025-08-03T18:19:29.207Z)
+2025-08-03 23:52:21.56
+02d1c277
+User
+2. production-backup-2025-08-03T18-19-29-019Z.db (modified: 2025-08-03T18:19:29.105Z)
+2025-08-03 23:52:21.56
+02d1c277
+User
+3. production-backup-2025-08-03T18-18-20-063Z.db (modified: 2025-08-03T18:18:20.150Z)
+2025-08-03 23:52:21.56
+02d1c277
+User
+🔄 Restoring most recent backup: production-backup.db (modified: 2025-08-03T18:19:29.207Z)
+2025-08-03 23:52:21.63
+02d1c277
+User
+☁️ Downloading database backup: production-backup.db (4KB)
+2025-08-03 23:52:21.72
+02d1c277
+User
+✅ Database backup downloaded successfully to: /home/runner/workspace/data/production.db
+2025-08-03 23:52:21.72
+02d1c277
+User
+✅ Database restored from most recent backup: production-backup.db
+2025-08-03 23:52:21.72
+02d1c277
+User
+✅ Database restored from Object Storage backup
+2025-08-03 23:52:21.72
+02d1c277
+User
+✅ Database restored from Object Storage backup
+2025-08-03 23:52:21.72
+02d1c277
+User
+✅ SQLite database initialized successfully
+2025-08-03 23:52:21.72
+02d1c277
+User
+✅ Organizations table has timezone column

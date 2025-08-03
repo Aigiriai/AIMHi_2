@@ -299,12 +299,29 @@ export class DatabaseBackupService {
       backupsWithMetadata.sort((a, b) => b.updated.getTime() - a.updated.getTime());
       
       console.log(`📋 Found ${backupsWithMetadata.length} backup files, checking most recent:`);
-      backupsWithMetadata.forEach((backup, index) => {
+      
+      // DEBUG: Check organizations in the top 3 backups
+      for (let i = 0; i < Math.min(3, backupsWithMetadata.length); i++) {
+        const backup = backupsWithMetadata[i];
         const timeStr = backup.updated.toISOString();
-        if (index < 3) { // Show top 3 for debugging
-          console.log(`  ${index + 1}. ${backup.name} (modified: ${timeStr})`);
+        console.log(`  ${i + 1}. ${backup.name} (modified: ${timeStr})`);
+        
+        // Download and check organizations in this backup
+        try {
+          const tempPath = `/tmp/debug_backup_${i}.db`;
+          const downloaded = await this.downloadDatabaseBackup(backup.name, tempPath);
+          if (downloaded) {
+            const Database = require('better-sqlite3');
+            const db = new Database(tempPath, { readonly: true });
+            const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
+            console.log(`     📋 Organizations in ${backup.name}:`, orgs.map(o => `${o.name} (${o.domain})`).join(', ') || 'None');
+            db.close();
+            require('fs').unlinkSync(tempPath); // Clean up temp file
+          }
+        } catch (error) {
+          console.log(`     ⚠️ Could not analyze backup ${backup.name}:`, error.message);
         }
-      });
+      }
       
       // Try to restore the most recent backup
       const latestBackup = backupsWithMetadata[0];
@@ -314,6 +331,18 @@ export class DatabaseBackupService {
       
       if (restored) {
         console.log(`✅ Database restored from most recent backup: ${latestBackup.name}`);
+        
+        // DEBUG: Check what organizations exist in the restored database
+        try {
+          const Database = require('better-sqlite3');
+          const db = new Database(localDbPath, { readonly: true });
+          const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
+          console.log(`🔍 DEBUG: Organizations in restored backup:`, orgs);
+          db.close();
+        } catch (error) {
+          console.log(`⚠️ DEBUG: Could not read organizations from restored backup:`, error.message);
+        }
+        
         return true;
       } else {
         console.log(`❌ Failed to restore backup: ${latestBackup.name}`);

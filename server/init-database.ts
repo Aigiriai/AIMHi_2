@@ -23,7 +23,12 @@ export async function initializeSQLiteDatabase() {
     // PRODUCTION DATA PROTECTION: Restore automatically if database missing
     if (process.env.NODE_ENV === 'production' && !fs.existsSync(dbPath)) {
       console.log('🔄 Production database missing - attempting restoration from latest backup...');
-      await dataPersistence.protectDataBeforeDeployment();
+      const restored = await dataPersistence.restoreFromLatestBackup();
+      if (restored) {
+        console.log('✅ Database restored successfully from backup');
+      } else {
+        console.log('📦 No backup available - will create fresh database');
+      }
     }
 
     const sqlite = new Database(dbPath);
