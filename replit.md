@@ -72,6 +72,8 @@ Preferred communication style: Simple, everyday language.
 - **Production Environment Protection**: Enhanced data persistence manager with cloud-based backup storage.
 - **Build Compatibility**: Fixed dynamic require() statements for proper ES module bundling in production deployments.
 - **Critical Backup Timing Fix**: Resolved data loss issue where initialization backups were overwriting user data during deployment restarts.
+- **CRITICAL FIX (Aug 2025)**: Modified restoreLatestBackup() to use Google Cloud Storage metadata timestamps instead of filename sorting, ensuring manually triggered backups are prioritized over older production-backup.db files.
+- **Throttling Disabled**: Removed time throttling restrictions to ensure critical backups aren't skipped during rapid operations.
 
 ## External Dependencies
 
