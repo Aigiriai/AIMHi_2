@@ -199,6 +199,36 @@ export class BackupIntegrationService {
       this.isBackupInProgress = prevBackupInProgress;
     }
   }
+
+  // Force backup regardless of environment (for manual triggers)
+  async forceBackupAnyEnvironment(reason: string): Promise<boolean> {
+    if (!reason || typeof reason !== "string") {
+      console.error("❌ Force backup failed: invalid reason parameter");
+      return false;
+    }
+
+    const prevBackupInProgress = this.isBackupInProgress;
+    this.isBackupInProgress = true;
+
+    try {
+      console.log(`🚨 Manual backup triggered (any environment): ${reason}`);
+      const backupName = await dataPersistence.createBackup();
+      if (backupName) {
+        console.log(`✅ Manual backup completed: ${backupName}`);
+        this.lastBackupTime = Date.now();
+        return true;
+      } else {
+        console.log(`❌ Manual backup failed: ${reason}`);
+        return false;
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error(`❌ Manual backup failed for ${reason}: ${errorMessage}`, error);
+      return false;
+    } finally {
+      this.isBackupInProgress = prevBackupInProgress;
+    }
+  }
 }
 
 // Export singleton instance

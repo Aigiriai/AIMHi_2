@@ -2678,6 +2678,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual backup endpoint (for debugging data persistence)
+  app.post("/api/manual-backup", authenticateToken, async (req: AuthRequest, res) => {
+    try {
+      const { backupService } = await import('./backup-integration');
+      const success = await backupService.forceBackupAnyEnvironment('manual_trigger_from_api');
+      
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: 'Manual backup completed successfully',
+          environment: process.env.NODE_ENV || 'undefined'
+        });
+      } else {
+        res.status(500).json({ 
+          success: false, 
+          message: 'Manual backup failed' 
+        });
+      }
+    } catch (error) {
+      console.error('Manual backup error:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Manual backup error',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Mount route modules
   app.use('/api/auth', authRoutes);
   app.use('/api/settings', settingsRoutes);
