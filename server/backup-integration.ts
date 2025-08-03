@@ -84,6 +84,7 @@ export class BackupIntegrationService {
 
     try {
       console.log(`🔄 Auto-backup triggered (${priority}): ${reason}`);
+      console.log(`📊 BACKUP TIMING: Last backup was ${Math.round((now - this.lastBackupTime) / 1000)}s ago`);
       await dataPersistence.autoBackupIfNeeded(reason);
 
       this.lastBackupTime = now;
@@ -134,10 +135,13 @@ export class BackupIntegrationService {
       console.error("❌ Invalid organization data for backup");
       return false;
     }
-    return await this.scheduleAutoBackup(
+    console.log(`🔄 BACKUP SERVICE: Organization created backup trigger for: ${orgData.name} (NODE_ENV: ${process.env.NODE_ENV})`);
+    const result = await this.scheduleAutoBackup(
       `organization_created_${orgData.name}`,
       "high",
     );
+    console.log(`📊 BACKUP SERVICE: Organization backup result: ${result ? 'SUCCESS' : 'FAILED'}`);
+    return result;
   }
 
   async onCandidateBulkImport(count: number): Promise<boolean> {

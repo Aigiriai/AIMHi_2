@@ -157,10 +157,15 @@ export class OrganizationManager {
     console.log(`✅ ORG MANAGER: Admin user created successfully with ID = ${adminUser.id}`);
     console.log(`📁 ORG MANAGER: Data written to database file based on NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
 
+    // CRITICAL: Add small delay to ensure database transaction is fully committed
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     // Trigger auto-backup for production (organization creation is high priority)
+    console.log(`🔄 ORG MANAGER: Triggering backup after org creation (NODE_ENV: ${process.env.NODE_ENV})`);
     await backupService.onOrganizationCreated(organization);
     
     // Trigger auto-backup for user creation  
+    console.log(`🔄 ORG MANAGER: Triggering backup after user creation (NODE_ENV: ${process.env.NODE_ENV})`);
     await backupService.onUserCreated(adminUser);
 
     return {

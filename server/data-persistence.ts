@@ -50,11 +50,23 @@ export class DataPersistenceManager {
         return null;
       }
       
-      // Check if there are organizations (debug info)
+      // Check if there are organizations (debug info) - but don't block backup if empty
       const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
       console.log(`🔍 DEBUG: Organizations BEFORE backup creation:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
       
+      // Additional validation: check if we have essential tables
+      const essentialTables = ['users', 'organizations'];
+      for (const tableName of essentialTables) {
+        const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+        if (!tableExists) {
+          console.log(`🚫 BACKUP BLOCKED: Database missing essential table: ${tableName}`);
+          db.close();
+          return null;
+        }
+      }
+      
       db.close();
+      console.log(`✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup`);
     } catch (error) {
       console.log(`⚠️ DEBUG: Could not validate database before backup:`, error.message);
       console.log(`🚫 BACKUP BLOCKED: Database validation failed - will not backup potentially corrupt database`);
@@ -239,6 +251,7 @@ export class DataPersistenceManager {
    */
   async autoBackupIfNeeded(reason: string = 'auto'): Promise<void> {
     if (!this.hasProductionDatabase()) {
+      console.log(`⚠️ Auto-backup skipped: No production database found for reason: ${reason}`);
       return;
     }
 
@@ -246,6 +259,8 @@ export class DataPersistenceManager {
     const backupName = await this.createBackup();
     if (backupName) {
       console.log(`✅ Auto-backup completed: ${backupName}`);
+    } else {
+      console.log(`❌ Auto-backup failed for reason: ${reason}`);
     }
   }
 }
