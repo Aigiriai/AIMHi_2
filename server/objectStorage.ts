@@ -314,8 +314,16 @@ export class DatabaseBackupService {
             // Use dynamic import instead of require for ES modules
             const Database = (await import('better-sqlite3')).default;
             const db = new Database(tempPath, { readonly: true });
-            const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
-            console.log(`     📋 Organizations in ${backup.name}:`, orgs.map(o => `${o.name} (${o.domain})`).join(', ') || 'None');
+            
+            // Check if organizations table exists first
+            const tablesResult = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='organizations'").get();
+            if (tablesResult) {
+              const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
+              console.log(`     📋 Organizations in ${backup.name}:`, orgs.map(o => `${o.name} (${o.domain})`).join(', ') || 'None');
+            } else {
+              console.log(`     ⚠️ ${backup.name}: INCOMPLETE - missing organizations table`);
+            }
+            
             db.close();
             const fs = await import('fs');
             fs.unlinkSync(tempPath); // Clean up temp file
@@ -338,8 +346,16 @@ export class DatabaseBackupService {
         try {
           const Database = (await import('better-sqlite3')).default;
           const db = new Database(localDbPath, { readonly: true });
-          const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
-          console.log(`🔍 DEBUG: Organizations in restored backup:`, orgs);
+          
+          // Check if organizations table exists first
+          const tablesResult = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='organizations'").get();
+          if (tablesResult) {
+            const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
+            console.log(`🔍 DEBUG: Organizations in restored backup:`, orgs);
+          } else {
+            console.log(`⚠️ DEBUG: Restored backup is INCOMPLETE - missing organizations table`);
+          }
+          
           db.close();
         } catch (error) {
           console.log(`⚠️ DEBUG: Could not read organizations from restored backup:`, error.message);
