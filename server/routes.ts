@@ -13,7 +13,7 @@ import pipelineRoutes from "./pipeline-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
 import { getDB } from "./db-connection";
 import { eq, and, or, desc, inArray, sql, gte } from "drizzle-orm";
-import { initializeMultiTenantSystem } from "./seed-demo";
+// Consolidated seeding moved to sqlite-db.ts initialization
 import multer from "multer";
 import { getDirectDomain } from "./index";
 import { createIncomingCallTwiML, createOutboundCallTwiML, setCallContext, prepareCallContext } from "./ai-calling";
@@ -70,8 +70,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const jobBoardService = new JobBoardService();
   const fileStorage = new FileStorageService();
 
-  // Initialize multi-tenant system on startup
-  initializeMultiTenantSystem().catch(console.error);
+  // Seeding now handled during database initialization in sqlite-db.ts
 
   // Test endpoint for AI matching demonstration
   app.post('/api/test-ai-match', async (req, res) => {

@@ -413,6 +413,20 @@ export async function initializeSQLiteDB() {
 
 async function seedInitialData(db: any, sqlite: any) {
   try {
+    // PRODUCTION DATA PROTECTION: Check if we have existing data
+    if (process.env.NODE_ENV === 'production') {
+      const orgCount = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get();
+      const userCount = sqlite.prepare('SELECT COUNT(*) as count FROM users').get();
+      
+      if (orgCount.count > 0 || userCount.count > 0) {
+        console.log('📊 Existing production data found:');
+        console.log(`Organizations: ${orgCount.count}`);
+        console.log(`Users: ${userCount.count}`);
+        console.log('🛡️ Seeding skipped - existing data preserved');
+        return;
+      }
+    }
+    
     // Check if super admin user exists (more comprehensive check)
     const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
     
@@ -442,6 +456,7 @@ async function seedInitialData(db: any, sqlite: any) {
       `).run(systemOrg.id, 'superadmin@aimhi.app', hashedPassword, 'Super', 'Admin', 'super_admin', 0);
       
       console.log('✓ Super admin seeded successfully');
+      console.log('✅ Multi-tenant system initialized successfully');
     } else {
       console.log('✓ Super admin already exists');
     }
