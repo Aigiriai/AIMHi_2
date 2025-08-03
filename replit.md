@@ -74,6 +74,7 @@ Preferred communication style: Simple, everyday language.
 - **Critical Backup Timing Fix**: Resolved data loss issue where initialization backups were overwriting user data during deployment restarts.
 - **CRITICAL FIX (Aug 2025)**: Modified restoreLatestBackup() to use Google Cloud Storage metadata timestamps instead of filename sorting, ensuring manually triggered backups are prioritized over older production-backup.db files.
 - **Throttling Disabled**: Removed time throttling restrictions to ensure critical backups aren't skipped during rapid operations.
+- **Dual Seeding Eliminated**: Consolidated all seeding logic to sqlite-db.ts, removing competing seeding systems that could overwrite restored data and create duplicate super admin accounts.
 
 ## External Dependencies
 
