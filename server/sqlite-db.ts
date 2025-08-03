@@ -400,8 +400,23 @@ export async function initializeSQLiteDB() {
       console.log('Column migration handled:', error);
     }
     
-    // Seed initial data
-    await seedInitialData(db, sqlite);
+    // CRITICAL FIX: Only seed if this is a truly fresh database
+    // Check if restoration happened elsewhere first
+    const existingOrgs = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get();
+    const existingUsers = sqlite.prepare('SELECT COUNT(*) as count FROM users').get();
+    
+    console.log(`🔍 BEFORE SEEDING CHECK: Found ${existingOrgs.count} organizations, ${existingUsers.count} users`);
+    
+    if (existingOrgs.count === 0 && existingUsers.count === 0) {
+      console.log('📦 No existing data found - proceeding with initial seeding');
+      await seedInitialData(db, sqlite);
+    } else {
+      console.log('🛡️ Existing data found - skipping seeding to preserve restored/existing data');
+      
+      // DEBUG: Show what organizations exist
+      const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
+      console.log(`🔍 PRESERVED ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+    }
     
   } catch (error) {
     console.error('Database initialization error:', error);
