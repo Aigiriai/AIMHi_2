@@ -1,0 +1,128 @@
+2025-08-03 23:07:47.15
+ea8236f5
+User
+☁️ Uploading database backup: production-backup-2025-08-03T17-37-47-154Z.db (4KB)
+2025-08-03 23:07:47.41
+ea8236f5
+User
+✅ Database backup uploaded successfully: production-backup-2025-08-03T17-37-47-154Z.db
+2025-08-03 23:07:47.41
+ea8236f5
+User
+☁️ Uploading database backup: production-backup.db (4KB)
+2025-08-03 23:07:47.49
+ea8236f5
+User
+✅ Database backup uploaded successfully: production-backup.db
+2025-08-03 23:07:47.49
+ea8236f5
+User
+✅ Database backup created in Object Storage: production-backup-2025-08-03T17-37-47-154Z.db
+2025-08-03 23:07:47.49
+ea8236f5
+User
+✅ Auto-backup completed: production-backup-2025-08-03T17-37-47-154Z.db
+2025-08-03 23:07:47.49
+ea8236f5
+User
+✅ Auto-backup completed: organization_created_org1
+2025-08-03 23:07:47.49
+ea8236f5
+User
+🔄 Auto-backup triggered (normal): user_created_org1admin@gmail.com
+2025-08-03 23:07:47.49
+ea8236f5
+User
+🔄 Auto-backup triggered: user_created_org1admin@gmail.com
+2025-08-03 23:07:47.49
+ea8236f5
+User
+☁️ Uploading database backup: production-backup-2025-08-03T17-37-47-491Z.db (4KB)
+2025-08-03 23:07:47.57
+ea8236f5
+User
+✅ Database backup uploaded successfully: production-backup-2025-08-03T17-37-47-491Z.db
+2025-08-03 23:07:47.57
+ea8236f5
+User
+☁️ Uploading database backup: production-backup.db (4KB)
+2025-08-03 23:07:47.65
+ea8236f5
+User
+✅ Database backup uploaded successfully: production-backup.db
+2025-08-03 23:07:47.65
+ea8236f5
+User
+✅ Database backup created in Object Storage: production-backup-2025-08-03T17-37-47-491Z.db
+2025-08-03 23:07:47.65
+ea8236f5
+User
+✅ Auto-backup completed: production-backup-2025-08-03T17-37-47-491Z.db
+2025-08-03 23:07:47.65
+ea8236f5
+User
+✅ Auto-backup completed: user_created_org1admin@gmail.com
+2025-08-03 23:07:47.65
+ea8236f5
+User
+✅ ORG ADMIN CREATION: Organization admin created successfully with ID = 2
+2025-08-03 23:07:47.65
+ea8236f5
+User
+Audit event (disabled): {
+2025-08-03 23:07:47.65
+ea8236f5
+User
+organizationId: 1,
+2025-08-03 23:07:47.65
+ea8236f5
+User
+userId: 1,
+2025-08-03 23:07:47.65
+ea8236f5
+User
+action: 'organization_created',
+2025-08-03 23:07:47.65
+ea8236f5
+User
+resourceType: 'organization',
+2025-08-03 23:07:47.65
+ea8236f5
+User
+resourceId: 2,
+2025-08-03 23:07:47.65
+ea8236f5
+User
+details: { organizationName: 'org1', adminEmail: 'org1admin@gmail.com' }
+2025-08-03 23:07:47.65
+ea8236f5
+User
+}
+2025-08-03 23:07:47.65
+ea8236f5
+User
+5:37:47 PM [express] POST /api/auth/invite-organization-admin 200 in 805ms :: {"message":"Organizati…
+2025-08-03 23:07:47.98
+ea8236f5
+User
+5:37:47 PM [express] GET /api/auth/organizations 200 in 6ms :: {"organizations":[{"id":2,"name":"org…
+2025-08-03 23:10:56.10
+ea8236f5
+User
+5:40:56 PM [express] POST /api/auth/login 200 in 299ms :: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpX…
+2025-08-03 23:10:57.12
+ea8236f5
+User
+📊 STATS: Calculating user-specific stats for user 2 (org_admin) in organization 2
+2025-08-03 23:10:57.12
+ea8236f5
+User
+📊 STATS: User has access to 0 jobs: []
+2025-08-03 23:10:57.12
+ea8236f5
+User
+📊 STATS: User has no accessible jobs, returning empty stats
+2025-08-03 23:10:57.12
+ea8236f5
+User
+5:40:57 PM [express] GET /api/stats 304 in 3ms :: {"activeJobs":0,"totalCandidates":0,"aiMatches":0,…
