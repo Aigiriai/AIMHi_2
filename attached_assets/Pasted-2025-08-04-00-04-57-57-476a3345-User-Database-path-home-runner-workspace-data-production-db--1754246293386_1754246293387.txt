@@ -1,0 +1,140 @@
+2025-08-04 00:04:57.57
+476a3345
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 00:04:57.57
+476a3345
+User
+🔄 Production database missing - attempting restoration from latest backup...
+2025-08-04 00:04:57.57
+476a3345
+User
+☁️ Attempting to restore from Object Storage...
+2025-08-04 00:04:57.57
+476a3345
+User
+🛡️ Attempting to restore database from Object Storage...
+2025-08-04 00:04:57.63
+476a3345
+User
+✅ SQLite database initialized successfully
+2025-08-04 00:04:57.63
+476a3345
+User
+🌱 Seeding super admin...
+2025-08-04 00:04:57.74
+476a3345
+User
+✓ Super admin seeded successfully
+2025-08-04 00:04:57.74
+476a3345
+User
+✅ Multi-tenant system initialized successfully
+2025-08-04 00:04:57.74
+476a3345
+User
+=== Login Credentials ===
+2025-08-04 00:04:57.74
+476a3345
+User
+Super Admin:
+2025-08-04 00:04:57.74
+476a3345
+User
+Email: superadmin@aimhi.app
+2025-08-04 00:04:57.74
+476a3345
+User
+Password: SuperAdmin123!@#
+2025-08-04 00:04:57.74
+476a3345
+User
+========================
+2025-08-04 00:04:57.91
+476a3345
+User
+📋 Found 20 backup files, checking most recent:
+2025-08-04 00:04:57.91
+476a3345
+User
+1. production-backup.db (modified: 2025-08-03T18:19:29.207Z)
+2025-08-04 00:04:57.99
+476a3345
+User
+☁️ Downloading database backup: production-backup.db (4KB)
+2025-08-04 00:04:58.09
+476a3345
+User
+✅ Database backup downloaded successfully to: /tmp/debug_backup_0.db
+2025-08-04 00:04:58.09
+476a3345
+User
+⚠️ Could not analyze backup production-backup.db: Dynamic require of "better-sqlite3" is not supported
+2025-08-04 00:04:58.09
+476a3345
+User
+2. production-backup-2025-08-03T18-19-29-019Z.db (modified: 2025-08-03T18:19:29.105Z)
+2025-08-04 00:04:58.15
+476a3345
+User
+☁️ Downloading database backup: production-backup-2025-08-03T18-19-29-019Z.db (4KB)
+2025-08-04 00:04:58.24
+476a3345
+User
+✅ Database backup downloaded successfully to: /tmp/debug_backup_1.db
+2025-08-04 00:04:58.24
+476a3345
+User
+⚠️ Could not analyze backup production-backup-2025-08-03T18-19-29-019Z.db: Dynamic require of "better-sqlite3" is not supported
+2025-08-04 00:04:58.24
+476a3345
+User
+3. production-backup-2025-08-03T18-18-20-063Z.db (modified: 2025-08-03T18:18:20.150Z)
+2025-08-04 00:04:58.29
+476a3345
+User
+☁️ Downloading database backup: production-backup-2025-08-03T18-18-20-063Z.db (4KB)
+2025-08-04 00:04:58.40
+476a3345
+User
+✅ Database backup downloaded successfully to: /tmp/debug_backup_2.db
+2025-08-04 00:04:58.40
+476a3345
+User
+⚠️ Could not analyze backup production-backup-2025-08-03T18-18-20-063Z.db: Dynamic require of "better-sqlite3" is not supported
+2025-08-04 00:04:58.40
+476a3345
+User
+🔄 Restoring most recent backup: production-backup.db (modified: 2025-08-03T18:19:29.207Z)
+2025-08-04 00:04:58.45
+476a3345
+User
+☁️ Downloading database backup: production-backup.db (4KB)
+2025-08-04 00:04:58.49
+476a3345
+User
+✅ Database backup downloaded successfully to: /home/runner/workspace/data/production.db
+2025-08-04 00:04:58.49
+476a3345
+User
+✅ Database restored from most recent backup: production-backup.db
+2025-08-04 00:04:58.49
+476a3345
+User
+⚠️ DEBUG: Could not read organizations from restored backup: Dynamic require of "better-sqlite3" is not supported
+2025-08-04 00:04:58.49
+476a3345
+User
+✅ Database restored from Object Storage backup
+2025-08-04 00:04:58.49
+476a3345
+User
+✅ Database restored successfully from backup
+2025-08-04 00:04:58.49
+476a3345
+User
+✅ SQLite database initialized successfully
+2025-08-04 00:04:58.49
+476a3345
+User
+✅ Organizations table has timezone column

@@ -26,6 +26,20 @@ export async function initializeSQLiteDatabase() {
       const restored = await dataPersistence.restoreFromLatestBackup();
       if (restored) {
         console.log('✅ Database restored successfully from backup');
+        // Database was restored, now open it
+        const sqlite = new Database(dbPath);
+        sqlite.pragma('journal_mode = WAL');
+        sqlite.pragma('synchronous = NORMAL');
+        sqlite.pragma('cache_size = 1000');
+        sqlite.pragma('temp_store = memory');
+        
+        console.log('✅ SQLite database initialized successfully');
+        
+        // Skip seeding - data already exists from backup
+        console.log('🔄 Database restored from backup - skipping initialization seeding');
+        
+        const drizzleDb = drizzle(sqlite);
+        return { db: drizzleDb, sqlite };
       } else {
         console.log('📦 No backup available - will create fresh database');
       }

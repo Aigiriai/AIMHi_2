@@ -311,12 +311,14 @@ export class DatabaseBackupService {
           const tempPath = `/tmp/debug_backup_${i}.db`;
           const downloaded = await this.downloadDatabaseBackup(backup.name, tempPath);
           if (downloaded) {
-            const Database = require('better-sqlite3');
+            // Use dynamic import instead of require for ES modules
+            const Database = (await import('better-sqlite3')).default;
             const db = new Database(tempPath, { readonly: true });
             const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
             console.log(`     📋 Organizations in ${backup.name}:`, orgs.map(o => `${o.name} (${o.domain})`).join(', ') || 'None');
             db.close();
-            require('fs').unlinkSync(tempPath); // Clean up temp file
+            const fs = await import('fs');
+            fs.unlinkSync(tempPath); // Clean up temp file
           }
         } catch (error) {
           console.log(`     ⚠️ Could not analyze backup ${backup.name}:`, error.message);
@@ -334,7 +336,7 @@ export class DatabaseBackupService {
         
         // DEBUG: Check what organizations exist in the restored database
         try {
-          const Database = require('better-sqlite3');
+          const Database = (await import('better-sqlite3')).default;
           const db = new Database(localDbPath, { readonly: true });
           const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
           console.log(`🔍 DEBUG: Organizations in restored backup:`, orgs);
