@@ -1,0 +1,96 @@
+2025-08-03 23:11:01.34
+ea8236f5
+User
+📊 PIPELINE STATS: User has access to 0 jobs: []
+2025-08-03 23:11:01.34
+ea8236f5
+User
+📊 PIPELINE STATS: User has no accessible jobs, returning empty stats
+2025-08-03 23:11:01.34
+ea8236f5
+User
+5:41:01 PM [express] GET /api/pipeline/stats 200 in 2ms :: {"success":true,"stats":{"totalJobs":0,"a…
+2025-08-03 23:11:01.35
+ea8236f5
+User
+🔍 PIPELINE: Found 0 jobs with IDs: []
+2025-08-03 23:11:01.35
+ea8236f5
+User
+🔍 PIPELINE: Found 0 applications for organization 2
+2025-08-03 23:11:01.35
+ea8236f5
+User
+🔍 PIPELINE: Returning 0 jobs with applications
+2025-08-03 23:11:01.35
+ea8236f5
+User
+5:41:01 PM [express] GET /api/pipeline 304 in 3ms :: {"success":true,"jobs":[]}
+2025-08-03 23:11:03.56
+ea8236f5
+User
+5:41:03 PM [express] GET /api/auth/me 200 in 3ms :: {"id":2,"email":"org1admin@gmail.com","firstName…
+2025-08-03 23:11:03.57
+ea8236f5
+User
+5:41:03 PM [express] GET /api/users 200 in 2ms :: {"users":[{"id":2,"email":"org1admin@gmail.com","f…
+2025-08-03 23:11:03.57
+ea8236f5
+User
+5:41:03 PM [express] GET /api/settings/user 304 in 2ms :: {"theme":"system","language":"en","notific…
+2025-08-03 23:13:40.27
+961b1741
+System
+starting up user application
+2025-08-03 23:13:40.49
+961b1741
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-08-03 23:13:41.93
+961b1741
+User
+> rest-express@1.0.0 start
+2025-08-03 23:13:41.93
+961b1741
+User
+> NODE_ENV=production node dist/index.js
+2025-08-03 23:13:44.48
+961b1741
+User
+☁️ Object Storage backup service initialized
+2025-08-03 23:13:44.56
+961b1741
+User
+5:43:44 PM [express] Initializing consolidated Node.js backend...
+2025-08-03 23:13:44.56
+961b1741
+User
+5:43:44 PM [express] 📦 Initializing SQLite database...
+2025-08-03 23:13:44.56
+961b1741
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-03 23:13:44.56
+961b1741
+User
+🔄 Production database missing - attempting restoration from latest backup...
+2025-08-03 23:13:44.56
+961b1741
+User
+🛡️ Starting pre-deployment data protection...
+2025-08-03 23:13:44.56
+961b1741
+User
+⚠️ No production database found
+2025-08-03 23:13:44.56
+961b1741
+User
+📦 Fresh deployment detected - creating new database
+2025-08-03 23:13:44.60
+961b1741
+User
+✅ SQLite database initialized successfully
+2025-08-03 23:13:44.60
+961b1741
+User
+✅ Organizations table has timezone column
