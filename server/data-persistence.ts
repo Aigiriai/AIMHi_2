@@ -37,6 +37,17 @@ export class DataPersistenceManager {
       return null;
     }
 
+    // DEBUG: Check organizations BEFORE creating backup
+    try {
+      const Database = (await import('better-sqlite3')).default;
+      const db = new Database(prodDbPath, { readonly: true });
+      const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
+      console.log(`🔍 DEBUG: Organizations BEFORE backup creation:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+      db.close();
+    } catch (error) {
+      console.log(`⚠️ DEBUG: Could not read organizations before backup:`, error.message);
+    }
+
     try {
       // Try cloud backup first (persistent)
       if (this.cloudBackupService) {
