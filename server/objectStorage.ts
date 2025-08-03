@@ -251,6 +251,29 @@ export class DatabaseBackupService {
 
   // Create a timestamped backup
   async createTimestampedBackup(localDbPath: string): Promise<string> {
+    // CRITICAL: Force SQLite checkpoint to flush WAL to main database before backup
+    try {
+      const Database = (await import('better-sqlite3')).default;
+      const db = new Database(localDbPath);
+      
+      // Force checkpoint to ensure all data is in the main database file
+      console.log(`🔄 BACKUP: Forcing SQLite checkpoint before backup creation`);
+      db.pragma('wal_checkpoint(FULL)');
+      
+      // Verify data is present after checkpoint
+      const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
+      console.log(`🔍 BACKUP VERIFY: Organizations after checkpoint:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+      
+      db.close();
+      
+      // Small delay to ensure filesystem sync
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+    } catch (error) {
+      console.error('❌ Failed to checkpoint database before backup:', error);
+      throw new Error(`Failed to checkpoint database: ${error.message}`);
+    }
+
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupName = `production-backup-${timestamp}.db`;
     

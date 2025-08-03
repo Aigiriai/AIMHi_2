@@ -1,0 +1,152 @@
+2025-08-04 00:46:48.94
+2cf1101e
+User
+📊 BACKUP TIMING: Last backup was 115s ago
+2025-08-04 00:46:48.95
+2cf1101e
+User
+🔄 Auto-backup triggered: organization_created_Org4
+2025-08-04 00:46:48.95
+2cf1101e
+User
+🔍 DEBUG: Organizations BEFORE backup creation: AIM Hi System (aimhi.app), Org3 (no-domain), Org4 (https://org4.com)
+2025-08-04 00:46:48.95
+2cf1101e
+User
+✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup
+2025-08-04 00:46:48.95
+2cf1101e
+User
+☁️ Uploading database backup: production-backup-2025-08-03T19-16-48-951Z.db (4KB)
+2025-08-04 00:46:49.03
+2cf1101e
+User
+✅ Database backup uploaded successfully: production-backup-2025-08-03T19-16-48-951Z.db
+2025-08-04 00:46:49.03
+2cf1101e
+User
+☁️ Uploading database backup: production-backup.db (4KB)
+2025-08-04 00:46:49.13
+2cf1101e
+User
+✅ Database backup uploaded successfully: production-backup.db
+2025-08-04 00:46:49.13
+2cf1101e
+User
+✅ Database backup created in Object Storage: production-backup-2025-08-03T19-16-48-951Z.db
+2025-08-04 00:46:49.13
+2cf1101e
+User
+✅ Auto-backup completed: production-backup-2025-08-03T19-16-48-951Z.db
+2025-08-04 00:46:49.13
+2cf1101e
+User
+✅ Auto-backup completed: organization_created_Org4
+2025-08-04 00:46:49.13
+2cf1101e
+User
+📊 BACKUP SERVICE: Organization backup result: SUCCESS
+2025-08-04 00:46:49.13
+2cf1101e
+User
+🔄 ORG MANAGER: Triggering backup after user creation (NODE_ENV: production)
+2025-08-04 00:46:49.13
+2cf1101e
+User
+🔄 Auto-backup triggered (normal): user_created_org4@gmail.com
+2025-08-04 00:46:49.13
+2cf1101e
+User
+📊 BACKUP TIMING: Last backup was 0s ago
+2025-08-04 00:46:49.13
+2cf1101e
+User
+🔄 Auto-backup triggered: user_created_org4@gmail.com
+2025-08-04 00:46:49.13
+2cf1101e
+User
+🔍 DEBUG: Organizations BEFORE backup creation: AIM Hi System (aimhi.app), Org3 (no-domain), Org4 (https://org4.com)
+2025-08-04 00:46:49.13
+2cf1101e
+User
+✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup
+2025-08-04 00:46:49.13
+2cf1101e
+User
+☁️ Uploading database backup: production-backup-2025-08-03T19-16-49-131Z.db (4KB)
+2025-08-04 00:46:49.21
+2cf1101e
+User
+✅ Database backup uploaded successfully: production-backup-2025-08-03T19-16-49-131Z.db
+2025-08-04 00:46:49.21
+2cf1101e
+User
+☁️ Uploading database backup: production-backup.db (4KB)
+2025-08-04 00:46:49.31
+2cf1101e
+User
+✅ Database backup uploaded successfully: production-backup.db
+2025-08-04 00:46:49.31
+2cf1101e
+User
+✅ Database backup created in Object Storage: production-backup-2025-08-03T19-16-49-131Z.db
+2025-08-04 00:46:49.31
+2cf1101e
+User
+✅ Auto-backup completed: production-backup-2025-08-03T19-16-49-131Z.db
+2025-08-04 00:46:49.31
+2cf1101e
+User
+✅ Auto-backup completed: user_created_org4@gmail.com
+2025-08-04 00:46:49.31
+2cf1101e
+User
+✅ ORG ADMIN CREATION: Organization admin created successfully with ID = 3
+2025-08-04 00:46:49.31
+2cf1101e
+User
+Audit event (disabled): {
+2025-08-04 00:46:49.31
+2cf1101e
+User
+organizationId: 1,
+2025-08-04 00:46:49.31
+2cf1101e
+User
+userId: 1,
+2025-08-04 00:46:49.31
+2cf1101e
+User
+action: 'organization_created',
+2025-08-04 00:46:49.31
+2cf1101e
+User
+resourceType: 'organization',
+2025-08-04 00:46:49.31
+2cf1101e
+User
+resourceId: 3,
+2025-08-04 00:46:49.31
+2cf1101e
+User
+details: { organizationName: 'Org4', adminEmail: 'org4@gmail.com' }
+2025-08-04 00:46:49.31
+2cf1101e
+User
+}
+2025-08-04 00:46:49.32
+2cf1101e
+User
+7:16:49 PM [express] POST /api/auth/invite-organization-admin 200 in 1662ms :: {"message":"Organizat…
+2025-08-04 00:46:49.67
+2cf1101e
+User
+7:16:49 PM [express] GET /api/auth/organizations 200 in 10ms :: {"organizations":[{"id":3,"name":"Or…
+2025-08-04 00:50:07.95
+b421439d
+System
+starting up user application
+2025-08-04 00:50:08.55
+b421439d
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
