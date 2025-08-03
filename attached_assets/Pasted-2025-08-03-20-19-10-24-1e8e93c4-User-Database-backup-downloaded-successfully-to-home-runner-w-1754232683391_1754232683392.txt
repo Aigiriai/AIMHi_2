@@ -1,0 +1,159 @@
+2025-08-03 20:19:10.24
+1e8e93c4
+User
+✅ Database backup downloaded successfully to: /home/runner/workspace/data/production.db
+2025-08-03 20:19:10.24
+1e8e93c4
+User
+✅ Database restored from Object Storage backup
+2025-08-03 20:19:10.24
+1e8e93c4
+User
+✅ Database restored from Object Storage backup
+2025-08-03 20:19:10.24
+1e8e93c4
+User
+✅ Database restored from Object Storage backup
+2025-08-03 20:19:10.24
+1e8e93c4
+User
+✅ SQLite database initialized successfully
+2025-08-03 20:19:10.24
+1e8e93c4
+User
+✅ Organizations table has timezone column
+2025-08-03 20:19:10.24
+1e8e93c4
+User
+2:49:10 PM [express] 🔗 AI calling configured for direct webhooks (no tunnel required)
+2025-08-03 20:19:10.24
+1e8e93c4
+User
+🔄 Initializing call context on app startup...
+2025-08-03 20:19:10.25
+1e8e93c4
+User
+📂 Call context loaded from disk
+2025-08-03 20:19:10.25
+1e8e93c4
+User
+✅ Restored context for Sudhir from previous session
+2025-08-03 20:19:10.26
+1e8e93c4
+User
+📂 Multiple call contexts loaded from disk (1 candidates)
+2025-08-03 20:19:10.26
+1e8e93c4
+User
+📂 Loaded 1 candidate contexts for AI calling
+2025-08-03 20:19:10.26
+1e8e93c4
+User
+• Sudhir (93%)
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+🚀 Initializing multi-tenant system...
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+📊 Existing production data found:
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+Organizations: 2
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+Users: 2
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+Jobs: 0
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+Candidates: 0
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+🛡️ Initialization backup skipped - existing data preserved
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+✅ User data detected - system ready with existing data
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+✅ SQLite database initialized successfully
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+✅ Organizations table has timezone column
+2025-08-03 20:19:10.27
+1e8e93c4
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+✓ Super admin already exists
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+✓ Demo organization seeding skipped - clean system ready
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+✅ Multi-tenant system initialized successfully
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+=== Login Credentials ===
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+Super Admin:
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+Email: superadmin@aimhi.app
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+Password: SuperAdmin123!@#
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+Demo Organization Admin:
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+Email: admin@aimhidemo.com
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+Password: Demo123!@#
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+========================
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+2:49:10 PM [express] Server running on port 5000 with AI calling support
+2025-08-03 20:19:10.28
+1e8e93c4
+User
+2:49:10 PM [express] Direct webhook domain: aimhi.aigiri.ai

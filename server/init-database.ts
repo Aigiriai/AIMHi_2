@@ -20,10 +20,14 @@ export async function initializeSQLiteDatabase() {
     const dbPath = path.join(dataDir, dbName);
     console.log(`📁 Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV || 'undefined'})`);
 
-    // PRODUCTION DATA PROTECTION: Check for backup restoration using Object Storage
+    // PRODUCTION DATA PROTECTION: Only restore if explicitly requested
     if (process.env.NODE_ENV === 'production' && !fs.existsSync(dbPath)) {
-      console.log('🛡️  Production database missing - attempting restoration...');
-      await dataPersistence.protectDataBeforeDeployment();
+      if (process.env.RESTORE_FROM_BACKUP === 'true') {
+        console.log('🔄 Production database missing - attempting restoration (explicit request)...');
+        await dataPersistence.protectDataBeforeDeployment();
+      } else {
+        console.log('📦 Production database missing - will create fresh database');
+      }
     }
 
     const sqlite = new Database(dbPath);

@@ -196,13 +196,21 @@ export class DataPersistenceManager {
         console.log('⚠️ Backup failed - continuing with deployment');
       }
     } else {
-      console.log('⚠️  No production database found - attempting restoration...');
-      const restored = await this.restoreFromLatestBackup();
+      console.log('⚠️  No production database found');
       
-      if (restored) {
-        console.log('✅ Database restored from Object Storage backup');
+      // Check if this is an explicit restore request vs fresh deployment
+      // Only restore automatically if explicitly requested via environment variable
+      if (process.env.RESTORE_FROM_BACKUP === 'true') {
+        console.log('🔄 Explicit restore requested - attempting restoration...');
+        const restored = await this.restoreFromLatestBackup();
+        
+        if (restored) {
+          console.log('✅ Database restored from Object Storage backup');
+        } else {
+          console.log('📦 No backup available - fresh database will be created');
+        }
       } else {
-        console.log('📦 No backup available - fresh database will be created');
+        console.log('📦 Fresh deployment detected - creating new database');
       }
     }
   }
