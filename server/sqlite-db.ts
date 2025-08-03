@@ -413,19 +413,24 @@ export async function initializeSQLiteDB() {
 
 async function seedInitialData(db: any, sqlite: any) {
   try {
-    // Check if super admin exists
-    const existingSuperAdmin = sqlite.prepare('SELECT id FROM organizations WHERE name = ?').get('AIM Hi System');
+    // Check if super admin user exists (more comprehensive check)
+    const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
     
     if (!existingSuperAdmin) {
-      console.log('🌱 Seeding initial data...');
+      console.log('🌱 Seeding super admin...');
       
-      // Create system organization
-      const orgResult = sqlite.prepare(`
-        INSERT INTO organizations (name, domain, plan, status) 
-        VALUES (?, ?, ?, ?)
-      `).run('AIM Hi System', 'aimhi.app', 'enterprise', 'active');
+      // Check if AIM Hi System organization exists
+      let systemOrg = sqlite.prepare('SELECT id FROM organizations WHERE name = ?').get('AIM Hi System');
       
-      const orgId = orgResult.lastInsertRowid;
+      if (!systemOrg) {
+        // Create system organization
+        const orgResult = sqlite.prepare(`
+          INSERT INTO organizations (name, domain, plan, status) 
+          VALUES (?, ?, ?, ?)
+        `).run('AIM Hi System', 'aimhi.app', 'enterprise', 'active');
+        
+        systemOrg = { id: orgResult.lastInsertRowid };
+      }
       
       // Create super admin user
       const bcrypt = await import('bcrypt');
@@ -434,36 +439,17 @@ async function seedInitialData(db: any, sqlite: any) {
       sqlite.prepare(`
         INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role, has_temporary_password)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(orgId, 'superadmin@aimhi.app', hashedPassword, 'Super', 'Admin', 'super_admin', 0);
+      `).run(systemOrg.id, 'superadmin@aimhi.app', hashedPassword, 'Super', 'Admin', 'super_admin', 0);
       
-      // Create demo organization
-      const demoOrgResult = sqlite.prepare(`
-        INSERT INTO organizations (name, domain, plan, status) 
-        VALUES (?, ?, ?, ?)
-      `).run('AIM Hi Demo', 'aimhidemo.com', 'professional', 'active');
-      
-      const demoOrgId = demoOrgResult.lastInsertRowid;
-      
-      // Create demo admin
-      const demoHashedPassword = await bcrypt.hash('Demo123!@#', 10);
-      
-      sqlite.prepare(`
-        INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role, has_temporary_password)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `).run(demoOrgId, 'admin@aimhidemo.com', demoHashedPassword, 'Demo', 'Admin', 'org_admin', 0);
-      
-      console.log('✓ Initial data seeded successfully');
+      console.log('✓ Super admin seeded successfully');
     } else {
-      console.log('✓ Initial data already exists');
+      console.log('✓ Super admin already exists');
     }
     
     console.log('=== Login Credentials ===');
     console.log('Super Admin:');
     console.log('  Email: superadmin@aimhi.app');
     console.log('  Password: SuperAdmin123!@#');
-    console.log('Demo Organization Admin:');
-    console.log('  Email: admin@aimhidemo.com');
-    console.log('  Password: Demo123!@#');
     console.log('========================');
     
   } catch (error) {
