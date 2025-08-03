@@ -295,22 +295,8 @@ export class DatabaseBackupService {
       // Wait for all metadata to be retrieved
       const backupsWithMetadata = await Promise.all(backupFiles);
       
-      // Sort by priority: timestamped backups first, then by modification time
-      backupsWithMetadata.sort((a, b) => {
-        // Prioritize timestamped backups (manual backups) over generic ones
-        const aIsTimestamped = a.name.includes('-2025-') || a.name.match(/-\d{4}-\d{2}-\d{2}T/);
-        const bIsTimestamped = b.name.includes('-2025-') || b.name.match(/-\d{4}-\d{2}-\d{2}T/);
-        
-        if (aIsTimestamped && !bIsTimestamped) {
-          return -1; // a comes first (timestamped beats generic)
-        }
-        if (!aIsTimestamped && bIsTimestamped) {
-          return 1; // b comes first (timestamped beats generic)
-        }
-        
-        // If both are same type, sort by most recent modification time
-        return b.updated.getTime() - a.updated.getTime();
-      });
+      // Sort by most recent modification time (updated timestamp)
+      backupsWithMetadata.sort((a, b) => b.updated.getTime() - a.updated.getTime());
       
       console.log(`📋 Found ${backupsWithMetadata.length} backup files, checking most recent:`);
       backupsWithMetadata.forEach((backup, index) => {
