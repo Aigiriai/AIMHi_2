@@ -94,6 +94,52 @@ export class DatabaseBackupService {
     });
   }
 
+  // Verify backup content by downloading and reading it
+  private async verifyBackupContent(backupName: string): Promise<void> {
+    try {
+      // Create temporary file for verification
+      const tempDir = path.join(process.cwd(), 'temp');
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      const tempBackupPath = path.join(tempDir, `verify-${backupName}`);
+      
+      console.log(`🔍 BACKUP VERIFY: Downloading backup to verify content...`);
+      
+      // Download the backup file
+      const downloaded = await this.downloadDatabaseBackup(backupName, tempBackupPath);
+      
+      if (downloaded) {
+        // Read and verify the backup content
+        const Database = (await import('better-sqlite3')).default;
+        const backupDb = new Database(tempBackupPath, { readonly: true });
+        
+        try {
+          // Check if organizations table exists
+          const tablesResult = backupDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='organizations'").get();
+          
+          if (tablesResult) {
+            // Read organizations from the backup
+            const orgs = backupDb.prepare('SELECT id, name, domain FROM organizations').all();
+            console.log(`✅ BACKUP VERIFIED: Organizations in backup file:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+          } else {
+            console.log(`❌ BACKUP VERIFICATION FAILED: Organizations table missing in backup file`);
+          }
+        } finally {
+          backupDb.close();
+        }
+        
+        // Clean up temporary file
+        fs.unlinkSync(tempBackupPath);
+      } else {
+        console.log(`❌ BACKUP VERIFICATION FAILED: Could not download backup for verification`);
+      }
+    } catch (error) {
+      console.error('❌ Error during backup verification:', error);
+    }
+  }
+
   // Upload database backup to Object Storage
   async uploadDatabaseBackup(localDbPath: string, backupName: string = 'production-backup.db'): Promise<string> {
     // Validate input parameters
@@ -281,6 +327,9 @@ export class DatabaseBackupService {
     
     // Also update the main backup
     await this.uploadDatabaseBackup(localDbPath, 'production-backup.db');
+    
+    // CRITICAL: Verify backup by downloading and reading it
+    await this.verifyBackupContent(backupName);
     
     return backupName;
   }
