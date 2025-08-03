@@ -262,32 +262,67 @@ export class DatabaseBackupService {
     return backupName;
   }
 
-  // Restore latest backup
+  // Restore latest backup based on file modification timestamp
   async restoreLatestBackup(localDbPath: string): Promise<boolean> {
     console.log(`🛡️ Attempting to restore database from Object Storage...`);
     
-    // Try to download the main backup first
-    const restored = await this.downloadDatabaseBackup('production-backup.db', localDbPath);
-    
-    if (restored) {
-      console.log(`✅ Database restored from Object Storage backup`);
-      return true;
+    try {
+      // Get all backup files with their metadata
+      const bucket = this.getBucket();
+      const [files] = await bucket.getFiles({ 
+        prefix: 'database-backups/',
+        maxResults: 1000
+      });
+      
+      // Filter backup files and get their metadata
+      const backupFiles = files
+        .filter(file => file.name.startsWith('database-backups/') && file.name.endsWith('.db'))
+        .map(async file => {
+          const [metadata] = await file.getMetadata();
+          return {
+            name: file.name.replace('database-backups/', ''),
+            fullName: file.name,
+            timeCreated: new Date(metadata.timeCreated || 0),
+            updated: new Date(metadata.updated || metadata.timeCreated || 0)
+          };
+        });
+      
+      if (backupFiles.length === 0) {
+        console.log(`❌ No backup files found in Object Storage`);
+        return false;
+      }
+      
+      // Wait for all metadata to be retrieved
+      const backupsWithMetadata = await Promise.all(backupFiles);
+      
+      // Sort by most recent modification time (updated timestamp)
+      backupsWithMetadata.sort((a, b) => b.updated.getTime() - a.updated.getTime());
+      
+      console.log(`📋 Found ${backupsWithMetadata.length} backup files, checking most recent:`);
+      backupsWithMetadata.forEach((backup, index) => {
+        const timeStr = backup.updated.toISOString();
+        if (index < 3) { // Show top 3 for debugging
+          console.log(`  ${index + 1}. ${backup.name} (modified: ${timeStr})`);
+        }
+      });
+      
+      // Try to restore the most recent backup
+      const latestBackup = backupsWithMetadata[0];
+      console.log(`🔄 Restoring most recent backup: ${latestBackup.name} (modified: ${latestBackup.updated.toISOString()})`);
+      
+      const restored = await this.downloadDatabaseBackup(latestBackup.name, localDbPath);
+      
+      if (restored) {
+        console.log(`✅ Database restored from most recent backup: ${latestBackup.name}`);
+        return true;
+      } else {
+        console.log(`❌ Failed to restore backup: ${latestBackup.name}`);
+        return false;
+      }
+      
+    } catch (error) {
+      console.error('❌ Error finding latest backup:', error);
+      return false;
     }
-    
-    // If main backup doesn't exist, try to find the latest timestamped backup
-    const backups = await this.listBackups();
-    const timestampedBackups = backups
-      .filter(name => name.startsWith('production-backup-') && name.endsWith('.db'))
-      .sort()
-      .reverse(); // Most recent first
-    
-    if (timestampedBackups.length > 0) {
-      const latestBackup = timestampedBackups[0];
-      console.log(`🔄 Trying latest timestamped backup: ${latestBackup}`);
-      return await this.downloadDatabaseBackup(latestBackup, localDbPath);
-    }
-    
-    console.log(`❌ No backups found in Object Storage`);
-    return false;
   }
 }
