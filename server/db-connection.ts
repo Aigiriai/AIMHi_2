@@ -28,7 +28,7 @@ export async function getDB() {
     try {
       await dbConnection.select({ test: 1 }).limit(1);
       return { db: dbConnection, schema: dbSchema };
-    } catch (error) {
+    } catch (error: any) {
       console.warn(`🔧 DB: Cached connection unhealthy, reinitializing:`, error.message);
       dbConnection = null;
       dbSchema = null;
@@ -40,14 +40,33 @@ export async function getDB() {
   console.log(`🗄️ Using SQLite database (NODE_ENV: ${currentEnv || 'undefined'})`);
   const sqlite = await initializeSQLiteDatabase();
   
-  // Test database integrity before creating Drizzle connection
+  // Test database integrity with I/O error recovery
   try {
     sqlite.pragma('integrity_check');
     console.log(`✅ Database integrity check passed`);
-  } catch (error) {
+  } catch (error: any) {
     console.error(`❌ Database integrity check failed:`, error.message);
-    // Force restoration if integrity check fails
     sqlite.close();
+    
+    // Handle disk I/O errors specifically
+    if (error.code === 'SQLITE_IOERR' || error.code === 'SQLITE_IOERR_SHORT_READ' || error.message?.includes('disk I/O error')) {
+      console.log('🔄 Disk I/O error detected - triggering database recovery...');
+      
+      // Reset connection cache to prevent type pollution
+      resetDBConnection();
+      
+      // Re-trigger initialization which will handle restoration
+      const recoveredSqlite = await initializeSQLiteDatabase();
+      
+      // Create fresh Drizzle connection
+      dbConnection = sqliteDrizzle(recoveredSqlite, { schema: sqliteSchema });
+      dbSchema = sqliteSchema;
+      cachedEnvironment = currentEnv;
+      
+      console.log('✅ Database recovered from I/O error');
+      return { db: dbConnection, schema: dbSchema };
+    }
+    
     throw new Error(`Database corruption detected: ${error.message}`);
   }
   

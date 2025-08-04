@@ -46,12 +46,19 @@ export async function initializeSQLiteDatabase() {
         try {
           sqlite.pragma('integrity_check');
           console.log(`✅ Restored database integrity verified`);
-        } catch (error) {
+        } catch (error: any) {
           console.error(`❌ Restored database corruption detected:`, error.message);
-          // Close corrupted database and retry restoration
           sqlite.close();
-          fs.unlinkSync(dbPath);
-          throw new Error(`Restored database is corrupted: ${error.message}`);
+          
+          // Handle I/O errors during restoration
+          if (error.code === 'SQLITE_IOERR' || error.code === 'SQLITE_IOERR_SHORT_READ' || error.message?.includes('disk I/O error')) {
+            console.log('🔄 I/O error on restored database - removing and creating fresh...');
+            fs.unlinkSync(dbPath);
+            // Will fall through to normal initialization path
+          } else {
+            fs.unlinkSync(dbPath);
+            throw new Error(`Restored database is corrupted: ${error.message}`);
+          }
         }
         
         sqlite.pragma('journal_mode = WAL');
@@ -73,11 +80,24 @@ export async function initializeSQLiteDatabase() {
 
     const sqlite = new Database(dbPath);
     
-    // Enable WAL mode for better performance
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('synchronous = NORMAL');
-    sqlite.pragma('cache_size = 1000');
-    sqlite.pragma('temp_store = memory');
+    // Enable WAL mode for better performance with I/O error handling
+    try {
+      sqlite.pragma('journal_mode = WAL');
+      sqlite.pragma('synchronous = NORMAL');
+      sqlite.pragma('cache_size = 1000');
+      sqlite.pragma('temp_store = memory');
+    } catch (error: any) {
+      console.error(`❌ Failed to set SQLite pragmas:`, error.message);
+      
+      // Handle I/O errors during pragma setup
+      if (error.code === 'SQLITE_IOERR' || error.code === 'SQLITE_IOERR_SHORT_READ' || error.message?.includes('disk I/O error')) {
+        sqlite.close();
+        fs.unlinkSync(dbPath);
+        throw new Error(`Database I/O error during initialization: ${error.message}`);
+      }
+      
+      throw error;
+    }
     
 
     

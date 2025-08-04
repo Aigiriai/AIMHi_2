@@ -76,6 +76,7 @@ Preferred communication style: Simple, everyday language.
 - **Throttling Disabled**: Removed time throttling restrictions to ensure critical backups aren't skipped during rapid operations.
 - **Dual Seeding Eliminated**: Consolidated all seeding logic to sqlite-db.ts, removing competing seeding systems that could overwrite restored data and create duplicate super admin accounts.
 - **Database I/O Error Recovery System (Aug 2025)**: Implemented comprehensive SQLite corruption detection and recovery with automatic connection health checks, integrity verification, and retry mechanisms to prevent disk I/O errors in production deployments.
+- **Connection Type Consistency Fix (Aug 2025)**: Resolved "select(...).limit is not a function" errors by standardizing initializeSQLiteDatabase() return types and adding I/O error recovery with automatic database restoration for production resilience.
 - **Enhanced Authentication Resilience**: Added retry logic and connection reset capabilities to authentication middleware, ensuring robust token validation even during database connection issues.
 
 ## External Dependencies
