@@ -1,0 +1,124 @@
+2025-08-04 15:40:30.10
+409263bf
+User
+🔍 DEBUG: Organizations in restored backup: [
+2025-08-04 15:40:30.10
+409263bf
+User
+{ id: 1, name: 'AIM Hi System', domain: 'aimhi.app' },
+2025-08-04 15:40:30.10
+409263bf
+User
+{ id: 2, name: 'Org4', domain: 'https://org4.com' }
+2025-08-04 15:40:30.10
+409263bf
+User
+]
+2025-08-04 15:40:30.10
+409263bf
+User
+✅ Database restored from Object Storage backup
+2025-08-04 15:40:30.10
+409263bf
+User
+🔄 DB: Forcing database connection reset
+2025-08-04 15:40:30.10
+409263bf
+User
+🔄 Database connection cache reset after restoration
+2025-08-04 15:40:30.10
+409263bf
+User
+✅ Database restored successfully from backup
+2025-08-04 15:40:30.10
+409263bf
+User
+🔄 DB: Forcing database connection reset
+2025-08-04 15:40:30.10
+409263bf
+User
+🔄 Database connection cache reset after restoration
+2025-08-04 15:40:30.13
+409263bf
+User
+✅ Restored database integrity verified
+2025-08-04 15:40:30.13
+409263bf
+User
+✅ SQLite database initialized successfully
+2025-08-04 15:40:30.13
+409263bf
+User
+🔄 Database restored from backup - skipping initialization seeding
+2025-08-04 15:40:30.13
+409263bf
+User
+✅ Database integrity check passed
+2025-08-04 15:40:30.13
+409263bf
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-04 15:40:30.13
+409263bf
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 15:40:30.13
+409263bf
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 15:40:30.13
+409263bf
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 15:40:30.13
+409263bf
+User
+🔍 ROUTE: Getting matches with user-level filtering for user 1 (super_admin)
+2025-08-04 15:40:30.13
+409263bf
+User
+🔍 ROUTE: Got 0 matches for user 1 with role super_admin
+2025-08-04 15:40:30.13
+409263bf
+User
+10:10:30 AM [express] GET /api/matches 304 in 853ms :: []
+2025-08-04 15:40:30.19
+409263bf
+User
+✅ Restored database integrity verified
+2025-08-04 15:40:30.19
+409263bf
+User
+✅ SQLite database initialized successfully
+2025-08-04 15:40:30.19
+409263bf
+User
+🔄 Database restored from backup - skipping initialization seeding
+2025-08-04 15:40:30.20
+409263bf
+User
+✅ Database integrity check passed
+2025-08-04 15:40:30.20
+409263bf
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-04 15:40:30.20
+409263bf
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 15:40:30.20
+409263bf
+User
+🔧 DB: Cached connection unhealthy, reinitializing: dbConnection.select(...).limit is not a function
+2025-08-04 15:40:30.20
+409263bf
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 15:40:30.20
+409263bf
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 15:40:30.20
+409263bf
+User
+Fetching jobs for organization: 1

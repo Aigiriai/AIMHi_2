@@ -10,6 +10,7 @@ import { initializeSQLiteDatabase } from './init-database';
 let dbConnection: any = null;
 let dbSchema: any = null;
 let cachedEnvironment: string | undefined = null;
+let isInitializing = false; // Prevent race conditions during initialization
 
 // Force database reconnection (useful after restoration)
 export function resetDBConnection() {
@@ -17,17 +18,31 @@ export function resetDBConnection() {
   dbConnection = null;
   dbSchema = null;
   cachedEnvironment = null;
+  isInitializing = false; // Reset initialization flag
 }
 
 export async function getDB() {
   const currentEnv = process.env.NODE_ENV;
   
+  // Wait if another initialization is in progress
+  while (isInitializing) {
+    await new Promise(resolve => setTimeout(resolve, 10));
+  }
+  
   // Check if we need to reinitialize due to environment change
   if (dbConnection && cachedEnvironment === currentEnv) {
     // Test connection health before returning cached connection
     try {
-      await dbConnection.select({ test: 1 }).limit(1);
-      return { db: dbConnection, schema: dbSchema };
+      // Ensure we have a Drizzle instance with select method
+      if (typeof dbConnection.select === 'function') {
+        await dbConnection.select({ test: 1 }).limit(1);
+        return { db: dbConnection, schema: dbSchema };
+      } else {
+        console.warn(`🔧 DB: Cached connection is not a Drizzle instance, reinitializing`);
+        dbConnection = null;
+        dbSchema = null;
+        cachedEnvironment = null;
+      }
     } catch (error: any) {
       console.warn(`🔧 DB: Cached connection unhealthy, reinitializing:`, error.message);
       dbConnection = null;
@@ -35,6 +50,9 @@ export async function getDB() {
       cachedEnvironment = null;
     }
   }
+  
+  // Set initialization flag to prevent race conditions
+  isInitializing = true;
 
   // Environment changed or first initialization - create new connection
   console.log(`🗄️ Using SQLite database (NODE_ENV: ${currentEnv || 'undefined'})`);
@@ -62,6 +80,7 @@ export async function getDB() {
       dbConnection = sqliteDrizzle(recoveredSqlite, { schema: sqliteSchema });
       dbSchema = sqliteSchema;
       cachedEnvironment = currentEnv;
+      isInitializing = false; // Clear initialization flag
       
       console.log('✅ Database recovered from I/O error');
       return { db: dbConnection, schema: dbSchema };
@@ -73,6 +92,7 @@ export async function getDB() {
   dbConnection = sqliteDrizzle(sqlite, { schema: sqliteSchema });
   dbSchema = sqliteSchema;
   cachedEnvironment = currentEnv;
+  isInitializing = false; // Clear initialization flag
   
   // Log the actual database file being used for debugging
   console.log(`📊 DB CONNECTION: Database initialized for environment: ${currentEnv || 'undefined'}`);
