@@ -1,0 +1,140 @@
+2025-08-04 17:50:17.25
+1386bb93
+User
+original_file_name: 'C_JD.docx',
+2025-08-04 17:50:17.25
+1386bb93
+User
+status: 'active',
+2025-08-04 17:50:17.25
+1386bb93
+User
+approved_by: null,
+2025-08-04 17:50:17.25
+1386bb93
+User
+approved_at: null,
+2025-08-04 17:50:17.25
+1386bb93
+User
+closed_at: null,
+2025-08-04 17:50:17.25
+1386bb93
+User
+filled_at: null,
+2025-08-04 17:50:17.25
+1386bb93
+User
+requires_approval: 1,
+2025-08-04 17:50:17.25
+1386bb93
+User
+auto_publish_at: null,
+2025-08-04 17:50:17.25
+1386bb93
+User
+application_deadline: null,
+2025-08-04 17:50:17.25
+1386bb93
+User
+settings: '{}',
+2025-08-04 17:50:17.25
+1386bb93
+User
+created_at: '2025-08-04 12:20:17',
+2025-08-04 17:50:17.25
+1386bb93
+User
+updated_at: '2025-08-04 12:20:17'
+2025-08-04 17:50:17.25
+1386bb93
+User
+}
+2025-08-04 17:50:17.25
+1386bb93
+User
+✅ Stored original file for job 1: C_JD.docx
+2025-08-04 17:50:17.25
+1386bb93
+User
+🔄 Generating template for job: C Programming Engineer (Embedded Systems / Firmware)
+2025-08-04 17:50:25.41
+1386bb93
+User
+✅ Template created successfully for job ID: 1
+2025-08-04 17:50:25.41
+1386bb93
+User
+✅ Template generated successfully for job ID: 1
+2025-08-04 17:50:25.41
+1386bb93
+User
+12:20:25 PM [express] POST /api/jobs/bulk-upload 200 in 14446ms :: {"message":"Processed 1 files","cr…
+2025-08-04 17:50:25.78
+1386bb93
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 17:50:25.79
+1386bb93
+User
+🔧 DB: Cached connection unhealthy, reinitializing: disk I/O error
+2025-08-04 17:50:25.79
+1386bb93
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 17:50:25.79
+1386bb93
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 17:50:25.79
+1386bb93
+User
+❌ Failed to set SQLite pragmas: disk I/O error
+2025-08-04 17:50:25.79
+1386bb93
+User
+❌ Failed to initialize SQLite database: Error: Database I/O error during initialization: disk I/O error
+2025-08-04 17:50:25.79
+1386bb93
+User
+at initializeSQLiteDatabase (file:///home/runner/workspace/dist/index.js:1031:15)
+2025-08-04 17:50:25.79
+1386bb93
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-08-04 17:50:25.79
+1386bb93
+User
+at async getDB (file:///home/runner/workspace/dist/index.js:1476:18)
+2025-08-04 17:50:25.79
+1386bb93
+User
+at async authenticateToken (file:///home/runner/workspace/dist/index.js:6023:32)
+2025-08-04 17:50:25.79
+1386bb93
+User
+🔐 DB ERROR (attempt 1): Database I/O error during initialization: disk I/O error
+2025-08-04 17:50:25.79
+1386bb93
+User
+🔄 DB: Forcing database connection reset
+2025-08-04 17:50:25.79
+1386bb93
+User
+🔄 AUTH: Resetting DB connection for retry 1
+2025-08-04 17:50:25.80
+1386bb93
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 17:50:25.80
+1386bb93
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 17:50:25.80
+1386bb93
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 17:50:25.80
+1386bb93
+User
+🔄 Production database missing - attempting restoration from latest backup...
