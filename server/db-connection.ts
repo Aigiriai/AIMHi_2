@@ -50,7 +50,9 @@ export async function getDB() {
     try {
       // Ensure we have a Drizzle instance with proper methods
       if (typeof dbConnection.select === 'function' && typeof dbConnection.insert === 'function') {
-        await dbConnection.select({ test: 1 }).limit(1);
+        // Use proper Drizzle syntax for health check - simple query that works with any table
+        const testQuery = dbConnection.select().from(dbSchema.organizations).limit(1);
+        await testQuery;
         return { db: dbConnection, schema: dbSchema };
       } else {
         console.warn(`🔧 DB: Cached connection is not a valid Drizzle instance, reinitializing`);
