@@ -11,6 +11,7 @@ let dbConnection: any = null;
 let dbSchema: any = null;
 let cachedEnvironment: string | undefined = null;
 let isInitializing = false; // Prevent race conditions during initialization
+let isRestorationComplete = false; // Block all DB access until restoration completes
 
 // Force database reconnection (useful after restoration)
 export function resetDBConnection() {
@@ -21,8 +22,19 @@ export function resetDBConnection() {
   isInitializing = false; // Reset initialization flag
 }
 
+// Mark restoration as complete - allows database access
+export function markRestorationComplete() {
+  isRestorationComplete = true;
+  console.log('✅ DB: Restoration complete - database access enabled');
+}
+
 export async function getDB() {
   const currentEnv = process.env.NODE_ENV;
+  
+  // Wait for restoration to complete before allowing any database access
+  while (!isRestorationComplete) {
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
   
   // Wait if another initialization is in progress
   while (isInitializing) {

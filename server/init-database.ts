@@ -29,7 +29,7 @@ export async function initializeSQLiteDatabase() {
         
         // CRITICAL FIX: Reset any cached database connections
         try {
-          const { resetDBConnection } = await import('./db-connection');
+          const { resetDBConnection, markRestorationComplete } = await import('./db-connection');
           resetDBConnection();
           console.log(`🔄 Database connection cache reset after restoration`);
         } catch (error) {
@@ -70,6 +70,14 @@ export async function initializeSQLiteDatabase() {
         
         // Skip seeding - data already exists from backup
         console.log('🔄 Database restored from backup - skipping initialization seeding');
+        
+        // Mark restoration as complete to allow other database access
+        try {
+          const { markRestorationComplete } = await import('./db-connection');
+          markRestorationComplete();
+        } catch (error) {
+          console.warn(`⚠️ Could not mark restoration complete:`, error.message);
+        }
         
         // Return raw SQLite instance (consistent with normal path)
         return sqlite;
@@ -512,6 +520,14 @@ export async function initializeSQLiteDatabase() {
 
     console.log('✅ SQLite database initialized successfully');
     console.log('✅ Organizations table has timezone column');
+    
+    // Mark restoration as complete to allow other database access
+    try {
+      const { markRestorationComplete } = await import('./db-connection');
+      markRestorationComplete();
+    } catch (error) {
+      console.warn(`⚠️ Could not mark restoration complete:`, error.message);
+    }
     
     return sqlite;
   } catch (error) {
