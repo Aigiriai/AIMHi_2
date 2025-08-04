@@ -27,6 +27,15 @@ export async function initializeSQLiteDatabase() {
       if (restored) {
         console.log('✅ Database restored successfully from backup');
         
+        // CRITICAL FIX: Reset any cached database connections
+        try {
+          const { resetDBConnection } = await import('./db-connection');
+          resetDBConnection();
+          console.log(`🔄 Database connection cache reset after restoration`);
+        } catch (error) {
+          console.warn(`⚠️ Could not reset DB connection cache:`, error.message);
+        }
+        
         // CRITICAL FIX: Small delay to ensure file system operations complete before opening connection
         await new Promise(resolve => setTimeout(resolve, 200));
         

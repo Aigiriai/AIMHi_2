@@ -57,7 +57,10 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
+    console.log(`🔐 AUTH: Token decoded for user ${decoded.userId}`);
+    
     const { db, schema } = await getDB();
+    console.log(`🔐 AUTH: Database connection obtained`);
     
     // Fetch fresh user data
     const user = await db
@@ -69,7 +72,10 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
       ))
       .limit(1);
 
+    console.log(`🔐 AUTH: User query returned ${user.length} results for user ${decoded.userId}`);
+    
     if (!user.length) {
+      console.log(`🔐 AUTH: No active user found for ID ${decoded.userId}`);
       return res.status(401).json({ message: 'Invalid token' });
     }
 
@@ -90,8 +96,17 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     //   .set({ lastLoginAt: new Date() })
     //   .where(eq(users.id, user[0].id));
 
+    console.log(`🔐 AUTH: Authentication successful for user ${user[0].id} (${user[0].role})`);
     next();
   } catch (error) {
+    console.error(`🔐 AUTH ERROR:`, error);
+    if (error.name === 'JsonWebTokenError') {
+      console.error(`🔐 JWT ERROR: Token verification failed - ${error.message}`);
+    } else if (error.name === 'TokenExpiredError') {
+      console.error(`🔐 JWT ERROR: Token expired - ${error.message}`);
+    } else {
+      console.error(`🔐 DB ERROR: Database query failed - ${error.message}`);
+    }
     return res.status(403).json({ message: 'Invalid token' });
   }
 }

@@ -11,6 +11,14 @@ let dbConnection: any = null;
 let dbSchema: any = null;
 let cachedEnvironment: string | undefined = null;
 
+// Force database reconnection (useful after restoration)
+export function resetDBConnection() {
+  console.log('🔄 DB: Forcing database connection reset');
+  dbConnection = null;
+  dbSchema = null;
+  cachedEnvironment = null;
+}
+
 export async function getDB() {
   const currentEnv = process.env.NODE_ENV;
   

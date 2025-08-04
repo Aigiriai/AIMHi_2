@@ -114,6 +114,16 @@ export class DataPersistenceManager {
         const restored = await this.cloudBackupService.restoreLatestBackup(prodDbPath);
         if (restored) {
           console.log(`✅ Database restored from Object Storage backup`);
+          
+          // CRITICAL FIX: Reset database connection cache after restoration
+          try {
+            const { resetDBConnection } = await import('./db-connection');
+            resetDBConnection();
+            console.log(`🔄 Database connection cache reset after restoration`);
+          } catch (error) {
+            console.warn(`⚠️ Could not reset DB connection cache:`, error.message);
+          }
+          
           return true;
         }
         console.log('⚠️ No backups found in Object Storage, trying local fallback...');
