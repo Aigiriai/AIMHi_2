@@ -1,0 +1,100 @@
+2025-08-04 11:11:21.25
+a0733058
+User
+☁️ Attempting to restore from Object Storage...
+2025-08-04 11:11:21.25
+a0733058
+User
+🛡️ Attempting to restore database from Object Storage...
+2025-08-04 11:11:21.34
+a0733058
+User
+✅ SQLite database initialized successfully
+2025-08-04 11:11:21.34
+a0733058
+User
+🔍 BEFORE SEEDING CHECK: Found 0 organizations, 0 users
+2025-08-04 11:11:21.34
+a0733058
+User
+🧪 SEEDING DISABLED FOR HYPOTHESIS TEST - checking existing data only
+2025-08-04 11:11:21.34
+a0733058
+User
+🔍 ORGANIZATIONS AFTER RESTORATION: None
+2025-08-04 11:11:21.34
+a0733058
+User
+🔍 DATA COUNT: 0 organizations, 0 users
+2025-08-04 11:11:21.64
+a0733058
+User
+📋 Found 28 backup files, checking most recent:
+2025-08-04 11:11:21.64
+a0733058
+User
+1. production-backup.db (modified: 2025-08-03T19:33:26.604Z)
+2025-08-04 11:11:21.71
+a0733058
+User
+☁️ Downloading database backup: production-backup.db (124KB)
+2025-08-04 11:11:21.79
+a0733058
+User
+✅ Database backup downloaded successfully to: /tmp/debug_backup_0.db
+2025-08-04 11:11:21.79
+a0733058
+User
+📋 Organizations in production-backup.db: AIM Hi System (aimhi.app), Org4 (https://org4.com)
+2025-08-04 11:11:21.79
+a0733058
+User
+2. production-backup-2025-08-03T19-33-26-375Z.db (modified: 2025-08-03T19:33:26.464Z)
+2025-08-04 11:11:21.84
+a0733058
+User
+☁️ Downloading database backup: production-backup-2025-08-03T19-33-26-375Z.db (124KB)
+2025-08-04 11:11:21.91
+a0733058
+User
+✅ Database backup downloaded successfully to: /tmp/debug_backup_1.db
+2025-08-04 11:11:21.91
+a0733058
+User
+📋 Organizations in production-backup-2025-08-03T19-33-26-375Z.db: AIM Hi System (aimhi.app), Org4 (https://org4.com)
+2025-08-04 11:11:21.91
+a0733058
+User
+3. production-backup-2025-08-03T19-33-25-741Z.db (modified: 2025-08-03T19:33:25.866Z)
+2025-08-04 11:11:21.96
+a0733058
+User
+☁️ Downloading database backup: production-backup-2025-08-03T19-33-25-741Z.db (124KB)
+2025-08-04 11:11:22.05
+a0733058
+User
+✅ Database backup downloaded successfully to: /tmp/debug_backup_2.db
+2025-08-04 11:11:22.05
+a0733058
+User
+📋 Organizations in production-backup-2025-08-03T19-33-25-741Z.db: AIM Hi System (aimhi.app), Org4 (https://org4.com)
+2025-08-04 11:11:22.05
+a0733058
+User
+🔄 Restoring most recent backup: production-backup.db (modified: 2025-08-03T19:33:26.604Z)
+2025-08-04 11:11:22.10
+a0733058
+User
+☁️ Downloading database backup: production-backup.db (124KB)
+2025-08-04 11:11:22.15
+a0733058
+User
+✅ Database backup downloaded successfully to: /home/runner/workspace/data/production.db
+2025-08-04 11:11:22.15
+a0733058
+User
+✅ Database restored from most recent backup: production-backup.db
+2025-08-04 11:11:22.15
+a0733058
+User
+🔍 DEBUG: Organizations in restored backup: []
