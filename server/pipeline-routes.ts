@@ -223,70 +223,35 @@ router.get("/pipeline", authenticateToken, async (req: AuthRequest, res: Respons
 // Get pipeline statistics with permission-based filtering
 router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    console.log(`📊 PIPELINE STATS: Calculating user-specific statistics for user ${req.user?.id} (${req.user?.role}) in organization ${req.user?.organizationId}`);
-    const { db } = await getDB();
-    const user = req.user!;
-
-    // Get user's accessible job IDs based on role and assignments
-    let accessibleJobIds: number[] = [];
+    console.log(`📊 PIPELINE STATS: THEORY TEST - Always returning empty stats for user ${req.user?.id} (${req.user?.role}) in organization ${req.user?.organizationId}`);
     
-    if (['super_admin', 'org_admin'].includes(user.role)) {
-      // Super admin and org admin can see all jobs in their organization
-      const allJobs = await db.select({ id: jobs.id })
-        .from(jobs)
-        .where(eq(jobs.organizationId, user.organizationId))
-        .all();
-      accessibleJobIds = allJobs.map((job: any) => job.id);
-    } else {
-      // For Manager, Team Lead, and Recruiter: only jobs they created or are assigned to
-      const assignedJobIds = await db.select({ jobId: jobAssignments.jobId })
-        .from(jobAssignments)
-        .where(eq(jobAssignments.userId, user.id))
-        .all();
-      
-      const createdJobs = await db.select({ id: jobs.id })
-        .from(jobs)
-        .where(and(
-          eq(jobs.organizationId, user.organizationId),
-          eq(jobs.createdBy, user.id)
-        ))
-        .all();
-      
-      const assignedIds = assignedJobIds.map((a: any) => a.jobId);
-      const createdIds = createdJobs.map((j: any) => j.id);
-      accessibleJobIds = Array.from(new Set([...assignedIds, ...createdIds]));
-    }
+    // THEORY TEST: Always return empty stats to test if database corruption prevents UI loading
+    const emptyStats: PipelineStats = {
+      totalJobs: 0,
+      activeJobs: 0,
+      totalApplications: 0,
+      jobsByStatus: {},
+      applicationsByStatus: {},
+    };
+    
+    console.log(`📊 PIPELINE STATS: THEORY TEST - Returning hardcoded empty stats (bypassing all database queries)`);
+    
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString()
+    });
+    
+    return res.json({ 
+      success: true, 
+      stats: {
+        ...emptyStats,
+        timestamp: Date.now()
+      }
+    });
 
-    console.log(`📊 PIPELINE STATS: User has access to ${accessibleJobIds.length} jobs:`, accessibleJobIds);
-
-    if (accessibleJobIds.length === 0) {
-      // User has no accessible jobs
-      const emptyStats: PipelineStats = {
-        totalJobs: 0,
-        activeJobs: 0,
-        totalApplications: 0,
-        jobsByStatus: {},
-        applicationsByStatus: {},
-      };
-      
-      console.log(`📊 PIPELINE STATS: User has no accessible jobs, returning empty stats`);
-      
-      res.set({
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-        'Last-Modified': new Date().toUTCString()
-      });
-      
-      return res.json({ 
-        success: true, 
-        stats: {
-          ...emptyStats,
-          timestamp: Date.now()
-        }
-      });
-    }
-
+    /* COMMENTED OUT FOR THEORY TEST - Original database query logic that causes I/O errors
     // Get job statistics for accessible jobs only
     const jobStats = await db.select({
       status: jobs.status,
@@ -374,6 +339,7 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
         timestamp: Date.now() // Add timestamp to force fresh data
       }
     });
+    END OF COMMENTED OUT CODE FOR THEORY TEST */
   } catch (error) {
     console.error("Failed to fetch pipeline stats:", error);
     res.status(500).json({ success: false, error: "Failed to fetch pipeline statistics" });
