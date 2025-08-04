@@ -1,0 +1,144 @@
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+🔐 DB ERROR: Database query failed - disk I/O error
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+9:54:05 AM [express] GET /api/jobs 403 in 207ms :: {"message":"Invalid token"}
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+❌ Failed to initialize SQLite database: SqliteError: disk I/O error
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at Database.pragma (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/pragma.js:10:27)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at initializeSQLiteDatabase (file:///home/runner/workspace/dist/index.js:1010:12)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at async getDB (file:///home/runner/workspace/dist/index.js:1426:18)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at async authenticateToken (file:///home/runner/workspace/dist/index.js:5959:32) {
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+}
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+🔐 DB ERROR (attempt 3): disk I/O error
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+🔐 AUTH ERROR: SqliteError: disk I/O error
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at Database.pragma (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/pragma.js:10:27)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at initializeSQLiteDatabase (file:///home/runner/workspace/dist/index.js:1010:12)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at async getDB (file:///home/runner/workspace/dist/index.js:1426:18)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at async authenticateToken (file:///home/runner/workspace/dist/index.js:5959:32) {
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+}
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+🔐 DB ERROR: Database query failed - disk I/O error
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+❌ Failed to initialize SQLite database: SqliteError: disk I/O error
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at Database.pragma (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/pragma.js:10:27)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at initializeSQLiteDatabase (file:///home/runner/workspace/dist/index.js:1010:12)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at async getDB (file:///home/runner/workspace/dist/index.js:1426:18)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at async authenticateToken (file:///home/runner/workspace/dist/index.js:5959:32) {
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+}
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+🔐 DB ERROR (attempt 3): disk I/O error
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+🔐 AUTH ERROR: SqliteError: disk I/O error
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at Database.pragma (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/pragma.js:10:27)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at initializeSQLiteDatabase (file:///home/runner/workspace/dist/index.js:1010:12)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at async getDB (file:///home/runner/workspace/dist/index.js:1426:18)
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+at async authenticateToken (file:///home/runner/workspace/dist/index.js:5959:32) {
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+}
+2025-08-04 15:24:05.57
+b27f6a4f
+User
+🔐 DB ERROR: Database query failed - disk I/O error
