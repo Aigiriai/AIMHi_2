@@ -26,6 +26,10 @@ export async function initializeSQLiteDatabase() {
       const restored = await dataPersistence.restoreFromLatestBackup();
       if (restored) {
         console.log('✅ Database restored successfully from backup');
+        
+        // CRITICAL FIX: Small delay to ensure file system operations complete before opening connection
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         // Database was restored, now open it
         const sqlite = new Database(dbPath);
         sqlite.pragma('journal_mode = WAL');

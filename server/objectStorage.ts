@@ -295,6 +295,53 @@ export class DatabaseBackupService {
     }
   }
 
+  // Prepare database for safe restoration by closing connections and cleaning up WAL files
+  private async prepareForDatabaseRestoration(localDbPath: string): Promise<void> {
+    try {
+      console.log('🔧 Preparing database for restoration - closing connections and cleaning up WAL files...');
+      
+      // Step 1: Try to close any existing database connections gracefully
+      try {
+        const Database = (await import('better-sqlite3')).default;
+        const db = new Database(localDbPath);
+        
+        // Force WAL checkpoint to flush all data to main database
+        db.pragma('wal_checkpoint(TRUNCATE)');
+        db.close();
+        console.log('✅ Existing database connections closed and checkpointed');
+      } catch (error) {
+        // Database might not exist or already closed - this is fine
+        console.log('📋 No existing database connections to close');
+      }
+      
+      // Step 2: Clean up WAL and SHM files that might interfere with restoration
+      const fs = await import('fs');
+      const walFiles = [
+        `${localDbPath}-wal`,
+        `${localDbPath}-shm`,
+        `${localDbPath}-journal`
+      ];
+      
+      for (const walFile of walFiles) {
+        if (fs.existsSync(walFile)) {
+          try {
+            fs.unlinkSync(walFile);
+            console.log(`🗑️ Cleaned up interfering file: ${walFile}`);
+          } catch (error) {
+            console.warn(`⚠️ Could not remove ${walFile}:`, error.message);
+          }
+        }
+      }
+      
+      // Step 3: Small delay to ensure file system operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('✅ Database preparation complete - ready for restoration');
+    } catch (error) {
+      console.warn('⚠️ Database preparation had issues, but continuing with restoration:', error.message);
+    }
+  }
+
   // Create a timestamped backup
   async createTimestampedBackup(localDbPath: string): Promise<string> {
     // CRITICAL: Force SQLite checkpoint to flush WAL to main database before backup
@@ -408,6 +455,9 @@ export class DatabaseBackupService {
       // Try to restore the most recent backup
       const latestBackup = backupsWithMetadata[0];
       console.log(`🔄 Restoring most recent backup: ${latestBackup.name} (modified: ${latestBackup.updated.toISOString()})`);
+      
+      // CRITICAL FIX: Close all database connections and clean up WAL files before restoration
+      await this.prepareForDatabaseRestoration(localDbPath);
       
       const restored = await this.downloadDatabaseBackup(latestBackup.name, localDbPath);
       
