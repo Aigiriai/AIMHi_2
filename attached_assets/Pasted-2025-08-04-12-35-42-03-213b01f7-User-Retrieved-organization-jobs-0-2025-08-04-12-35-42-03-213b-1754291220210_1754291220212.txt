@@ -1,0 +1,152 @@
+2025-08-04 12:35:42.03
+213b01f7
+User
+Retrieved organization jobs: 0
+2025-08-04 12:35:42.03
+213b01f7
+User
+7:05:42 AM [express] GET /api/jobs 304 in 7ms :: []
+2025-08-04 12:35:42.03
+213b01f7
+User
+🔧 DB: Cached connection unhealthy, reinitializing: dbConnection.select(...).limit is not a function
+2025-08-04 12:35:42.03
+213b01f7
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 12:35:42.03
+213b01f7
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 12:35:42.03
+213b01f7
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 12:35:42.03
+213b01f7
+User
+✅ SQLite database initialized successfully
+2025-08-04 12:35:42.03
+213b01f7
+User
+✅ Organizations table has timezone column
+2025-08-04 12:35:42.03
+213b01f7
+User
+✅ Database integrity check passed
+2025-08-04 12:35:42.03
+213b01f7
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-04 12:35:42.03
+213b01f7
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 12:35:42.03
+213b01f7
+User
+🔧 DB: Cached connection unhealthy, reinitializing: dbConnection.select(...).limit is not a function
+2025-08-04 12:35:42.03
+213b01f7
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 12:35:42.03
+213b01f7
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 12:35:42.03
+213b01f7
+User
+📊 STATS: Calculating user-specific stats for user 1 (super_admin) in organization 1
+2025-08-04 12:35:42.03
+213b01f7
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 12:35:42.03
+213b01f7
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 12:35:42.04
+213b01f7
+User
+✅ SQLite database initialized successfully
+2025-08-04 12:35:42.04
+213b01f7
+User
+✅ Organizations table has timezone column
+2025-08-04 12:35:42.04
+213b01f7
+User
+✅ Database integrity check passed
+2025-08-04 12:35:42.04
+213b01f7
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-04 12:35:42.04
+213b01f7
+User
+📊 STATS: User has access to 0 jobs: []
+2025-08-04 12:35:42.04
+213b01f7
+User
+📊 STATS: User has no accessible jobs, returning empty stats
+2025-08-04 12:35:42.04
+213b01f7
+User
+7:05:42 AM [express] GET /api/stats 304 in 8ms :: {"activeJobs":0,"totalCandidates":0,"aiMatches":0,…
+2025-08-04 12:35:42.04
+213b01f7
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 12:35:42.04
+213b01f7
+User
+🔧 DB: Cached connection unhealthy, reinitializing: dbConnection.select(...).limit is not a function
+2025-08-04 12:35:42.04
+213b01f7
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 12:35:42.04
+213b01f7
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 12:35:42.04
+213b01f7
+User
+✅ SQLite database initialized successfully
+2025-08-04 12:35:42.04
+213b01f7
+User
+✅ Organizations table has timezone column
+2025-08-04 12:35:42.04
+213b01f7
+User
+✅ Database integrity check passed
+2025-08-04 12:35:42.04
+213b01f7
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-04 12:35:42.04
+213b01f7
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 12:35:42.04
+213b01f7
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 12:35:42.04
+213b01f7
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 12:35:42.04
+213b01f7
+User
+🔍 ROUTE: Getting matches with user-level filtering for user 1 (super_admin)
+2025-08-04 12:35:42.04
+213b01f7
+User
+🔍 ROUTE: Got 0 matches for user 1 with role super_admin
+2025-08-04 12:35:42.04
+213b01f7
+User
+7:05:42 AM [express] GET /api/matches 304 in 4ms :: []
