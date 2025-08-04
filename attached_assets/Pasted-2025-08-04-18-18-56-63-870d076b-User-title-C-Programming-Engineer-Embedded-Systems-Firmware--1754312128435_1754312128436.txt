@@ -1,0 +1,132 @@
+2025-08-04 18:18:56.63
+870d076b
+User
+title: 'C Programming Engineer (Embedded Systems / Firmware)',
+2025-08-04 18:18:56.63
+870d076b
+User
+description: 'Join our innovative team at ABC Inc, a leader in developing cutting-edge SoC solutions for large-scale embedded products. We are seeking a talented C Programming Engineer to contribute to the core firmware development of our next-generation devices, impacting industries from automotive to IoT. We are seeking a highly skilled and passionate C Programming Engineer to join our dynamic software development team. In this role, you will be instrumental in designing, developing, testing, and maintaining robust, efficient, and reliable low-level software and firmware for our complex embedded products. The ideal candidate will possess deep expertise in C programming, a strong understanding of embedded systems principles, and a commitment to producing high-quality, performant code in resource-constrained environments.',
+2025-08-04 18:18:56.63
+870d076b
+User
+experience_level: 'Mid Level',
+2025-08-04 18:18:56.63
+870d076b
+User
+job_type: 'Full Time',
+2025-08-04 18:18:56.63
+870d076b
+User
+keywords: 'C programming, Embedded Systems, Firmware, Microcontrollers, ARM Cortex-M/A, RISC-V, DSPs, Device Drivers, Hardware Abstraction Layers',
+2025-08-04 18:18:56.63
+870d076b
+User
+requirements: 'Requirements not specified',
+2025-08-04 18:18:56.63
+870d076b
+User
+location: 'Location not specified',
+2025-08-04 18:18:56.63
+870d076b
+User
+salary_min: null,
+2025-08-04 18:18:56.63
+870d076b
+User
+salary_max: null,
+2025-08-04 18:18:56.63
+870d076b
+User
+original_file_name: 'C_JD.docx',
+2025-08-04 18:18:56.63
+870d076b
+User
+status: 'active',
+2025-08-04 18:18:56.63
+870d076b
+User
+approved_by: null,
+2025-08-04 18:18:56.63
+870d076b
+User
+approved_at: null,
+2025-08-04 18:18:56.63
+870d076b
+User
+closed_at: null,
+2025-08-04 18:18:56.63
+870d076b
+User
+filled_at: null,
+2025-08-04 18:18:56.63
+870d076b
+User
+requires_approval: 1,
+2025-08-04 18:18:56.63
+870d076b
+User
+auto_publish_at: null,
+2025-08-04 18:18:56.63
+870d076b
+User
+application_deadline: null,
+2025-08-04 18:18:56.63
+870d076b
+User
+settings: '{}',
+2025-08-04 18:18:56.63
+870d076b
+User
+created_at: '2025-08-04 12:48:56',
+2025-08-04 18:18:56.63
+870d076b
+User
+updated_at: '2025-08-04 12:48:56'
+2025-08-04 18:18:56.63
+870d076b
+User
+}
+2025-08-04 18:18:56.63
+870d076b
+User
+✅ Stored original file for job 1: C_JD.docx
+2025-08-04 18:18:56.63
+870d076b
+User
+✅ Job created successfully (template generation disabled): C Programming Engineer (Embedded Systems / Firmware)
+2025-08-04 18:18:56.63
+870d076b
+User
+12:48:56 PM [express] POST /api/jobs/bulk-upload 200 in 3919ms :: {"message":"Processed 1 files","cre…
+2025-08-04 18:18:56.95
+870d076b
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 18:18:56.95
+870d076b
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 18:18:56.95
+870d076b
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 18:18:56.95
+870d076b
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 18:18:56.95
+870d076b
+User
+📊 STATS: Calculating user-specific stats for user 1 (super_admin) in organization 1
+2025-08-04 18:18:56.95
+870d076b
+User
+Error fetching stats: SqliteError: disk I/O error
+2025-08-04 18:18:56.95
+870d076b
+User
+at PreparedQuery.values (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:100:28)
+2025-08-04 18:18:56.95
+870d076b
+User
+at PreparedQuery.all (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:75:23)
