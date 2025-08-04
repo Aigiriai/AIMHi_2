@@ -11,7 +11,7 @@ let dbConnection: any = null;
 let dbSchema: any = null;
 let cachedEnvironment: string | undefined = null;
 let isInitializing = false; // Prevent race conditions during initialization
-let isRestorationComplete = false; // Block all DB access until restoration completes
+let isRestorationComplete = process.env.NODE_ENV === 'development'; // Development doesn't need restoration wait
 
 // Force database reconnection (useful after restoration)
 export function resetDBConnection() {
@@ -20,12 +20,15 @@ export function resetDBConnection() {
   dbSchema = null;
   cachedEnvironment = null;
   isInitializing = false; // Reset initialization flag
+  // DON'T reset isRestorationComplete - it should persist
 }
 
 // Mark restoration as complete - allows database access
 export function markRestorationComplete() {
-  isRestorationComplete = true;
-  console.log('✅ DB: Restoration complete - database access enabled');
+  if (!isRestorationComplete) {
+    isRestorationComplete = true;
+    console.log('✅ DB: Restoration complete - database access enabled');
+  }
 }
 
 export async function getDB() {
@@ -45,12 +48,12 @@ export async function getDB() {
   if (dbConnection && cachedEnvironment === currentEnv) {
     // Test connection health before returning cached connection
     try {
-      // Ensure we have a Drizzle instance with select method
-      if (typeof dbConnection.select === 'function') {
+      // Ensure we have a Drizzle instance with proper methods
+      if (typeof dbConnection.select === 'function' && typeof dbConnection.insert === 'function') {
         await dbConnection.select({ test: 1 }).limit(1);
         return { db: dbConnection, schema: dbSchema };
       } else {
-        console.warn(`🔧 DB: Cached connection is not a Drizzle instance, reinitializing`);
+        console.warn(`🔧 DB: Cached connection is not a valid Drizzle instance, reinitializing`);
         dbConnection = null;
         dbSchema = null;
         cachedEnvironment = null;

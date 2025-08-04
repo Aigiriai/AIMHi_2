@@ -1,0 +1,120 @@
+2025-08-04 16:10:15.71
+e66f31fd
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 16:10:15.71
+e66f31fd
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 16:10:15.71
+e66f31fd
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 16:10:15.71
+e66f31fd
+User
+✅ SQLite database initialized successfully
+2025-08-04 16:10:15.71
+e66f31fd
+User
+✅ Organizations table has timezone column
+2025-08-04 16:10:15.71
+e66f31fd
+User
+✅ DB: Restoration complete - database access enabled
+2025-08-04 16:10:15.71
+e66f31fd
+User
+✅ Database integrity check passed
+2025-08-04 16:10:15.71
+e66f31fd
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-04 16:10:15.71
+e66f31fd
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 16:10:15.72
+e66f31fd
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 16:10:15.72
+e66f31fd
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 16:10:15.72
+e66f31fd
+User
+10:40:15 AM [express] GET /api/auth/me 200 in 17ms :: {"id":1,"email":"superadmin@aimhi.app","firstNa…
+2025-08-04 16:11:55.89
+e66f31fd
+User
+10:41:55 AM [express] POST /api/auth/login 200 in 81ms :: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXV…
+2025-08-04 16:11:56.35
+e66f31fd
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 16:11:56.35
+e66f31fd
+User
+🔧 DB: Cached connection unhealthy, reinitializing: dbConnection.select(...).limit is not a function
+2025-08-04 16:11:56.35
+e66f31fd
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 16:11:56.35
+e66f31fd
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-04 16:11:56.35
+e66f31fd
+User
+✅ SQLite database initialized successfully
+2025-08-04 16:11:56.35
+e66f31fd
+User
+✅ Organizations table has timezone column
+2025-08-04 16:11:56.35
+e66f31fd
+User
+✅ DB: Restoration complete - database access enabled
+2025-08-04 16:11:56.35
+e66f31fd
+User
+✅ Database integrity check passed
+2025-08-04 16:11:56.35
+e66f31fd
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-04 16:11:56.35
+e66f31fd
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 16:11:56.35
+e66f31fd
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 16:11:56.35
+e66f31fd
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 16:11:56.36
+e66f31fd
+User
+10:41:56 AM [express] GET /api/auth/me 200 in 8ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-04 16:11:56.66
+e66f31fd
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 16:11:56.66
+e66f31fd
+User
+🔧 DB: Cached connection unhealthy, reinitializing: dbConnection.select(...).limit is not a function
+2025-08-04 16:11:56.66
+e66f31fd
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-04 16:11:56.66
+e66f31fd
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
