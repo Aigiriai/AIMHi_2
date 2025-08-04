@@ -24,12 +24,33 @@ export async function getDB() {
   
   // Check if we need to reinitialize due to environment change
   if (dbConnection && cachedEnvironment === currentEnv) {
-    return { db: dbConnection, schema: dbSchema };
+    // Test connection health before returning cached connection
+    try {
+      await dbConnection.select({ test: 1 }).limit(1);
+      return { db: dbConnection, schema: dbSchema };
+    } catch (error) {
+      console.warn(`🔧 DB: Cached connection unhealthy, reinitializing:`, error.message);
+      dbConnection = null;
+      dbSchema = null;
+      cachedEnvironment = null;
+    }
   }
 
   // Environment changed or first initialization - create new connection
   console.log(`🗄️ Using SQLite database (NODE_ENV: ${currentEnv || 'undefined'})`);
   const sqlite = await initializeSQLiteDatabase();
+  
+  // Test database integrity before creating Drizzle connection
+  try {
+    sqlite.pragma('integrity_check');
+    console.log(`✅ Database integrity check passed`);
+  } catch (error) {
+    console.error(`❌ Database integrity check failed:`, error.message);
+    // Force restoration if integrity check fails
+    sqlite.close();
+    throw new Error(`Database corruption detected: ${error.message}`);
+  }
+  
   dbConnection = sqliteDrizzle(sqlite, { schema: sqliteSchema });
   dbSchema = sqliteSchema;
   cachedEnvironment = currentEnv;

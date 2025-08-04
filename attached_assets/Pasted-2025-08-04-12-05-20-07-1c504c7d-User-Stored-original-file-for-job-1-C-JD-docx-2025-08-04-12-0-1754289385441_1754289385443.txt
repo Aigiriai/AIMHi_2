@@ -1,0 +1,140 @@
+2025-08-04 12:05:20.07
+1c504c7d
+User
+✅ Stored original file for job 1: C_JD.docx
+2025-08-04 12:05:20.07
+1c504c7d
+User
+🔄 Generating template for job: C Programming Engineer (Embedded Systems / Firmware)
+2025-08-04 12:05:28.09
+1c504c7d
+User
+✅ Template created successfully for job ID: 1
+2025-08-04 12:05:28.09
+1c504c7d
+User
+✅ Template generated successfully for job ID: 1
+2025-08-04 12:05:28.09
+1c504c7d
+User
+6:35:28 AM [express] POST /api/jobs/bulk-upload 200 in 9821ms :: {"message":"Processed 1 files","cre…
+2025-08-04 12:05:28.41
+1c504c7d
+User
+🔐 AUTH: Token decoded for user 2
+2025-08-04 12:05:28.41
+1c504c7d
+User
+🔐 AUTH: Database connection obtained
+2025-08-04 12:05:28.41
+1c504c7d
+User
+🔐 AUTH ERROR: SqliteError: disk I/O error
+2025-08-04 12:05:28.41
+1c504c7d
+User
+at PreparedQuery.values (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:100:28)
+2025-08-04 12:05:28.41
+1c504c7d
+User
+at PreparedQuery.all (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:75:23)
+2025-08-04 12:05:28.41
+1c504c7d
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:28)
+2025-08-04 12:05:28.41
+1c504c7d
+User
+at SQLiteSelectBase.execute (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:597:17)
+2025-08-04 12:05:28.41
+1c504c7d
+User
+at SQLiteSelectBase.then (file:///home/runner/workspace/node_modules/drizzle-orm/query-promise.js:21:17)
+2025-08-04 12:05:28.41
+1c504c7d
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+2025-08-04 12:05:28.41
+1c504c7d
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-04 12:05:28.41
+1c504c7d
+User
+}
+2025-08-04 12:05:28.41
+1c504c7d
+User
+🔐 DB ERROR: Database query failed - disk I/O error
+2025-08-04 12:05:28.42
+1c504c7d
+User
+6:35:28 AM [express] GET /api/jobs 403 in 4ms :: {"message":"Invalid token"}
+2025-08-04 12:05:28.43
+1c504c7d
+User
+🔐 AUTH: Token decoded for user 2
+2025-08-04 12:05:28.43
+1c504c7d
+User
+🔐 AUTH: Database connection obtained
+2025-08-04 12:05:28.43
+1c504c7d
+User
+🔐 AUTH ERROR: SqliteError: disk I/O error
+2025-08-04 12:05:28.43
+1c504c7d
+User
+at PreparedQuery.values (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:100:28)
+2025-08-04 12:05:28.43
+1c504c7d
+User
+at PreparedQuery.all (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:75:23)
+2025-08-04 12:05:28.43
+1c504c7d
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:28)
+2025-08-04 12:05:28.43
+1c504c7d
+User
+at SQLiteSelectBase.execute (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:597:17)
+2025-08-04 12:05:28.43
+1c504c7d
+User
+at SQLiteSelectBase.then (file:///home/runner/workspace/node_modules/drizzle-orm/query-promise.js:21:17)
+2025-08-04 12:05:28.43
+1c504c7d
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+2025-08-04 12:05:28.43
+1c504c7d
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-04 12:05:28.43
+1c504c7d
+User
+}
+2025-08-04 12:05:28.43
+1c504c7d
+User
+🔐 DB ERROR: Database query failed - disk I/O error
+2025-08-04 12:05:28.43
+1c504c7d
+User
+6:35:28 AM [express] GET /api/stats 403 in 2ms :: {"message":"Invalid token"}
+2025-08-04 12:05:28.45
+1c504c7d
+User
+🔐 AUTH: Token decoded for user 2
+2025-08-04 12:05:28.45
+1c504c7d
+User
+🔐 AUTH: Database connection obtained
+2025-08-04 12:05:28.45
+1c504c7d
+User
+🔐 AUTH ERROR: SqliteError: disk I/O error
+2025-08-04 12:05:28.45
+1c504c7d
+User
+at PreparedQuery.values (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:100:28)

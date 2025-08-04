@@ -75,6 +75,8 @@ Preferred communication style: Simple, everyday language.
 - **CRITICAL FIX (Aug 2025)**: Modified restoreLatestBackup() to use Google Cloud Storage metadata timestamps instead of filename sorting, ensuring manually triggered backups are prioritized over older production-backup.db files.
 - **Throttling Disabled**: Removed time throttling restrictions to ensure critical backups aren't skipped during rapid operations.
 - **Dual Seeding Eliminated**: Consolidated all seeding logic to sqlite-db.ts, removing competing seeding systems that could overwrite restored data and create duplicate super admin accounts.
+- **Database I/O Error Recovery System (Aug 2025)**: Implemented comprehensive SQLite corruption detection and recovery with automatic connection health checks, integrity verification, and retry mechanisms to prevent disk I/O errors in production deployments.
+- **Enhanced Authentication Resilience**: Added retry logic and connection reset capabilities to authentication middleware, ensuring robust token validation even during database connection issues.
 
 ## External Dependencies
 

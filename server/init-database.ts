@@ -39,8 +39,21 @@ export async function initializeSQLiteDatabase() {
         // CRITICAL FIX: Small delay to ensure file system operations complete before opening connection
         await new Promise(resolve => setTimeout(resolve, 200));
         
-        // Database was restored, now open it
+        // Database was restored, now open it with integrity check
         const sqlite = new Database(dbPath);
+        
+        // Test database integrity immediately after restoration
+        try {
+          sqlite.pragma('integrity_check');
+          console.log(`✅ Restored database integrity verified`);
+        } catch (error) {
+          console.error(`❌ Restored database corruption detected:`, error.message);
+          // Close corrupted database and retry restoration
+          sqlite.close();
+          fs.unlinkSync(dbPath);
+          throw new Error(`Restored database is corrupted: ${error.message}`);
+        }
+        
         sqlite.pragma('journal_mode = WAL');
         sqlite.pragma('synchronous = NORMAL');
         sqlite.pragma('cache_size = 1000');

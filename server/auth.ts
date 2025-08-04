@@ -59,45 +59,62 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     console.log(`🔐 AUTH: Token decoded for user ${decoded.userId}`);
     
-    const { db, schema } = await getDB();
-    console.log(`🔐 AUTH: Database connection obtained`);
+    let retryCount = 0;
+    const maxRetries = 2;
     
-    // Fetch fresh user data
-    const user = await db
-      .select()
-      .from(schema.users)
-      .where(and(
-        eq(schema.users.id, decoded.userId),
-        eq(schema.users.isActive, 1)
-      ))
-      .limit(1);
+    while (retryCount <= maxRetries) {
+      try {
+        const { db, schema } = await getDB();
+        console.log(`🔐 AUTH: Database connection obtained (attempt ${retryCount + 1})`);
+        
+        // Fetch fresh user data
+        const user = await db
+          .select()
+          .from(schema.users)
+          .where(and(
+            eq(schema.users.id, decoded.userId),
+            eq(schema.users.isActive, 1)
+          ))
+          .limit(1);
 
-    console.log(`🔐 AUTH: User query returned ${user.length} results for user ${decoded.userId}`);
-    
-    if (!user.length) {
-      console.log(`🔐 AUTH: No active user found for ID ${decoded.userId}`);
-      return res.status(401).json({ message: 'Invalid token' });
+        console.log(`🔐 AUTH: User query returned ${user.length} results for user ${decoded.userId}`);
+        
+        if (!user.length) {
+          console.log(`🔐 AUTH: No active user found for ID ${decoded.userId}`);
+          return res.status(401).json({ message: 'Invalid token' });
+        }
+        
+        // Success - break out of retry loop
+        req.user = {
+          id: user[0].id,
+          organizationId: user[0].organizationId,
+          email: user[0].email,
+          firstName: user[0].firstName,
+          lastName: user[0].lastName,
+          role: user[0].role,
+          permissions: user[0].permissions,
+        };
+        req.organizationId = user[0].organizationId;
+        console.log(`🔐 AUTH: Authentication successful for user ${user[0].id} (${user[0].role})`);
+        return next();
+        
+      } catch (dbError) {
+        retryCount++;
+        console.error(`🔐 DB ERROR (attempt ${retryCount}):`, dbError.message);
+        
+        if (retryCount > maxRetries) {
+          throw dbError; // Final attempt failed
+        }
+        
+        // Reset connection and try again
+        const { resetDBConnection } = await import('./db-connection');
+        resetDBConnection();
+        console.log(`🔄 AUTH: Resetting DB connection for retry ${retryCount}`);
+        
+        // Small delay before retry
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
     }
-
-    req.user = {
-      id: user[0].id,
-      organizationId: user[0].organizationId,
-      email: user[0].email,
-      firstName: user[0].firstName,
-      lastName: user[0].lastName,
-      role: user[0].role,
-      permissions: user[0].permissions,
-    };
-    req.organizationId = user[0].organizationId;
-
-    // Update last login (skip for SQLite compatibility)
-    // await db
-    //   .update(users)
-    //   .set({ lastLoginAt: new Date() })
-    //   .where(eq(users.id, user[0].id));
-
-    console.log(`🔐 AUTH: Authentication successful for user ${user[0].id} (${user[0].role})`);
-    next();
   } catch (error) {
     console.error(`🔐 AUTH ERROR:`, error);
     if (error.name === 'JsonWebTokenError') {
