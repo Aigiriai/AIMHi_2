@@ -407,25 +407,34 @@ export async function initializeSQLiteDB() {
     
     console.log(`🔍 BEFORE SEEDING CHECK: Found ${existingOrgs.count} organizations, ${existingUsers.count} users`);
     
-    // Re-enable seeding for development environment to restore super admin access
-    if (existingOrgs.count === 0 && existingUsers.count === 0) {
-      console.log('📦 No existing data found - proceeding with initial seeding');
-      await seedInitialData(db, sqlite);
-    } else {
-      console.log('🔍 Existing data found - checking if super admin exists');
-      
-      // Check if super admin exists and create if missing
-      const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
-      
-      if (!existingSuperAdmin) {
-        console.log('🔧 Super admin missing - creating super admin user');
+    // DEVELOPMENT ONLY: Re-enable seeding for development environment to restore super admin access
+    if (process.env.NODE_ENV !== 'production') {
+      if (existingOrgs.count === 0 && existingUsers.count === 0) {
+        console.log('📦 No existing data found - proceeding with initial seeding (DEVELOPMENT)');
         await seedInitialData(db, sqlite);
+      } else {
+        console.log('🔍 Existing data found - checking if super admin exists (DEVELOPMENT)');
+        
+        // Check if super admin exists and create if missing
+        const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
+        
+        if (!existingSuperAdmin) {
+          console.log('🔧 Super admin missing - creating super admin user (DEVELOPMENT ONLY)');
+          await seedInitialData(db, sqlite);
+        }
+        
+        // DEBUG: Show what organizations exist
+        const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
+        console.log(`🔍 ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+        console.log(`🔍 DATA COUNT: ${existingOrgs.count} organizations, ${existingUsers.count} users`);
       }
+    } else {
+      console.log('🛡️ PRODUCTION: Seeding completely disabled - existing data preserved');
       
-      // DEBUG: Show what organizations exist
+      // DEBUG: Show what production organizations exist without seeding
       const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
-      console.log(`🔍 ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
-      console.log(`🔍 DATA COUNT: ${existingOrgs.count} organizations, ${existingUsers.count} users`);
+      console.log(`🔍 PRODUCTION ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+      console.log(`🔍 PRODUCTION DATA COUNT: ${existingOrgs.count} organizations, ${existingUsers.count} users`);
     }
     
   } catch (error) {
