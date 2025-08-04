@@ -420,16 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // TEMPORARILY DISABLED: Automatically generate job template after successful job creation
-          // Template generation was causing SQLite database corruption due to:
-          // 1. Heavy AI processing during database transactions (14+ seconds)
-          // 2. PRAGMA foreign key manipulation
-          // 3. DROP TABLE operations in createJobTemplate
-          // 4. Concurrent backup operations
-          // 
-          // Templates are not used in AI matching (which uses raw JD + resume content)
-          // so disabling this has zero functional impact on core features.
-          /*
+          // Automatically generate job template after successful job creation
           try {
             console.log(`🔄 Generating template for job: ${job.title}`);
             const templateData = await createJobTemplate(
@@ -448,8 +439,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error(`❌ Template generation failed for job ID: ${job.id}`, templateError);
             // Continue with job creation even if template generation fails
           }
-          */
-          console.log(`✅ Job created successfully (template generation disabled): ${job.title}`);
           
           createdJobs.push({ filename: jobDoc.filename, job });
         } catch (error: any) {
