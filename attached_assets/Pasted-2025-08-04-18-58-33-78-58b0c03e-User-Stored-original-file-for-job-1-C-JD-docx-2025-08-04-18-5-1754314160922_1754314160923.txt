@@ -1,0 +1,152 @@
+2025-08-04 18:58:33.78
+58b0c03e
+User
+✅ Stored original file for job 1: C_JD.docx
+2025-08-04 18:58:33.78
+58b0c03e
+User
+✅ Job created successfully (template generation permanently disabled): C Programming Engineer (Embedded Systems / Firmware)
+2025-08-04 18:58:33.78
+58b0c03e
+User
+1:28:33 PM [express] POST /api/jobs/bulk-upload 200 in 2874ms :: {"message":"Processed 1 files","cre…
+2025-08-04 18:58:34.11
+58b0c03e
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 18:58:34.11
+58b0c03e
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 18:58:34.11
+58b0c03e
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 18:58:34.11
+58b0c03e
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 18:58:34.11
+58b0c03e
+User
+Fetching jobs for organization: 1
+2025-08-04 18:58:34.11
+58b0c03e
+User
+Error fetching jobs: SqliteError: disk I/O error
+2025-08-04 18:58:34.11
+58b0c03e
+User
+at PreparedQuery.values (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:100:28)
+2025-08-04 18:58:34.11
+58b0c03e
+User
+at PreparedQuery.all (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:75:23)
+2025-08-04 18:58:34.11
+58b0c03e
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:28)
+2025-08-04 18:58:34.11
+58b0c03e
+User
+at file:///home/runner/workspace/dist/index.js:8208:37
+2025-08-04 18:58:34.11
+58b0c03e
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+2025-08-04 18:58:34.11
+58b0c03e
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-04 18:58:34.11
+58b0c03e
+User
+}
+2025-08-04 18:58:34.11
+58b0c03e
+User
+1:28:34 PM [express] GET /api/jobs 500 in 6ms :: {"message":"Failed to fetch jobs"}
+2025-08-04 18:58:34.12
+58b0c03e
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 18:58:34.12
+58b0c03e
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 18:58:34.12
+58b0c03e
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 18:58:34.12
+58b0c03e
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 18:58:34.12
+58b0c03e
+User
+🔍 ROUTE: Getting matches with user-level filtering for user 1 (super_admin)
+2025-08-04 18:58:34.12
+58b0c03e
+User
+🔍 ROUTE: Got 0 matches for user 1 with role super_admin
+2025-08-04 18:58:34.12
+58b0c03e
+User
+1:28:34 PM [express] GET /api/matches 304 in 2ms :: []
+2025-08-04 18:58:34.13
+58b0c03e
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-04 18:58:34.13
+58b0c03e
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-04 18:58:34.13
+58b0c03e
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-04 18:58:34.13
+58b0c03e
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-04 18:58:34.13
+58b0c03e
+User
+📊 STATS: Calculating user-specific stats for user 1 (super_admin) in organization 1
+2025-08-04 18:58:34.14
+58b0c03e
+User
+Error fetching stats: SqliteError: disk I/O error
+2025-08-04 18:58:34.14
+58b0c03e
+User
+at PreparedQuery.values (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:100:28)
+2025-08-04 18:58:34.14
+58b0c03e
+User
+at PreparedQuery.all (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:75:23)
+2025-08-04 18:58:34.14
+58b0c03e
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:28)
+2025-08-04 18:58:34.14
+58b0c03e
+User
+at file:///home/runner/workspace/dist/index.js:8963:150
+2025-08-04 18:58:34.14
+58b0c03e
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+2025-08-04 18:58:34.14
+58b0c03e
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-04 18:58:34.14
+58b0c03e
+User
+}
+2025-08-04 18:58:34.14
+58b0c03e
+User
+1:28:34 PM [express] GET /api/stats 500 in 5ms :: {"message":"Failed to fetch stats"}
