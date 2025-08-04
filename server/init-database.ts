@@ -64,8 +64,8 @@ export async function initializeSQLiteDatabase() {
         // Skip seeding - data already exists from backup
         console.log('🔄 Database restored from backup - skipping initialization seeding');
         
-        const drizzleDb = drizzle(sqlite);
-        return { db: drizzleDb, sqlite };
+        // Return raw SQLite instance (consistent with normal path)
+        return sqlite;
       } else {
         console.log('📦 No backup available - will create fresh database');
       }
