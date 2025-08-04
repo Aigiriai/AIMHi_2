@@ -407,18 +407,26 @@ export async function initializeSQLiteDB() {
     
     console.log(`🔍 BEFORE SEEDING CHECK: Found ${existingOrgs.count} organizations, ${existingUsers.count} users`);
     
-    // HYPOTHESIS TEST: Comment out all seeding to test if seeding is overwriting restored data
-    // if (existingOrgs.count === 0 && existingUsers.count === 0) {
-    //   console.log('📦 No existing data found - proceeding with initial seeding');
-    //   await seedInitialData(db, sqlite);
-    // } else {
-      console.log('🧪 SEEDING DISABLED FOR HYPOTHESIS TEST - checking existing data only');
+    // Re-enable seeding for development environment to restore super admin access
+    if (existingOrgs.count === 0 && existingUsers.count === 0) {
+      console.log('📦 No existing data found - proceeding with initial seeding');
+      await seedInitialData(db, sqlite);
+    } else {
+      console.log('🔍 Existing data found - checking if super admin exists');
+      
+      // Check if super admin exists and create if missing
+      const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
+      
+      if (!existingSuperAdmin) {
+        console.log('🔧 Super admin missing - creating super admin user');
+        await seedInitialData(db, sqlite);
+      }
       
       // DEBUG: Show what organizations exist
       const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
-      console.log(`🔍 ORGANIZATIONS AFTER RESTORATION:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+      console.log(`🔍 ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
       console.log(`🔍 DATA COUNT: ${existingOrgs.count} organizations, ${existingUsers.count} users`);
-    // }
+    }
     
   } catch (error) {
     console.error('Database initialization error:', error);
