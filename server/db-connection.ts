@@ -31,6 +31,21 @@ export function markRestorationComplete() {
   }
 }
 
+// Create and cache Drizzle connection immediately after restoration
+export function cacheRestoredConnection(sqlite: Database.Database) {
+  const currentEnv = process.env.NODE_ENV;
+  
+  console.log('🔗 DB: Caching restored database connection');
+  
+  // Create Drizzle connection
+  dbConnection = sqliteDrizzle(sqlite, { schema: sqliteSchema });
+  dbSchema = sqliteSchema;
+  cachedEnvironment = currentEnv;
+  isInitializing = false;
+  
+  console.log('✅ DB: Restored connection cached successfully');
+}
+
 export async function getDB() {
   const currentEnv = process.env.NODE_ENV;
   

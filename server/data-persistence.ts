@@ -136,14 +136,8 @@ export class DataPersistenceManager {
             console.log(`📊 RESTORE: Restored database size: ${Math.round(restoredStats.size / 1024)}KB`);
           }
           
-          // CRITICAL FIX: Reset database connection cache after restoration
-          try {
-            const { resetDBConnection } = await import('./db-connection');
-            resetDBConnection();
-            console.log(`🔄 RESTORE: Database connection cache reset after restoration`);
-          } catch (error) {
-            console.warn(`⚠️ RESTORE: Could not reset DB connection cache:`, error.message);
-          }
+          // Skip connection reset - connection will be cached in init-database.ts
+          console.log(`🔄 RESTORE: Database connection will be cached after restoration`);
           
           return true;
         }

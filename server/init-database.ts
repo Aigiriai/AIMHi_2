@@ -36,19 +36,8 @@ export async function initializeSQLiteDatabase() {
           `✅ PRODUCTION INIT: Database restored successfully from backup`,
         );
 
-        // CRITICAL FIX: Reset any cached database connections
-        try {
-          const { resetDBConnection, markRestorationComplete } = await import(
-            "./db-connection"
-          );
-          resetDBConnection();
-          console.log(`🔄 Database connection cache reset after restoration`);
-        } catch (error) {
-          console.warn(
-            `⚠️ Could not reset DB connection cache:`,
-            error.message,
-          );
-        }
+        // Skip connection reset to prevent corruption - we'll cache the connection instead
+        console.log(`🔄 Database connection will be cached after integrity check`);
 
         // CRITICAL FIX: Small delay to ensure file system operations complete before opening connection
         await new Promise((resolve) => setTimeout(resolve, 200));
@@ -96,13 +85,15 @@ export async function initializeSQLiteDatabase() {
           `🔄 PRODUCTION INIT: Database restored from backup - skipping initialization seeding`,
         );
 
-        // Mark restoration as complete to allow other database access
+        // Mark restoration as complete and cache the connection to prevent double initialization
         try {
-          const { markRestorationComplete } = await import("./db-connection");
+          const { markRestorationComplete, cacheRestoredConnection } = await import("./db-connection");
           markRestorationComplete();
+          cacheRestoredConnection(sqlite);
+          console.log('🔗 DB: Restored database connection cached - preventing duplicate initialization');
         } catch (error) {
           console.warn(
-            `⚠️ Could not mark restoration complete:`,
+            `⚠️ Could not mark restoration complete or cache connection:`,
             error.message,
           );
         }
