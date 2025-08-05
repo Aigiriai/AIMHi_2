@@ -1,0 +1,92 @@
+2025-08-05 14:55:41.15
+ece361ab
+User
+✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup
+2025-08-05 14:55:41.15
+ece361ab
+User
+🔄 BACKUP: Forcing SQLite checkpoint before backup creation
+2025-08-05 14:55:41.15
+ece361ab
+User
+🔍 BACKUP VERIFY: Organizations after checkpoint: AIM Hi System (aimhi.app), NewOrg (no-domain)
+2025-08-05 14:55:41.35
+ece361ab
+User
+☁️ Uploading database backup: production-backup-2025-08-05T09-25-41-355Z.db (124KB)
+2025-08-05 14:55:41.44
+ece361ab
+User
+✅ Database backup uploaded successfully: production-backup-2025-08-05T09-25-41-355Z.db
+2025-08-05 14:55:41.44
+ece361ab
+User
+☁️ Uploading database backup: production-backup.db (124KB)
+2025-08-05 14:55:41.53
+ece361ab
+User
+✅ Database backup uploaded successfully: production-backup.db
+2025-08-05 14:55:41.53
+ece361ab
+User
+🔍 BACKUP VERIFY: Downloading backup to verify content...
+2025-08-05 14:55:41.61
+ece361ab
+User
+☁️ Downloading database backup: production-backup-2025-08-05T09-25-41-355Z.db (124KB)
+2025-08-05 14:55:41.68
+ece361ab
+User
+✅ Database backup downloaded successfully to: /home/runner/workspace/temp/verify-production-backup-2025-08-05T09-25-41-355Z.db
+2025-08-05 14:55:41.68
+ece361ab
+User
+✅ BACKUP VERIFIED: Organizations in backup file: AIM Hi System (aimhi.app), NewOrg (no-domain)
+2025-08-05 14:55:41.68
+ece361ab
+User
+✅ Database backup created in Object Storage: production-backup-2025-08-05T09-25-41-355Z.db
+2025-08-05 14:55:41.68
+ece361ab
+User
+✅ Auto-backup completed: production-backup-2025-08-05T09-25-41-355Z.db
+2025-08-05 14:55:41.68
+ece361ab
+User
+✅ Auto-backup completed: user_created_neworg@gmail.com
+2025-08-05 14:55:41.68
+ece361ab
+User
+✅ ORG ADMIN CREATION: Organization admin created successfully with ID = 2
+2025-08-05 14:55:41.68
+ece361ab
+User
+Audit event (disabled): {
+2025-08-05 14:55:41.68
+ece361ab
+User
+organizationId: 1,
+2025-08-05 14:55:41.68
+ece361ab
+User
+userId: 1,
+2025-08-05 14:55:41.68
+ece361ab
+User
+action: 'organization_created',
+2025-08-05 14:55:41.68
+ece361ab
+User
+resourceType: 'organization',
+2025-08-05 14:55:41.68
+ece361ab
+User
+resourceId: 2,
+2025-08-05 14:55:41.68
+ece361ab
+User
+details: { organizationName: 'NewOrg', adminEmail: 'neworg@gmail.com' }
+2025-08-05 14:55:41.68
+ece361ab
+User
+}
