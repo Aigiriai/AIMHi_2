@@ -1,21 +1,22 @@
 {
-  "Sudhir_7": {
+  "Sudhir_3": {
     "candidateName": "Sudhir",
     "jobDetails": {
-      "id": 7,
+      "id": 3,
       "organization_id": 1,
       "team_id": null,
       "created_by": 1,
-      "title": "C Programming Engineer (Embedded Systems / Firmware)",
-      "description": "We are seeking a highly skilled and passionate C Programming Engineer to join our dynamic software development team. In this role, you will be instrumental in designing, developing, testing, and maintaining robust, efficient, and reliable low-level software and firmware for our complex embedded products. The ideal candidate will possess deep expertise in C programming, a strong understanding of embedded systems principles, and a commitment to producing high-quality, performant code in resource-constrained environments. Key responsibilities include developing, implementing, and optimizing C code for microcontrollers, designing and implementing firmware modules and device drivers, and contributing to the architectural design of embedded software solutions.",
+      "title": "Hogan Developers (ILP / IDP / ODS)",
+      "description": "Skilled Hogan Developers with specialization in ILP (Loans), IDP (Deposits), or ODS (Online Delivery Systems) modules of the Hogan core banking platform. Opportunities are open both globally and within India, with flexible work arrangements including onsite, hybrid, or remote, based on candidate preference and business needs. Key skills required include expertise in the Hogan core banking platform, strong hands-on experience with COBOL, JCL, DB2, VSAM, proven ability in maintaining, enhancing, and integrating Hogan modules, sound understanding of banking systems like loans, deposits, online delivery, and excellent communication and client interaction skills.",
       "experience_level": "Mid Level",
       "job_type": "Full Time",
-      "keywords": "C programming, Embedded Systems, Firmware, ARM Cortex, RISC-V, DSPs, Device Drivers, HAL",
+      "keywords": "Hogan core banking platform, COBOL, JCL, DB2, VSAM, loans, deposits, online delivery, communication skills, client interaction, Computer Science, IT, onsite-offshore, global delivery",
+      "requirements": "Requirements not specified",
+      "location": "Location not specified",
+      "salary_min": null,
+      "salary_max": null,
+      "original_file_name": "JD Hogan Developer.docx",
       "status": "active",
-      "settings": "{}",
-      "created_at": "2025-08-04 12:46:03",
-      "updated_at": "2025-08-04 12:46:03",
-      "original_file_name": "C_JD.docx",
       "approved_by": null,
       "approved_at": null,
       "closed_at": null,
@@ -23,19 +24,18 @@
       "requires_approval": 1,
       "auto_publish_at": null,
       "application_deadline": null,
-      "requirements": "Requirements not specified",
-      "location": "Location not specified",
-      "salary_min": null,
-      "salary_max": null,
+      "settings": "{}",
+      "created_at": "2025-08-05 04:45:32",
+      "updated_at": "2025-08-05 04:45:32",
       "organizationId": 1,
       "teamId": null,
       "createdBy": 1,
       "experienceLevel": "Mid Level",
       "jobType": "Full Time",
-      "originalFileName": "C_JD.docx",
-      "createdAt": "2025-08-04T12:46:03.000Z",
-      "updatedAt": "2025-08-04T12:46:03.000Z"
+      "originalFileName": "JD Hogan Developer.docx",
+      "createdAt": "2025-08-05T04:45:32.000Z",
+      "updatedAt": "2025-08-05T04:45:32.000Z"
     },
-    "matchPercentage": 98
+    "matchPercentage": 5
   }
 }
