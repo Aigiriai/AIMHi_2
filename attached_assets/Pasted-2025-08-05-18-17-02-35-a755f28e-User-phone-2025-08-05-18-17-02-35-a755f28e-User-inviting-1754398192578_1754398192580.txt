@@ -1,0 +1,140 @@
+2025-08-05 18:17:02.35
+a755f28e
+User
+phone: '',
+2025-08-05 18:17:02.35
+a755f28e
+User
+invitingUserRole: 'org_admin'
+2025-08-05 18:17:02.35
+a755f28e
+User
+}
+2025-08-05 18:17:02.35
+a755f28e
+User
+👤 USER INVITATION: About to create user via invite-user endpoint
+2025-08-05 18:17:02.35
+a755f28e
+User
+📊 USER INVITATION: NODE_ENV = production
+2025-08-05 18:17:02.35
+a755f28e
+User
+📧 USER INVITATION: User email = org1Manager@gmail.com
+2025-08-05 18:17:02.35
+a755f28e
+User
+🏢 USER INVITATION: Organization ID = 2
+2025-08-05 18:17:02.64
+a755f28e
+User
+👤 USER INVITATION: About to insert user into database via direct SQL insert
+2025-08-05 18:17:02.64
+a755f28e
+User
+📁 USER INVITATION: Database file determined by NODE_ENV = production
+2025-08-05 18:17:02.64
+a755f28e
+User
+✅ USER INVITATION: User created successfully via invite-user with ID = 3
+2025-08-05 18:17:02.64
+a755f28e
+User
+📁 USER INVITATION: Data written to database file based on NODE_ENV = production
+2025-08-05 18:17:02.64
+a755f28e
+User
+🔄 Auto-backup triggered (normal): user_created_org1Manager@gmail.com
+2025-08-05 18:17:02.64
+a755f28e
+User
+📊 BACKUP TIMING: Last backup was 1754398023s ago
+2025-08-05 18:17:02.64
+a755f28e
+User
+🔄 Auto-backup triggered: user_created_org1Manager@gmail.com
+2025-08-05 18:17:02.65
+a755f28e
+User
+🔍 DEBUG: Organizations BEFORE backup creation: AIM Hi System (aimhi.app), Org1 (no-domain)
+2025-08-05 18:17:02.65
+a755f28e
+User
+✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup
+2025-08-05 18:17:02.65
+a755f28e
+User
+🔄 BACKUP: Forcing SQLite checkpoint before backup creation
+2025-08-05 18:17:02.65
+a755f28e
+User
+❌ Failed to checkpoint database before backup: SqliteError: disk I/O error
+2025-08-05 18:17:02.65
+a755f28e
+User
+at Database.pragma (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/pragma.js:11:44)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at DatabaseBackupService.createTimestampedBackup (file:///home/runner/workspace/dist/index.js:674:14)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async DataPersistenceManager.createBackup (file:///home/runner/workspace/dist/index.js:921:37)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async DataPersistenceManager.autoBackupIfNeeded (file:///home/runner/workspace/dist/index.js:1090:28)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async _BackupIntegrationService.scheduleAutoBackup (file:///home/runner/workspace/dist/index.js:1746:11)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async _BackupIntegrationService.onUserCreated (file:///home/runner/workspace/dist/index.js:1783:16)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async file:///home/runner/workspace/dist/index.js:7220:5 {
+2025-08-05 18:17:02.65
+a755f28e
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-05 18:17:02.65
+a755f28e
+User
+}
+2025-08-05 18:17:02.65
+a755f28e
+User
+❌ Failed to create backup: Error: Failed to checkpoint database: disk I/O error
+2025-08-05 18:17:02.65
+a755f28e
+User
+at DatabaseBackupService.createTimestampedBackup (file:///home/runner/workspace/dist/index.js:684:17)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async DataPersistenceManager.createBackup (file:///home/runner/workspace/dist/index.js:921:37)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async DataPersistenceManager.autoBackupIfNeeded (file:///home/runner/workspace/dist/index.js:1090:28)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async _BackupIntegrationService.scheduleAutoBackup (file:///home/runner/workspace/dist/index.js:1746:11)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async _BackupIntegrationService.onUserCreated (file:///home/runner/workspace/dist/index.js:1783:16)
+2025-08-05 18:17:02.65
+a755f28e
+User
+at async file:///home/runner/workspace/dist/index.js:7220:5
+2025-08-05 18:17:02.65
+a755f28e
+User
+❌ Auto-backup failed for reason: user_created_org1Manager@gmail.com

@@ -1,0 +1,116 @@
+2025-08-05 18:15:45.44
+a755f28e
+User
+🔐 AUTH: User query returned 1 results for user 2
+2025-08-05 18:15:45.44
+a755f28e
+User
+🔐 AUTH: Authentication successful for user 2 (org_admin)
+2025-08-05 18:15:45.44
+a755f28e
+User
+12:45:45 PM [express] GET /api/settings/user 304 in 4ms :: {"theme":"system","language":"en","notific…
+2025-08-05 18:17:02.35
+a755f28e
+User
+🔐 AUTH: Token decoded for user 2
+2025-08-05 18:17:02.35
+a755f28e
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 18:17:02.35
+a755f28e
+User
+🔐 AUTH: User query returned 1 results for user 2
+2025-08-05 18:17:02.35
+a755f28e
+User
+🔐 AUTH: Authentication successful for user 2 (org_admin)
+2025-08-05 18:17:02.35
+a755f28e
+User
+📧 Invite user request received: {
+2025-08-05 18:17:02.35
+a755f28e
+User
+email: 'org1Manager@gmail.com',
+2025-08-05 18:17:02.35
+a755f28e
+User
+firstName: 'Org1',
+2025-08-05 18:17:02.35
+a755f28e
+User
+lastName: 'Manager',
+2025-08-05 18:17:02.35
+a755f28e
+User
+role: 'manager',
+2025-08-05 18:17:02.35
+a755f28e
+User
+phone: '',
+2025-08-05 18:17:02.35
+a755f28e
+User
+invitingUserRole: 'org_admin'
+2025-08-05 18:17:02.35
+a755f28e
+User
+}
+2025-08-05 18:17:02.35
+a755f28e
+User
+👤 USER INVITATION: About to create user via invite-user endpoint
+2025-08-05 18:17:02.35
+a755f28e
+User
+📊 USER INVITATION: NODE_ENV = production
+2025-08-05 18:17:02.35
+a755f28e
+User
+📧 USER INVITATION: User email = org1Manager@gmail.com
+2025-08-05 18:17:02.35
+a755f28e
+User
+🏢 USER INVITATION: Organization ID = 2
+2025-08-05 18:17:02.64
+a755f28e
+User
+👤 USER INVITATION: About to insert user into database via direct SQL insert
+2025-08-05 18:17:02.64
+a755f28e
+User
+📁 USER INVITATION: Database file determined by NODE_ENV = production
+2025-08-05 18:17:02.64
+a755f28e
+User
+✅ USER INVITATION: User created successfully via invite-user with ID = 3
+2025-08-05 18:17:02.64
+a755f28e
+User
+📁 USER INVITATION: Data written to database file based on NODE_ENV = production
+2025-08-05 18:17:02.64
+a755f28e
+User
+🔄 Auto-backup triggered (normal): user_created_org1Manager@gmail.com
+2025-08-05 18:17:02.64
+a755f28e
+User
+📊 BACKUP TIMING: Last backup was 1754398023s ago
+2025-08-05 18:17:02.64
+a755f28e
+User
+🔄 Auto-backup triggered: user_created_org1Manager@gmail.com
+2025-08-05 18:17:02.65
+a755f28e
+User
+🔍 DEBUG: Organizations BEFORE backup creation: AIM Hi System (aimhi.app), Org1 (no-domain)
+2025-08-05 18:17:02.65
+a755f28e
+User
+✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup
+2025-08-05 18:17:02.65
+a755f28e
+User
+🔄 BACKUP: Forcing SQLite checkpoint before backup creation
