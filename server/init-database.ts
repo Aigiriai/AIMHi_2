@@ -1,59 +1,81 @@
-import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import fs from 'fs';
-import path from 'path';
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import fs from "fs";
+import path from "path";
 
 // Initialize SQLite database with proper schema
 export async function initializeSQLiteDatabase() {
   try {
     // Import data persistence manager for production safety
-    const { dataPersistence } = await import('./data-persistence');
-    
+    const { dataPersistence } = await import("./data-persistence");
+
     // Ensure data directory exists
-    const dataDir = path.join(process.cwd(), 'data');
+    const dataDir = path.join(process.cwd(), "data");
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir, { recursive: true });
     }
 
     // Use environment-specific database name
-    const dbName = process.env.NODE_ENV === 'production' ? 'production.db' : 'development.db';
+    const dbName =
+      process.env.NODE_ENV === "production"
+        ? "production.db"
+        : "development.db";
     const dbPath = path.join(dataDir, dbName);
-    console.log(`📁 Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV || 'undefined'})`);
+    console.log(
+      `📁 Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV || "undefined"})`,
+    );
 
-    // PRODUCTION DATA PROTECTION: Restore automatically if database missing
-    if (process.env.NODE_ENV === 'production' && !fs.existsSync(dbPath)) {
-      console.log(`🔄 PRODUCTION INIT: Database missing at ${dbPath} - attempting restoration from latest backup...`);
-      console.log(`🔄 PRODUCTION INIT: This will trigger backup deletion and fresh seeding if no backups exist`);
+    // PRODUCTION DATA PROTECTION: Restore always
+    if (process.env.NODE_ENV === "production") {
+      console.log(
+        `🔄 PRODUCTION INIT: attempting restoration from latest backup...`,
+      );
       const restored = await dataPersistence.restoreFromLatestBackup();
       if (restored) {
-        console.log(`✅ PRODUCTION INIT: Database restored successfully from backup`);
-        
+        console.log(
+          `✅ PRODUCTION INIT: Database restored successfully from backup`,
+        );
+
         // CRITICAL FIX: Reset any cached database connections
         try {
-          const { resetDBConnection, markRestorationComplete } = await import('./db-connection');
+          const { resetDBConnection, markRestorationComplete } = await import(
+            "./db-connection"
+          );
           resetDBConnection();
           console.log(`🔄 Database connection cache reset after restoration`);
         } catch (error) {
-          console.warn(`⚠️ Could not reset DB connection cache:`, error.message);
+          console.warn(
+            `⚠️ Could not reset DB connection cache:`,
+            error.message,
+          );
         }
-        
+
         // CRITICAL FIX: Small delay to ensure file system operations complete before opening connection
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
         // Database was restored, now open it with integrity check
         const sqlite = new Database(dbPath);
-        
+
         // Test database integrity immediately after restoration
         try {
-          sqlite.pragma('integrity_check');
+          sqlite.pragma("integrity_check");
           console.log(`✅ Restored database integrity verified`);
         } catch (error: any) {
-          console.error(`❌ Restored database corruption detected:`, error.message);
+          console.error(
+            `❌ Restored database corruption detected:`,
+            error.message,
+          );
           sqlite.close();
-          
+
           // Handle I/O errors during restoration
-          if (error.code === 'SQLITE_IOERR' || error.code === 'SQLITE_IOERR_SHORT_READ' || error.message?.includes('disk I/O error')) {
-            console.log('🔄 I/O error on restored database - removing and creating fresh...');
+          if (
+            error.code === "SQLITE_IOERR" ||
+            error.code === "SQLITE_IOERR_SHORT_READ" ||
+            error.message?.includes("disk I/O error")
+          ) {
+            console.log(
+              "🔄 I/O error on restored database - removing and creating fresh...",
+            );
             fs.unlinkSync(dbPath);
             // Will fall through to normal initialization path
           } else {
@@ -61,60 +83,75 @@ export async function initializeSQLiteDatabase() {
             throw new Error(`Restored database is corrupted: ${error.message}`);
           }
         }
-        
-        sqlite.pragma('journal_mode = WAL');
-        sqlite.pragma('synchronous = NORMAL');
-        sqlite.pragma('cache_size = 1000');
-        sqlite.pragma('temp_store = memory');
-        
-        console.log('✅ SQLite database initialized successfully');
-        
+
+        sqlite.pragma("journal_mode = WAL");
+        sqlite.pragma("synchronous = NORMAL");
+        sqlite.pragma("cache_size = 1000");
+        sqlite.pragma("temp_store = memory");
+
+        console.log("✅ SQLite database initialized successfully");
+
         // Skip seeding - data already exists from backup
-        console.log(`🔄 PRODUCTION INIT: Database restored from backup - skipping initialization seeding`);
-        
+        console.log(
+          `🔄 PRODUCTION INIT: Database restored from backup - skipping initialization seeding`,
+        );
+
         // Mark restoration as complete to allow other database access
         try {
-          const { markRestorationComplete } = await import('./db-connection');
+          const { markRestorationComplete } = await import("./db-connection");
           markRestorationComplete();
         } catch (error) {
-          console.warn(`⚠️ Could not mark restoration complete:`, error.message);
+          console.warn(
+            `⚠️ Could not mark restoration complete:`,
+            error.message,
+          );
         }
-        
+
         // Return raw SQLite instance (consistent with normal path)
         return sqlite;
       } else {
-        console.log(`🔄 PRODUCTION INIT: No backups available (deleted or never existed) - proceeding with fresh database initialization...`);
-        console.log(`🌱 PRODUCTION INIT: This will trigger fresh seeding for production environment`);
+        console.log(
+          `🔄 PRODUCTION INIT: No backups available (deleted or never existed) - proceeding with fresh database initialization...`,
+        );
+        console.log(
+          `🌱 PRODUCTION INIT: This will trigger fresh seeding for production environment`,
+        );
       }
-    } else if (process.env.NODE_ENV === 'production') {
+    } else if (process.env.NODE_ENV === "production") {
       console.log(`📊 PRODUCTION INIT: Database already exists at ${dbPath}`);
       const stats = fs.statSync(dbPath);
-      console.log(`📊 PRODUCTION INIT: Existing database size: ${Math.round(stats.size / 1024)}KB`);
+      console.log(
+        `📊 PRODUCTION INIT: Existing database size: ${Math.round(stats.size / 1024)}KB`,
+      );
     }
 
     const sqlite = new Database(dbPath);
-    
+
     // Enable WAL mode for better performance with I/O error handling
     try {
-      sqlite.pragma('journal_mode = WAL');
-      sqlite.pragma('synchronous = NORMAL');
-      sqlite.pragma('cache_size = 1000');
-      sqlite.pragma('temp_store = memory');
+      sqlite.pragma("journal_mode = WAL");
+      sqlite.pragma("synchronous = NORMAL");
+      sqlite.pragma("cache_size = 1000");
+      sqlite.pragma("temp_store = memory");
     } catch (error: any) {
       console.error(`❌ Failed to set SQLite pragmas:`, error.message);
-      
+
       // Handle I/O errors during pragma setup
-      if (error.code === 'SQLITE_IOERR' || error.code === 'SQLITE_IOERR_SHORT_READ' || error.message?.includes('disk I/O error')) {
+      if (
+        error.code === "SQLITE_IOERR" ||
+        error.code === "SQLITE_IOERR_SHORT_READ" ||
+        error.message?.includes("disk I/O error")
+      ) {
         sqlite.close();
         fs.unlinkSync(dbPath);
-        throw new Error(`Database I/O error during initialization: ${error.message}`);
+        throw new Error(
+          `Database I/O error during initialization: ${error.message}`,
+        );
       }
-      
+
       throw error;
     }
-    
 
-    
     // Create organizations table with all required columns
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS organizations (
@@ -517,27 +554,27 @@ export async function initializeSQLiteDatabase() {
 
     // Check if timezone column exists and is working
     const result = sqlite.prepare("PRAGMA table_info(organizations)").all();
-    const hasTimezone = result.some((col: any) => col.name === 'timezone');
-    
+    const hasTimezone = result.some((col: any) => col.name === "timezone");
+
     if (!hasTimezone) {
-      console.error('❌ Timezone column still missing after schema update');
-      throw new Error('Failed to create timezone column');
+      console.error("❌ Timezone column still missing after schema update");
+      throw new Error("Failed to create timezone column");
     }
 
-    console.log('✅ SQLite database initialized successfully');
-    console.log('✅ Organizations table has timezone column');
-    
+    console.log("✅ SQLite database initialized successfully");
+    console.log("✅ Organizations table has timezone column");
+
     // Mark restoration as complete to allow other database access
     try {
-      const { markRestorationComplete } = await import('./db-connection');
+      const { markRestorationComplete } = await import("./db-connection");
       markRestorationComplete();
     } catch (error) {
       console.warn(`⚠️ Could not mark restoration complete:`, error.message);
     }
-    
+
     return sqlite;
   } catch (error) {
-    console.error('❌ Failed to initialize SQLite database:', error);
+    console.error("❌ Failed to initialize SQLite database:", error);
     throw error;
   }
 }
