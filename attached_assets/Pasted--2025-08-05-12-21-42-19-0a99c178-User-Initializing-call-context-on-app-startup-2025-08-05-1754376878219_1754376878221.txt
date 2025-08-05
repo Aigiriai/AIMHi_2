@@ -1,0 +1,157 @@
+
+2025-08-05 12:21:42.19
+0a99c178
+User
+🔄 Initializing call context on app startup...
+2025-08-05 12:21:42.19
+0a99c178
+User
+📂 Call context loaded from disk
+2025-08-05 12:21:42.19
+0a99c178
+User
+✅ Restored context for Sudhir from previous session
+2025-08-05 12:21:42.20
+0a99c178
+User
+📂 Multiple call contexts loaded from disk (1 candidates)
+2025-08-05 12:21:42.20
+0a99c178
+User
+📂 Loaded 1 candidate contexts for AI calling
+2025-08-05 12:21:42.20
+0a99c178
+User
+• Sudhir (5%)
+2025-08-05 12:21:42.20
+0a99c178
+User
+6:51:42 AM [express] Server running on port 5000 with AI calling support
+2025-08-05 12:21:42.20
+0a99c178
+User
+6:51:42 AM [express] Direct webhook domain: aimhi.aigiri.ai
+2025-08-05 12:22:55.13
+0a99c178
+User
+6:52:55 AM [express] POST /api/auth/login 200 in 83ms :: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXV…
+2025-08-05 12:22:56.32
+0a99c178
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 12:22:56.32
+0a99c178
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-05 12:22:56.32
+0a99c178
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-05 12:22:56.32
+0a99c178
+User
+📊 PRODUCTION INIT: Database already exists at /home/runner/workspace/data/production.db
+2025-08-05 12:22:56.32
+0a99c178
+User
+📊 PRODUCTION INIT: Existing database size: 100KB
+2025-08-05 12:22:56.32
+0a99c178
+User
+✅ SQLite database initialized successfully
+2025-08-05 12:22:56.32
+0a99c178
+User
+✅ Organizations table has timezone column
+2025-08-05 12:22:56.32
+0a99c178
+User
+✅ Database integrity check passed
+2025-08-05 12:22:56.32
+0a99c178
+User
+📊 DB CONNECTION: Database initialized for environment: production
+2025-08-05 12:22:56.32
+0a99c178
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 12:22:56.32
+0a99c178
+User
+🔐 AUTH: User query returned 0 results for user 1
+2025-08-05 12:22:56.32
+0a99c178
+User
+🔐 AUTH: No active user found for ID 1
+2025-08-05 12:22:56.32
+0a99c178
+User
+6:52:56 AM [express] GET /api/auth/me 401 in 6ms :: {"message":"Invalid token"}
+2025-08-05 12:22:56.62
+0a99c178
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 12:22:56.62
+0a99c178
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 12:22:56.62
+0a99c178
+User
+🔐 AUTH: User query returned 0 results for user 1
+2025-08-05 12:22:56.62
+0a99c178
+User
+🔐 AUTH: No active user found for ID 1
+2025-08-05 12:22:56.62
+0a99c178
+User
+6:52:56 AM [express] GET /api/auth/me 401 in 3ms :: {"message":"Invalid token"}
+2025-08-05 12:24:01.67
+0a99c178
+User
+6:54:01 AM [express] POST /api/auth/login 200 in 73ms :: {"token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXV…
+2025-08-05 12:24:02.97
+0a99c178
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 12:24:02.97
+0a99c178
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 12:24:02.97
+0a99c178
+User
+🔐 AUTH: User query returned 0 results for user 1
+2025-08-05 12:24:02.97
+0a99c178
+User
+🔐 AUTH: No active user found for ID 1
+2025-08-05 12:24:02.97
+0a99c178
+User
+6:54:02 AM [express] GET /api/auth/me 401 in 3ms :: {"message":"Invalid token"}
+2025-08-05 12:24:03.28
+0a99c178
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 12:24:03.28
+0a99c178
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 12:24:03.28
+0a99c178
+User
+🔐 AUTH: User query returned 0 results for user 1
+2025-08-05 12:24:03.28
+0a99c178
+User
+🔐 AUTH: No active user found for ID 1
+2025-08-05 12:24:03.28
+0a99c178
+User
+6:54:03 AM [express] GET /api/auth/me 401 in 3ms :: {"message":"Invalid token"}
+2025-08-05 12:24:15.81
+d37be713
+System
+system: received signal terminated
