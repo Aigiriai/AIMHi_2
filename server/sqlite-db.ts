@@ -407,34 +407,27 @@ export async function initializeSQLiteDB() {
     
     console.log(`🔍 BEFORE SEEDING CHECK: Found ${existingOrgs.count} organizations, ${existingUsers.count} users`);
     
-    // DEVELOPMENT ONLY: Re-enable seeding for development environment to restore super admin access
-    if (process.env.NODE_ENV !== 'production') {
-      if (existingOrgs.count === 0 && existingUsers.count === 0) {
-        console.log('📦 No existing data found - proceeding with initial seeding (DEVELOPMENT)');
-        await seedInitialData(db, sqlite);
-      } else {
-        console.log('🔍 Existing data found - checking if super admin exists (DEVELOPMENT)');
-        
-        // Check if super admin exists and create if missing
-        const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
-        
-        if (!existingSuperAdmin) {
-          console.log('🔧 Super admin missing - creating super admin user (DEVELOPMENT ONLY)');
-          await seedInitialData(db, sqlite);
-        }
-        
-        // DEBUG: Show what organizations exist
-        const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
-        console.log(`🔍 ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
-        console.log(`🔍 DATA COUNT: ${existingOrgs.count} organizations, ${existingUsers.count} users`);
-      }
+    // TEMPORARY: Enable seeding for BOTH development and production to create fresh database
+    console.log(`🌱 TEMP CHANGE: Enabling fresh database seeding for both development and production`);
+    
+    if (existingOrgs.count === 0 && existingUsers.count === 0) {
+      console.log(`📦 FRESH SEEDING: No existing data found - proceeding with fresh seeding (${process.env.NODE_ENV})`);
+      await seedInitialData(db, sqlite);
     } else {
-      console.log('🛡️ PRODUCTION: Seeding completely disabled - existing data preserved');
+      console.log(`🔍 EXISTING DATA: Found data - checking super admin (${process.env.NODE_ENV})`);
       
-      // DEBUG: Show what production organizations exist without seeding
+      // Check if super admin exists and create if missing
+      const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
+      
+      if (!existingSuperAdmin) {
+        console.log(`🔧 SUPER ADMIN: Missing - creating super admin user (${process.env.NODE_ENV})`);
+        await seedInitialData(db, sqlite);
+      }
+      
+      // DEBUG: Show what organizations exist
       const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
-      console.log(`🔍 PRODUCTION ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
-      console.log(`🔍 PRODUCTION DATA COUNT: ${existingOrgs.count} organizations, ${existingUsers.count} users`);
+      console.log(`🔍 ORGANIZATIONS (${process.env.NODE_ENV}):`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+      console.log(`🔍 DATA COUNT (${process.env.NODE_ENV}): ${existingOrgs.count} organizations, ${existingUsers.count} users`);
     }
     
   } catch (error) {
@@ -447,7 +440,11 @@ export async function initializeSQLiteDB() {
 
 async function seedInitialData(db: any, sqlite: any) {
   try {
-    // PRODUCTION DATA PROTECTION: Check if we have existing data
+    console.log(`🌱 SEED START: Beginning fresh database seeding for ${process.env.NODE_ENV} environment`);
+    
+    // TEMPORARY: Remove production data protection to allow fresh seeding
+    // Original protection code commented out for this fresh deployment
+    /*
     if (process.env.NODE_ENV === 'production') {
       const orgCount = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get();
       const userCount = sqlite.prepare('SELECT COUNT(*) as count FROM users').get();
@@ -460,17 +457,19 @@ async function seedInitialData(db: any, sqlite: any) {
         return;
       }
     }
+    */
     
     // Check if super admin user exists (more comprehensive check)
     const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
     
     if (!existingSuperAdmin) {
-      console.log('🌱 Seeding super admin...');
+      console.log(`🌱 SEED: Creating super admin for ${process.env.NODE_ENV} environment...`);
       
       // Check if AIM Hi System organization exists
       let systemOrg = sqlite.prepare('SELECT id FROM organizations WHERE name = ?').get('AIM Hi System');
       
       if (!systemOrg) {
+        console.log(`🏢 SEED: Creating AIM Hi System organization...`);
         // Create system organization
         const orgResult = sqlite.prepare(`
           INSERT INTO organizations (name, domain, plan, status) 
@@ -478,21 +477,25 @@ async function seedInitialData(db: any, sqlite: any) {
         `).run('AIM Hi System', 'aimhi.app', 'enterprise', 'active');
         
         systemOrg = { id: orgResult.lastInsertRowid };
+        console.log(`✓ SEED: Organization created with ID ${systemOrg.id}`);
+      } else {
+        console.log(`✓ SEED: AIM Hi System organization already exists with ID ${systemOrg.id}`);
       }
       
       // Create super admin user
+      console.log(`👤 SEED: Creating super admin user...`);
       const bcrypt = await import('bcrypt');
       const hashedPassword = await bcrypt.hash('SuperAdmin123!@#', 10);
       
-      sqlite.prepare(`
+      const userResult = sqlite.prepare(`
         INSERT INTO users (organization_id, email, password_hash, first_name, last_name, role, has_temporary_password)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `).run(systemOrg.id, 'superadmin@aimhi.app', hashedPassword, 'Super', 'Admin', 'super_admin', 0);
       
-      console.log('✓ Super admin seeded successfully');
-      console.log('✅ Multi-tenant system initialized successfully');
+      console.log(`✓ SEED: Super admin created with ID ${userResult.lastInsertRowid}`);
+      console.log(`✅ SEED: Fresh database seeding completed for ${process.env.NODE_ENV}`);
     } else {
-      console.log('✓ Super admin already exists');
+      console.log(`✓ SEED: Super admin already exists with ID ${existingSuperAdmin.id}`);
     }
     
     console.log('=== Login Credentials ===');

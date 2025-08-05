@@ -102,52 +102,90 @@ export class DataPersistenceManager {
   async restoreFromLatestBackup(): Promise<boolean> {
     const prodDbPath = path.join(this.dataDir, 'production.db');
     
+    console.log(`🔄 RESTORE: Starting database restoration process...`);
+    console.log(`📁 RESTORE: Target database path: ${prodDbPath}`);
+    console.log(`🌍 RESTORE: Environment: ${process.env.NODE_ENV}`);
+    
     // Ensure data directory exists
     if (!fs.existsSync(this.dataDir)) {
+      console.log(`📁 RESTORE: Creating data directory: ${this.dataDir}`);
       fs.mkdirSync(this.dataDir, { recursive: true });
+    } else {
+      console.log(`📁 RESTORE: Data directory already exists: ${this.dataDir}`);
+    }
+
+    // Check if production database already exists
+    if (fs.existsSync(prodDbPath)) {
+      const stats = fs.statSync(prodDbPath);
+      console.log(`📊 RESTORE: Existing database found (${Math.round(stats.size / 1024)}KB), will be replaced if restoration succeeds`);
+    } else {
+      console.log(`📊 RESTORE: No existing database found at target path`);
     }
 
     try {
       // Try cloud backup first (persistent)
       if (this.cloudBackupService) {
-        console.log('☁️ Attempting to restore from Object Storage...');
+        console.log(`☁️ RESTORE: Attempting restoration from Object Storage...`);
         const restored = await this.cloudBackupService.restoreLatestBackup(prodDbPath);
         if (restored) {
-          console.log(`✅ Database restored from Object Storage backup`);
+          console.log(`✅ RESTORE: Database successfully restored from Object Storage backup`);
+          
+          // Verify restored database
+          if (fs.existsSync(prodDbPath)) {
+            const restoredStats = fs.statSync(prodDbPath);
+            console.log(`📊 RESTORE: Restored database size: ${Math.round(restoredStats.size / 1024)}KB`);
+          }
           
           // CRITICAL FIX: Reset database connection cache after restoration
           try {
             const { resetDBConnection } = await import('./db-connection');
             resetDBConnection();
-            console.log(`🔄 Database connection cache reset after restoration`);
+            console.log(`🔄 RESTORE: Database connection cache reset after restoration`);
           } catch (error) {
-            console.warn(`⚠️ Could not reset DB connection cache:`, error.message);
+            console.warn(`⚠️ RESTORE: Could not reset DB connection cache:`, error.message);
           }
           
           return true;
         }
-        console.log('⚠️ No backups found in Object Storage, trying local fallback...');
+        console.log(`⚠️ RESTORE: No backups found in Object Storage (likely deleted), will trigger fresh seeding...`);
+      } else {
+        console.log(`⚠️ RESTORE: Object Storage service not available, trying local fallback...`);
       }
       
       // Fallback to local backup (won't work in production deployments)
+      console.log(`📁 RESTORE: Checking for local backups in: ${this.backupDir}`);
+      
+      if (!fs.existsSync(this.backupDir)) {
+        console.log(`📁 RESTORE: Local backup directory does not exist`);
+        return false;
+      }
+      
       const backups = fs.readdirSync(this.backupDir)
         .filter(file => file.startsWith('production_') && file.endsWith('.db'))
         .sort()
         .reverse();
 
+      console.log(`📋 RESTORE: Found ${backups.length} local backup files`);
+
       if (backups.length === 0) {
-        console.log('❌ No local backups found to restore from');
+        console.log(`❌ RESTORE: No local backups found to restore from`);
         return false;
       }
 
       const latestBackup = path.join(this.backupDir, backups[0]);
+      console.log(`🔄 RESTORE: Restoring from local backup: ${backups[0]}`);
+      
+      const backupStats = fs.statSync(latestBackup);
+      console.log(`📊 RESTORE: Local backup size: ${Math.round(backupStats.size / 1024)}KB`);
+      
       fs.copyFileSync(latestBackup, prodDbPath);
-      console.log(`✅ Database restored from local backup: ${backups[0]}`);
-      console.warn('⚠️ Local backup restore will not work in production deployments');
+      console.log(`✅ RESTORE: Database restored from local backup: ${backups[0]}`);
+      console.warn(`⚠️ RESTORE: Local backup restore will not work in production deployments`);
       
       return true;
     } catch (error) {
-      console.error('❌ Failed to restore from backup:', error);
+      console.error(`❌ RESTORE: Failed to restore from backup:`, error);
+      console.error(`❌ RESTORE: Error details:`, error.message);
       return false;
     }
   }

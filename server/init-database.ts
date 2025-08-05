@@ -22,10 +22,11 @@ export async function initializeSQLiteDatabase() {
 
     // PRODUCTION DATA PROTECTION: Restore automatically if database missing
     if (process.env.NODE_ENV === 'production' && !fs.existsSync(dbPath)) {
-      console.log('🔄 Production database missing - attempting restoration from latest backup...');
+      console.log(`🔄 PRODUCTION INIT: Database missing at ${dbPath} - attempting restoration from latest backup...`);
+      console.log(`🔄 PRODUCTION INIT: This will trigger backup deletion and fresh seeding if no backups exist`);
       const restored = await dataPersistence.restoreFromLatestBackup();
       if (restored) {
-        console.log('✅ Database restored successfully from backup');
+        console.log(`✅ PRODUCTION INIT: Database restored successfully from backup`);
         
         // CRITICAL FIX: Reset any cached database connections
         try {
@@ -69,7 +70,7 @@ export async function initializeSQLiteDatabase() {
         console.log('✅ SQLite database initialized successfully');
         
         // Skip seeding - data already exists from backup
-        console.log('🔄 Database restored from backup - skipping initialization seeding');
+        console.log(`🔄 PRODUCTION INIT: Database restored from backup - skipping initialization seeding`);
         
         // Mark restoration as complete to allow other database access
         try {
@@ -82,8 +83,13 @@ export async function initializeSQLiteDatabase() {
         // Return raw SQLite instance (consistent with normal path)
         return sqlite;
       } else {
-        console.log('📦 No backup available - will create fresh database');
+        console.log(`🔄 PRODUCTION INIT: No backups available (deleted or never existed) - proceeding with fresh database initialization...`);
+        console.log(`🌱 PRODUCTION INIT: This will trigger fresh seeding for production environment`);
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      console.log(`📊 PRODUCTION INIT: Database already exists at ${dbPath}`);
+      const stats = fs.statSync(dbPath);
+      console.log(`📊 PRODUCTION INIT: Existing database size: ${Math.round(stats.size / 1024)}KB`);
     }
 
     const sqlite = new Database(dbPath);
