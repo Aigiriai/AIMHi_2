@@ -1,0 +1,124 @@
+2025-08-05 19:04:15.39
+47c760bb
+User
+✅ ORG MANAGER: Admin user created successfully with ID = 2
+2025-08-05 19:04:15.39
+47c760bb
+User
+📁 ORG MANAGER: Data written to database file based on NODE_ENV = production
+2025-08-05 19:04:16.39
+47c760bb
+User
+🔄 ORG MANAGER: Triggering backup after org creation (NODE_ENV: production)
+2025-08-05 19:04:16.39
+47c760bb
+User
+🔄 BACKUP SERVICE: Organization created backup trigger for: Org1 (NODE_ENV: production)
+2025-08-05 19:04:16.39
+47c760bb
+User
+📊 BACKUP SERVICE: Organization backup result: SUCCESS
+2025-08-05 19:04:16.39
+47c760bb
+User
+🔄 ORG MANAGER: Triggering backup after user creation (NODE_ENV: production)
+2025-08-05 19:04:16.39
+47c760bb
+User
+✅ ORG ADMIN CREATION: Organization admin created successfully with ID = 2
+2025-08-05 19:04:16.40
+47c760bb
+User
+Audit event (disabled): {
+2025-08-05 19:04:16.40
+47c760bb
+User
+organizationId: 1,
+2025-08-05 19:04:16.40
+47c760bb
+User
+userId: 1,
+2025-08-05 19:04:16.40
+47c760bb
+User
+action: 'organization_created',
+2025-08-05 19:04:16.40
+47c760bb
+User
+resourceType: 'organization',
+2025-08-05 19:04:16.40
+47c760bb
+User
+resourceId: 2,
+2025-08-05 19:04:16.40
+47c760bb
+User
+details: { organizationName: 'Org1', adminEmail: 'org1admin@gmail.com' }
+2025-08-05 19:04:16.40
+47c760bb
+User
+}
+2025-08-05 19:04:16.40
+47c760bb
+User
+1:34:16 PM [express] POST /api/auth/invite-organization-admin 200 in 1317ms :: {"message":"Organizat…
+2025-08-05 19:04:16.71
+47c760bb
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:04:16.71
+47c760bb
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:04:16.71
+47c760bb
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:04:16.71
+47c760bb
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:04:16.72
+47c760bb
+User
+1:34:16 PM [express] GET /api/auth/organizations 200 in 10ms :: {"organizations":[{"id":2,"name":"Or…
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔍 ROUTE: Getting matches with user-level filtering for user 1 (super_admin)
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔍 ROUTE: Got 0 matches for user 1 with role super_admin
+2025-08-05 19:06:02.18
+47c760bb
+User
+1:36:02 PM [express] GET /api/matches 304 in 7ms :: []
+2025-08-05 19:06:02.19
+47c760bb
+User
+1:36:02 PM [express] GET /api/interviews 304 in 1ms :: []
+2025-08-05 19:06:02.19
+47c760bb
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:06:02.19
+47c760bb
+User
+🔐 AUTH: Database connection obtained (attempt 1)

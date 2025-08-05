@@ -1,0 +1,136 @@
+2025-08-05 19:06:02.19
+47c760bb
+User
+🔍 CANDIDATES: Fetching candidates for user 1 (super_admin) in org 1
+2025-08-05 19:06:02.19
+47c760bb
+User
+👑 CANDIDATES: User has super_admin role - showing all candidates
+2025-08-05 19:06:02.19
+47c760bb
+User
+1:36:02 PM [express] GET /api/candidates 304 in 3ms :: []
+2025-08-05 19:06:02.21
+47c760bb
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:06:02.21
+47c760bb
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:06:02.21
+47c760bb
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:06:02.21
+47c760bb
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:06:02.21
+47c760bb
+User
+📊 STATS: Calculating user-specific stats for user 1 (super_admin) in organization 1
+2025-08-05 19:06:02.22
+47c760bb
+User
+📊 STATS: User has access to 0 jobs: []
+2025-08-05 19:06:02.22
+47c760bb
+User
+📊 STATS: User has no accessible jobs, returning empty stats
+2025-08-05 19:06:02.22
+47c760bb
+User
+1:36:02 PM [express] GET /api/stats 304 in 8ms :: {"activeJobs":0,"totalCandidates":0,"aiMatches":0,…
+2025-08-05 19:06:02.22
+47c760bb
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:06:02.22
+47c760bb
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:06:02.23
+47c760bb
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:06:02.23
+47c760bb
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:06:02.23
+47c760bb
+User
+Fetching jobs for organization: 1
+2025-08-05 19:06:02.24
+47c760bb
+User
+Retrieved organization jobs: 0
+2025-08-05 19:06:02.24
+47c760bb
+User
+1:36:02 PM [express] GET /api/jobs 200 in 17ms :: []
+2025-08-05 19:06:02.24
+47c760bb
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:06:02.24
+47c760bb
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:06:02.24
+47c760bb
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:06:02.24
+47c760bb
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:06:02.25
+47c760bb
+User
+1:36:02 PM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-05 19:06:02.55
+47c760bb
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:06:02.55
+47c760bb
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:06:02.55
+47c760bb
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:06:02.55
+47c760bb
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:06:02.55
+47c760bb
+User
+1:36:02 PM [express] GET /api/auth/me 200 in 5ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-05 19:06:02.69
+47c760bb
+User
+1:36:02 PM [express] GET /api/job-boards/credentials 304 in 1ms :: {"linkedIn":false,"indeed":false}
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:06:02.18
+47c760bb
+User
+🔍 ROUTE: Getting matches with user-level filtering for user 1 (super_admin)
