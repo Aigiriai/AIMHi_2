@@ -1,0 +1,116 @@
+2025-08-05 19:30:42.31
+37de545d
+User
+details: { organizationName: 'Org1', adminEmail: 'sudhir.grao@gmail.com' }
+2025-08-05 19:30:42.31
+37de545d
+User
+}
+2025-08-05 19:30:42.31
+37de545d
+User
+2:00:42 PM [express] POST /api/auth/invite-organization-admin 200 in 1272ms :: {"message":"Organizat…
+2025-08-05 19:30:42.65
+37de545d
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:30:42.65
+37de545d
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:30:42.66
+37de545d
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:30:42.66
+37de545d
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:30:42.66
+37de545d
+User
+2:00:42 PM [express] GET /api/auth/organizations 200 in 7ms :: {"organizations":[{"id":2,"name":"Org…
+2025-08-05 19:32:48.86
+37de545d
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:32:48.86
+37de545d
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:32:48.86
+37de545d
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:32:48.86
+37de545d
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:32:48.86
+37de545d
+User
+2:02:48 PM [express] GET /api/auth/me 200 in 5ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-05 19:32:51.25
+37de545d
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:32:51.25
+37de545d
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:32:51.25
+37de545d
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:32:51.25
+37de545d
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:32:51.25
+37de545d
+User
+🔄 MANUAL BACKUP: User superadmin@aimhi.app (super_admin) requested manual database backup
+2025-08-05 19:32:51.25
+37de545d
+User
+📊 MANUAL BACKUP: NODE_ENV = production
+2025-08-05 19:32:51.25
+37de545d
+User
+🏢 MANUAL BACKUP: Organization ID = 1
+2025-08-05 19:32:51.26
+37de545d
+User
+2:02:51 PM [express] POST /api/auth/backup-database 400 in 5ms :: {"success":false,"message":"Backup…
+2025-08-05 19:32:58.16
+37de545d
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 19:32:58.16
+37de545d
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 19:32:58.16
+37de545d
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 19:32:58.16
+37de545d
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 19:32:58.16
+37de545d
+User
+🔄 MANUAL BACKUP: User superadmin@aimhi.app (super_admin) requested manual database backup
+2025-08-05 19:32:58.16
+37de545d
+User
+📊 MANUAL BACKUP: NODE_ENV = production
+2025-08-05 19:32:58.16
+37de545d
+User
+🏢 MANUAL BACKUP: Organization ID = 1
+2025-08-05 19:32:58.17
+37de545d
+User
+2:02:58 PM [express] POST /api/auth/backup-database 400 in 4ms :: {"success":false,"message":"Backup…
