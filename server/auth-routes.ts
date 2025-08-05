@@ -1071,10 +1071,9 @@ router.post('/backup-database', authenticateToken, async (req: AuthRequest, res)
     console.log(`📊 MANUAL BACKUP: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
     console.log(`🏢 MANUAL BACKUP: Organization ID = ${req.user?.organizationId}`);
     
-    // Trigger manual backup with high priority
-    const success = await backupService.scheduleAutoBackup(
-      `manual_backup_by_${req.user?.email}`,
-      'high'
+    // Trigger manual backup (works in any environment)
+    const success = await backupService.forceBackupAnyEnvironment(
+      'manual_trigger_from_api'
     );
     
     if (success) {
