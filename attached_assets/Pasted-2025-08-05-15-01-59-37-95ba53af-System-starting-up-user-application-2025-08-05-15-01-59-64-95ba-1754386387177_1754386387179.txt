@@ -1,0 +1,92 @@
+2025-08-05 15:01:59.37
+95ba53af
+System
+starting up user application
+2025-08-05 15:01:59.64
+95ba53af
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-08-05 15:02:01.36
+95ba53af
+User
+> rest-express@1.0.0 start
+2025-08-05 15:02:01.36
+95ba53af
+User
+> NODE_ENV=production node dist/index.js
+2025-08-05 15:02:05.56
+95ba53af
+User
+☁️ Object Storage backup service initialized
+2025-08-05 15:02:05.67
+95ba53af
+User
+9:32:05 AM [express] Initializing consolidated Node.js backend...
+2025-08-05 15:02:05.67
+95ba53af
+User
+9:32:05 AM [express] 📦 Initializing SQLite database...
+2025-08-05 15:02:05.68
+95ba53af
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
+2025-08-05 15:02:05.68
+95ba53af
+User
+📊 PRODUCTION INIT: Database already exists at /home/runner/workspace/data/production.db
+2025-08-05 15:02:05.68
+95ba53af
+User
+📊 PRODUCTION INIT: Existing database size: 4KB
+2025-08-05 15:02:05.72
+95ba53af
+User
+✅ SQLite database initialized successfully
+2025-08-05 15:02:05.72
+95ba53af
+User
+✅ Organizations table has timezone column
+2025-08-05 15:02:05.72
+95ba53af
+User
+✅ DB: Restoration complete - database access enabled
+2025-08-05 15:02:05.72
+95ba53af
+User
+9:32:05 AM [express] 🔗 AI calling configured for direct webhooks (no tunnel required)
+2025-08-05 15:02:05.73
+95ba53af
+User
+🔄 Initializing call context on app startup...
+2025-08-05 15:02:05.73
+95ba53af
+User
+📂 Call context loaded from disk
+2025-08-05 15:02:05.73
+95ba53af
+User
+✅ Restored context for Sudhir from previous session
+2025-08-05 15:02:05.74
+95ba53af
+User
+📂 Multiple call contexts loaded from disk (1 candidates)
+2025-08-05 15:02:05.74
+95ba53af
+User
+📂 Loaded 1 candidate contexts for AI calling
+2025-08-05 15:02:05.74
+95ba53af
+User
+• Sudhir (5%)
+2025-08-05 15:02:05.76
+95ba53af
+User
+9:32:05 AM [express] Server running on port 5000 with AI calling support
+2025-08-05 15:02:05.76
+95ba53af
+User
+9:32:05 AM [express] Direct webhook domain: aimhi.aigiri.ai
+2025-08-05 15:02:05.76
+95ba53af
+User
+✅ SQLite database initialized successfully
