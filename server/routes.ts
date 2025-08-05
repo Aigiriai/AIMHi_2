@@ -1689,6 +1689,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
+      
+      // CRITICAL FIX: Handle database I/O errors by returning empty stats
+      // This prevents UI loading failures when database is corrupted from template generation
+      if (error instanceof Error && (
+        error.message?.includes('disk I/O error') ||
+        error.message?.includes('SQLITE_IOERR') ||
+        error.message?.includes('SQLITE_IOERR_SHORT_READ')
+      )) {
+        console.log('🚨 STATS: Database I/O error detected - returning empty stats to prevent UI failure');
+        return res.json({
+          activeJobs: 0,
+          totalCandidates: 0,
+          aiMatches: 0,
+          totalInterviews: 0,
+          avgMatchRate: 0
+        });
+      }
+      
       res.status(500).json({ message: "Failed to fetch stats" });
     }
   });
