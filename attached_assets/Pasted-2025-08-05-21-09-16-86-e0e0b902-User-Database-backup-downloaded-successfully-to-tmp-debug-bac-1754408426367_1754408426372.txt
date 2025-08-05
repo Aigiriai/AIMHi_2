@@ -1,0 +1,124 @@
+2025-08-05 21:09:16.86
+e0e0b902
+User
+✅ Database backup downloaded successfully to: /tmp/debug_backup_2.db
+2025-08-05 21:09:16.86
+e0e0b902
+User
+📋 Organizations in production-backup-2025-08-05T15-32-15-687Z.db: AIM Hi System (aimhi.app), Org1 (null), Nexer (null)
+2025-08-05 21:09:16.87
+e0e0b902
+User
+🔄 Restoring most recent backup: production-backup.db (modified: 2025-08-05T15:34:16.319Z)
+2025-08-05 21:09:16.87
+e0e0b902
+User
+🔧 Preparing database for restoration - closing connections and cleaning up WAL files...
+2025-08-05 21:09:16.87
+e0e0b902
+User
+📋 No existing database connections to close
+2025-08-05 21:09:16.87
+e0e0b902
+User
+🗑️ Cleaned up interfering file: /home/runner/workspace/data/production.db-wal
+2025-08-05 21:09:16.97
+e0e0b902
+User
+✅ Database preparation complete - ready for restoration
+2025-08-05 21:09:17.04
+e0e0b902
+User
+☁️ Downloading database backup: production-backup.db (124KB)
+2025-08-05 21:09:17.08
+e0e0b902
+User
+✅ Database backup downloaded successfully to: /home/runner/workspace/data/production.db
+2025-08-05 21:09:17.08
+e0e0b902
+User
+✅ Database restored from most recent backup: production-backup.db
+2025-08-05 21:09:17.08
+e0e0b902
+User
+⚠️ DEBUG: Could not read organizations from restored backup: disk I/O error
+2025-08-05 21:09:17.08
+e0e0b902
+User
+✅ RESTORE: Database successfully restored from Object Storage backup
+2025-08-05 21:09:17.08
+e0e0b902
+User
+📊 RESTORE: Restored database size: 124KB
+2025-08-05 21:09:17.08
+e0e0b902
+User
+🔄 RESTORE: Database connection will be cached after restoration
+2025-08-05 21:09:17.08
+e0e0b902
+User
+🧹 DB: Clearing connection cache after restoration
+2025-08-05 21:09:17.08
+e0e0b902
+User
+📝 DB: No cached connection to clear
+2025-08-05 21:09:17.08
+e0e0b902
+User
+🧹 RESTORE: Connection cache cleared after Object Storage restoration
+2025-08-05 21:09:17.08
+e0e0b902
+User
+✅ PRODUCTION INIT: Database restored successfully from backup
+2025-08-05 21:09:17.08
+e0e0b902
+User
+🔄 Database connection will be cached after integrity check
+2025-08-05 21:09:17.28
+e0e0b902
+User
+❌ Restored database corruption detected: disk I/O error
+2025-08-05 21:09:17.28
+e0e0b902
+User
+🔄 I/O error on restored database - removing and creating fresh...
+2025-08-05 21:09:17.28
+e0e0b902
+User
+❌ Failed to initialize SQLite database: TypeError: The database connection is not open
+2025-08-05 21:09:17.28
+e0e0b902
+User
+at Database.pragma (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/pragma.js:10:27)
+2025-08-05 21:09:17.28
+e0e0b902
+User
+at initializeSQLiteDatabase (file:///home/runner/workspace/dist/index.js:1163:17)
+2025-08-05 21:09:17.28
+e0e0b902
+User
+at async getDB (file:///home/runner/workspace/dist/index.js:1687:18)
+2025-08-05 21:09:17.28
+e0e0b902
+User
+at async authenticateToken (file:///home/runner/workspace/dist/index.js:6246:32)
+2025-08-05 21:09:17.28
+e0e0b902
+User
+🔐 DB ERROR (attempt 1): The database connection is not open
+2025-08-05 21:09:17.28
+e0e0b902
+User
+🔄 DB: Forcing database connection reset
+2025-08-05 21:09:17.28
+e0e0b902
+User
+🔄 AUTH: Resetting DB connection for retry 1
+2025-08-05 21:09:17.38
+e0e0b902
+User
+🗄️ Using SQLite database (NODE_ENV: production)
+2025-08-05 21:09:17.38
+e0e0b902
+User
+📁 Database path: /home/runner/workspace/data/production.db (NODE_ENV: production)
