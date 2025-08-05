@@ -1,0 +1,108 @@
+2025-08-05 16:13:05.78
+56c6b103
+User
+🔍 DEBUG: Organizations in restored backup: [
+2025-08-05 16:13:05.78
+56c6b103
+User
+{ id: 1, name: 'AIM Hi System', domain: 'aimhi.app' },
+2025-08-05 16:13:05.78
+56c6b103
+User
+{ id: 2, name: 'Org1', domain: null }
+2025-08-05 16:13:05.78
+56c6b103
+User
+]
+2025-08-05 16:13:05.79
+56c6b103
+User
+✅ RESTORE: Database successfully restored from Object Storage backup
+2025-08-05 16:13:05.79
+56c6b103
+User
+📊 RESTORE: Restored database size: 124KB
+2025-08-05 16:13:05.79
+56c6b103
+User
+🔄 RESTORE: Database connection will be cached after restoration
+2025-08-05 16:13:05.79
+56c6b103
+User
+✅ PRODUCTION INIT: Database restored successfully from backup
+2025-08-05 16:13:05.79
+56c6b103
+User
+🔄 Database connection will be cached after integrity check
+2025-08-05 16:13:05.99
+56c6b103
+User
+✅ Restored database integrity verified
+2025-08-05 16:13:05.99
+56c6b103
+User
+✅ SQLite database initialized successfully
+2025-08-05 16:13:05.99
+56c6b103
+User
+🔄 PRODUCTION INIT: Database restored from backup - skipping initialization seeding
+2025-08-05 16:13:05.99
+56c6b103
+User
+✅ DB: Restoration complete - database access enabled
+2025-08-05 16:13:05.99
+56c6b103
+User
+🔗 DB: Caching restored database connection
+2025-08-05 16:13:05.99
+56c6b103
+User
+✅ DB: Restored connection cached successfully
+2025-08-05 16:13:05.99
+56c6b103
+User
+🔗 DB: Restored database connection cached - preventing duplicate initialization
+2025-08-05 16:13:05.99
+56c6b103
+User
+10:43:05 AM [express] 🔗 AI calling configured for direct webhooks (no tunnel required)
+2025-08-05 16:13:05.99
+56c6b103
+User
+🔄 Initializing call context on app startup...
+2025-08-05 16:13:06.00
+56c6b103
+User
+📂 Call context loaded from disk
+2025-08-05 16:13:06.00
+56c6b103
+User
+✅ Restored context for Sudhir from previous session
+2025-08-05 16:13:06.01
+56c6b103
+User
+📂 Multiple call contexts loaded from disk (1 candidates)
+2025-08-05 16:13:06.01
+56c6b103
+User
+📂 Loaded 1 candidate contexts for AI calling
+2025-08-05 16:13:06.01
+56c6b103
+User
+• Sudhir (5%)
+2025-08-05 16:13:06.01
+56c6b103
+User
+10:43:06 AM [express] Server running on port 5000 with AI calling support
+2025-08-05 16:13:06.01
+56c6b103
+User
+10:43:06 AM [express] Direct webhook domain: aimhi.aigiri.ai
+2025-08-05 16:14:14.29
+d2d79592
+System
+system: received signal terminated
+2025-08-05 16:15:25.20
+56c6b103
+User
+🔐 AUTH: Token decoded for user 1
