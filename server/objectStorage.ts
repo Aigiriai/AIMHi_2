@@ -462,7 +462,7 @@ export class DatabaseBackupService {
     try {
       // TEMPORARY: Delete all existing backups to force fresh seeding
       //console.log(`🗑️ TEMP CODE: Deleting all existing backup files to force fresh database seeding...`);
-      //await this.deleteAllBackups();
+      await this.deleteAllBackups();
 
       // Get all backup files with their metadata
       const bucket = this.getBucket();
