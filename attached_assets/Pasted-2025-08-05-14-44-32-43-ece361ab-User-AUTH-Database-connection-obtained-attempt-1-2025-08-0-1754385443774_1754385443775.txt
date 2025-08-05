@@ -1,0 +1,156 @@
+2025-08-05 14:44:32.43
+ece361ab
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 14:44:32.44
+ece361ab
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 14:44:32.44
+ece361ab
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 14:44:32.44
+ece361ab
+User
+9:14:32 AM [express] GET /api/auth/me 200 in 14ms :: {"id":1,"email":"superadmin@aimhi.app","firstNa…
+2025-08-05 14:44:32.76
+ece361ab
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 14:44:32.76
+ece361ab
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 14:44:32.76
+ece361ab
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 14:44:32.76
+ece361ab
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 14:44:32.77
+ece361ab
+User
+9:14:32 AM [express] GET /api/auth/me 200 in 10ms :: {"id":1,"email":"superadmin@aimhi.app","firstNa…
+2025-08-05 14:44:32.78
+ece361ab
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 14:44:32.78
+ece361ab
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 14:44:32.78
+ece361ab
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 14:44:32.78
+ece361ab
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 14:44:32.79
+ece361ab
+User
+9:14:32 AM [express] GET /api/auth/organizations 200 in 7ms :: {"organizations":[{"id":1,"name":"AIM…
+2025-08-05 14:44:32.81
+ece361ab
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 14:44:32.81
+ece361ab
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 14:44:32.82
+ece361ab
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 14:44:32.82
+ece361ab
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 14:44:32.82
+ece361ab
+User
+9:14:32 AM [express] GET /api/auth/organizations 200 in 4ms :: {"organizations":[{"id":1,"name":"AIM…
+2025-08-05 14:44:36.65
+ece361ab
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 14:44:36.65
+ece361ab
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 14:44:36.65
+ece361ab
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 14:44:36.65
+ece361ab
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 14:44:36.65
+ece361ab
+User
+9:14:36 AM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-05 14:44:38.72
+ece361ab
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 14:44:38.72
+ece361ab
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 14:44:38.72
+ece361ab
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 14:44:38.72
+ece361ab
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 14:44:38.72
+ece361ab
+User
+9:14:38 AM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-05 14:44:40.24
+ece361ab
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 14:44:40.24
+ece361ab
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 14:44:40.24
+ece361ab
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 14:44:40.24
+ece361ab
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 14:44:40.24
+ece361ab
+User
+9:14:40 AM [express] GET /api/auth/me 200 in 5ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+2025-08-05 14:44:40.61
+ece361ab
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 14:44:40.61
+ece361ab
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 14:44:40.61
+ece361ab
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 14:44:40.61
+ece361ab
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 14:44:40.61
+ece361ab
+User
+9:14:40 AM [express] GET /api/auth/me 200 in 4ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
