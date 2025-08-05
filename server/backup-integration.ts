@@ -105,7 +105,7 @@ export class BackupIntegrationService {
       this.isBackupInProgress = false;
     }
   */
-    return true; // Placeholder for actual implementation
+    return false; // Placeholder for actual implementation
   }
 
   // Backup triggers for specific operations
@@ -213,7 +213,7 @@ export class BackupIntegrationService {
       this.isBackupInProgress = prevBackupInProgress;
     }
   */
-    return true;
+    return false;
   }
 
   // Force backup regardless of environment (for manual triggers)
