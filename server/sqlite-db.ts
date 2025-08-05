@@ -440,24 +440,21 @@ export async function initializeSQLiteDB() {
 
 async function seedInitialData(db: any, sqlite: any) {
   try {
-    console.log(`🌱 SEED START: Beginning fresh database seeding for ${process.env.NODE_ENV} environment`);
+    console.log(`🌱 SEED START: Beginning database seeding for ${process.env.NODE_ENV} environment`);
     
-    // TEMPORARY: Remove production data protection to allow fresh seeding
-    // Original protection code commented out for this fresh deployment
-    /*
-    if (process.env.NODE_ENV === 'production') {
-      const orgCount = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get();
-      const userCount = sqlite.prepare('SELECT COUNT(*) as count FROM users').get();
-      
-      if (orgCount.count > 0 || userCount.count > 0) {
-        console.log('📊 Existing production data found:');
-        console.log(`Organizations: ${orgCount.count}`);
-        console.log(`Users: ${userCount.count}`);
-        console.log('🛡️ Seeding skipped - existing data preserved');
-        return;
-      }
+    // CRITICAL: Only seed if database is completely empty (0 organizations AND 0 users)
+    const orgCount = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get();
+    const userCount = sqlite.prepare('SELECT COUNT(*) as count FROM users').get();
+    
+    if (orgCount.count > 0 || userCount.count > 0) {
+      console.log('📊 Existing data found - seeding skipped:');
+      console.log(`Organizations: ${orgCount.count}`);
+      console.log(`Users: ${userCount.count}`);
+      console.log('🛡️ Seeding skipped - existing data preserved');
+      return;
     }
-    */
+    
+    console.log(`🌱 EMPTY DATABASE: No existing data found - proceeding with fresh seeding`);
     
     // Check if super admin user exists (more comprehensive check)
     const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
