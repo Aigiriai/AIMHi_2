@@ -23,6 +23,33 @@ export function resetDBConnection() {
   // DON'T reset isRestorationComplete - it should persist
 }
 
+// Clear connection cache after restoration to prevent stale connections
+export async function clearConnectionCache(): Promise<void> {
+  console.log('🧹 DB: Clearing connection cache after restoration');
+  
+  // Close existing connection if it exists
+  if (dbConnection) {
+    try {
+      // For SQLite connections, we don't need to explicitly close Drizzle instances
+      // Just nullify the cached references
+      dbConnection = null;
+      dbSchema = null;
+      cachedEnvironment = null;
+      isInitializing = false;
+      console.log('✅ DB: Connection cache cleared successfully');
+    } catch (error) {
+      console.warn('⚠️ DB: Error while clearing connection cache:', error);
+      // Force clear even if error occurs
+      dbConnection = null;
+      dbSchema = null;
+      cachedEnvironment = null;
+      isInitializing = false;
+    }
+  } else {
+    console.log('📝 DB: No cached connection to clear');
+  }
+}
+
 // Mark restoration as complete - allows database access
 export function markRestorationComplete() {
   if (!isRestorationComplete) {
@@ -59,7 +86,7 @@ export async function getDB() {
     await new Promise(resolve => setTimeout(resolve, 10));
   }
   
-  // Check if we need to reinitialize due to environment change
+  // Check if we need to reinitialize due to environment change or cache clear
   if (dbConnection && cachedEnvironment === currentEnv) {
     // Test connection health before returning cached connection
     try {

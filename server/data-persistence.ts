@@ -136,8 +136,17 @@ export class DataPersistenceManager {
             console.log(`📊 RESTORE: Restored database size: ${Math.round(restoredStats.size / 1024)}KB`);
           }
           
-          // Skip connection reset - connection will be cached in init-database.ts
+          // Clear connection cache to prevent stale connections after restoration
           console.log(`🔄 RESTORE: Database connection will be cached after restoration`);
+          
+          // Import and clear connection cache to force fresh connections
+          try {
+            const { clearConnectionCache } = await import('./db-connection');
+            await clearConnectionCache();
+            console.log('🧹 RESTORE: Connection cache cleared after Object Storage restoration');
+          } catch (error) {
+            console.warn('⚠️ RESTORE: Failed to clear connection cache:', error);
+          }
           
           return true;
         }
@@ -175,6 +184,15 @@ export class DataPersistenceManager {
       fs.copyFileSync(latestBackup, prodDbPath);
       console.log(`✅ RESTORE: Database restored from local backup: ${backups[0]}`);
       console.warn(`⚠️ RESTORE: Local backup restore will not work in production deployments`);
+      
+      // Clear connection cache to prevent stale connections after restoration
+      try {
+        const { clearConnectionCache } = await import('./db-connection');
+        await clearConnectionCache();
+        console.log('🧹 RESTORE: Connection cache cleared after local backup restoration');
+      } catch (error) {
+        console.warn('⚠️ RESTORE: Failed to clear connection cache:', error);
+      }
       
       return true;
     } catch (error) {

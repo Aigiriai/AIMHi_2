@@ -78,6 +78,7 @@ Preferred communication style: Simple, everyday language.
 - **Database I/O Error Recovery System (Aug 2025)**: Implemented comprehensive SQLite corruption detection and recovery with automatic connection health checks, integrity verification, and retry mechanisms to prevent disk I/O errors in production deployments.
 - **Connection Type Consistency Fix (Aug 2025)**: Resolved "select(...).limit is not a function" errors by standardizing initializeSQLiteDatabase() return types and adding I/O error recovery with automatic database restoration for production resilience.
 - **Enhanced Authentication Resilience**: Added retry logic and connection reset capabilities to authentication middleware, ensuring robust token validation even during database connection issues.
+- **Connection Cache Invalidation Fix (Aug 2025)**: Implemented automatic connection cache clearing after database restoration to prevent stale connections from causing SQLITE_IOERR_SHORT_READ errors during write operations. Added clearConnectionCache() function that nullifies cached connections, forcing fresh connection creation for restored databases.
 
 ## External Dependencies
 
