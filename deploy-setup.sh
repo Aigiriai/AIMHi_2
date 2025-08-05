@@ -5,23 +5,69 @@
 
 echo "🚀 Starting deployment setup..."
 
+# Run cleanup script to remove corrupted backup files
+echo "🧹 Running corruption cleanup script..."
+if [ -f "cleanup-corrupted-backups.sh" ]; then
+  chmod +x cleanup-corrupted-backups.sh
+  ./cleanup-corrupted-backups.sh
+else
+  echo "⚠️ Cleanup script not found, proceeding with manual cleanup..."
+  # Fallback manual cleanup
+  mkdir -p data
+  find data/ -name "*.backup*" -type f -delete 2>/dev/null || true
+  find data/ -name "*-wal" -type f -delete 2>/dev/null || true
+  find data/ -name "*-shm" -type f -delete 2>/dev/null || true
+  echo "✅ Manual cleanup completed"
+fi
+
 # Create data directory if it doesn't exist
 mkdir -p data
 
-# Backup existing production database if it exists
-if [ -f "data/production.db" ]; then
-  echo "📋 Backing up existing production database..."
-  cp data/production.db data/production.db.backup.$(date +%Y%m%d_%H%M%S)
-  echo "✅ Production database backed up"
-else
-  echo "📦 No existing production database found - will create new one"
-fi
+# Function to check database integrity
+check_database_integrity() {
+  local db_file="$1"
+  if [ -f "$db_file" ]; then
+    # Use sqlite3 to check integrity
+    if sqlite3 "$db_file" "PRAGMA integrity_check;" 2>/dev/null | grep -q "ok"; then
+      return 0  # Database is intact
+    else
+      return 1  # Database is corrupted
+    fi
+  fi
+  return 1  # File doesn't exist
+}
 
-# Only remove development database files (not production)
-echo "🧹 Cleaning up development database files..."
+# Clean up any corrupted database files and WAL files
+echo "🧹 Cleaning up potentially corrupted database files..."
+
+# Remove all development database files
 rm -f data/development.db
 rm -f data/development.db-shm
 rm -f data/development.db-wal
+
+# Clean up old backup files that might be corrupted
+echo "🗑️ Removing old backup files to prevent corruption..."
+find data/ -name "*.backup.*" -type f -delete 2>/dev/null || true
+rm -f data/production.db.backup 2>/dev/null || true
+
+# Check production database integrity if it exists
+if [ -f "data/production.db" ]; then
+  echo "🔍 Checking production database integrity..."
+  if check_database_integrity "data/production.db"; then
+    echo "✅ Production database integrity check passed"
+    # Create a clean backup of the verified database
+    cp data/production.db data/production.db.backup.$(date +%Y%m%d_%H%M%S)
+    echo "📋 Clean backup created from verified database"
+  else
+    echo "❌ Production database corruption detected - removing corrupted file"
+    rm -f data/production.db
+    rm -f data/production.db-shm
+    rm -f data/production.db-wal
+    echo "🗑️ Corrupted production database files removed"
+  fi
+else
+  echo "📦 No existing production database found - will create new one"
+fi
 
 # CRITICAL DATA PROTECTION: Object Storage backup restoration will be handled by Node.js app
 # The data persistence manager will automatically check Object Storage for backups
