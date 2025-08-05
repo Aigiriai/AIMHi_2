@@ -1,0 +1,136 @@
+2025-08-05 10:21:31.33
+0e09cbcf
+User
+✅ Stored original file for job 1: JD Hogan Developer.docx
+2025-08-05 10:21:31.33
+0e09cbcf
+User
+✅ Job created successfully (template generation permanently disabled): Hogan Developers (ILP / IDP / ODS)
+2025-08-05 10:21:31.33
+0e09cbcf
+User
+4:51:31 AM [express] POST /api/jobs/bulk-upload 200 in 1824ms :: {"message":"Processed 1 files","cre…
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔍 ROUTE: Getting matches with user-level filtering for user 1 (super_admin)
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔍 ROUTE: Got 0 matches for user 1 with role super_admin
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+4:51:31 AM [express] GET /api/matches 304 in 2ms :: []
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 10:21:31.69
+0e09cbcf
+User
+Fetching jobs for organization: 1
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+Error fetching jobs: SqliteError: disk I/O error
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+at PreparedQuery.values (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:100:28)
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+at PreparedQuery.all (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:75:23)
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:28)
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+at file:///home/runner/workspace/dist/index.js:8208:37
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5) {
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+code: 'SQLITE_IOERR_SHORT_READ'
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+}
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+4:51:31 AM [express] GET /api/jobs 500 in 6ms :: {"message":"Failed to fetch jobs"}
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+🔐 AUTH: Token decoded for user 1
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+🔐 AUTH: Database connection obtained (attempt 1)
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+🔐 AUTH: User query returned 1 results for user 1
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+🔐 AUTH: Authentication successful for user 1 (super_admin)
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+📊 STATS: Calculating user-specific stats for user 1 (super_admin) in organization 1
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+🚨 STATS: Database I/O error detected - returning empty stats to prevent UI failure
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+Error fetching stats: SqliteError: disk I/O error
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+at PreparedQuery.values (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:100:28)
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+at PreparedQuery.all (file:///home/runner/workspace/node_modules/drizzle-orm/better-sqlite3/session.js:75:23)
+2025-08-05 10:21:31.70
+0e09cbcf
+User
+at SQLiteSelectBase.all (file:///home/runner/workspace/node_modules/drizzle-orm/sqlite-core/query-builders/select.js:588:28)
