@@ -97,64 +97,6 @@ export class DataPersistenceManager {
   }
 
   /**
-   * Check database file integrity before restoration
-   */
-  private async checkDatabaseIntegrity(dbPath: string): Promise<{ isValid: boolean; error?: string }> {
-    if (!fs.existsSync(dbPath)) {
-      return { isValid: false, error: 'Database file does not exist' };
-    }
-
-    try {
-      const Database = (await import('better-sqlite3')).default;
-      const db = new Database(dbPath, { readonly: true });
-      
-      try {
-        // Check file header for SQLite signature
-        const buffer = Buffer.alloc(16);
-        const fd = fs.openSync(dbPath, 'r');
-        fs.readSync(fd, buffer, 0, 16, 0);
-        fs.closeSync(fd);
-        
-        const header = buffer.toString('utf8', 0, 16);
-        if (!header.startsWith('SQLite format 3')) {
-          return { isValid: false, error: 'Invalid SQLite file header - file may be corrupted' };
-        }
-
-        // Run integrity check
-        const integrityResult = db.pragma('integrity_check');
-        if (Array.isArray(integrityResult) && integrityResult.length > 0 && integrityResult[0] !== 'ok') {
-          return { isValid: false, error: `SQLite integrity check failed: ${integrityResult.join(', ')}` };
-        }
-
-        // Check essential tables exist
-        const essentialTables = ['organizations', 'users'];
-        for (const tableName of essentialTables) {
-          const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
-          if (!tableExists) {
-            return { isValid: false, error: `Essential table missing: ${tableName}` };
-          }
-        }
-
-        // Test basic table access
-        try {
-          db.prepare("SELECT COUNT(*) FROM organizations").get();
-          db.prepare("SELECT COUNT(*) FROM users").get();
-        } catch (accessError: any) {
-          return { isValid: false, error: `Tables not accessible: ${accessError.message}` };
-        }
-
-        db.close();
-        return { isValid: true };
-      } catch (error: any) {
-        db.close();
-        return { isValid: false, error: error.message };
-      }
-    } catch (error: any) {
-      return { isValid: false, error: `Cannot open database: ${error.message}` };
-    }
-  }
-
-  /**
    * Restore database from the latest backup (Object Storage first, then local fallback)
    */
   async restoreFromLatestBackup(): Promise<boolean> {
@@ -164,12 +106,6 @@ export class DataPersistenceManager {
     console.log(`📁 RESTORE: Target database path: ${prodDbPath}`);
     console.log(`🌍 RESTORE: Environment: ${process.env.NODE_ENV}`);
     
-    // Check if restoration should be skipped due to environment variable
-    if (process.env.SKIP_BACKUP_RESTORATION === 'true') {
-      console.log(`⚠️ RESTORE: SKIP_BACKUP_RESTORATION is set - aborting restoration`);
-      return false;
-    }
-    
     // Ensure data directory exists
     if (!fs.existsSync(this.dataDir)) {
       console.log(`📁 RESTORE: Creating data directory: ${this.dataDir}`);
@@ -178,26 +114,10 @@ export class DataPersistenceManager {
       console.log(`📁 RESTORE: Data directory already exists: ${this.dataDir}`);
     }
 
-    // Check if production database already exists and clean up if corrupted
+    // Check if production database already exists
     if (fs.existsSync(prodDbPath)) {
       const stats = fs.statSync(prodDbPath);
-      console.log(`📊 RESTORE: Existing database found (${Math.round(stats.size / 1024)}KB), checking integrity...`);
-      
-      const integrityCheck = await this.checkDatabaseIntegrity(prodDbPath);
-      if (!integrityCheck.isValid) {
-        console.log(`❌ RESTORE: Existing database is corrupted: ${integrityCheck.error}`);
-        console.log(`🗑️ RESTORE: Removing corrupted database files before restoration...`);
-        try {
-          if (fs.existsSync(prodDbPath)) fs.unlinkSync(prodDbPath);
-          if (fs.existsSync(prodDbPath + '-shm')) fs.unlinkSync(prodDbPath + '-shm');
-          if (fs.existsSync(prodDbPath + '-wal')) fs.unlinkSync(prodDbPath + '-wal');
-          console.log(`✅ RESTORE: Corrupted database files removed`);
-        } catch (cleanupError) {
-          console.warn(`⚠️ RESTORE: Could not clean up corrupted files:`, cleanupError.message);
-        }
-      } else {
-        console.log(`✅ RESTORE: Existing database integrity verified, will be replaced if restoration succeeds`);
-      }
+      console.log(`📊 RESTORE: Existing database found (${Math.round(stats.size / 1024)}KB), will be replaced if restoration succeeds`);
     } else {
       console.log(`📊 RESTORE: No existing database found at target path`);
     }
@@ -210,37 +130,10 @@ export class DataPersistenceManager {
         if (restored) {
           console.log(`✅ RESTORE: Database successfully restored from Object Storage backup`);
           
-          // Verify restored database file existence and size
+          // Verify restored database
           if (fs.existsSync(prodDbPath)) {
             const restoredStats = fs.statSync(prodDbPath);
             console.log(`📊 RESTORE: Restored database size: ${Math.round(restoredStats.size / 1024)}KB`);
-            
-            // Critical: Check integrity of restored database
-            console.log(`🔍 RESTORE: Verifying integrity of restored database...`);
-            const integrityCheck = await this.checkDatabaseIntegrity(prodDbPath);
-            if (!integrityCheck.isValid) {
-              console.error(`❌ RESTORE: Restored database failed integrity check: ${integrityCheck.error}`);
-              console.log(`🗑️ RESTORE: Removing corrupted restored database...`);
-              
-              try {
-                if (fs.existsSync(prodDbPath)) fs.unlinkSync(prodDbPath);
-                if (fs.existsSync(prodDbPath + '-shm')) fs.unlinkSync(prodDbPath + '-shm');
-                if (fs.existsSync(prodDbPath + '-wal')) fs.unlinkSync(prodDbPath + '-wal');
-                console.log(`✅ RESTORE: Corrupted restored files removed`);
-              } catch (cleanupError) {
-                console.warn(`⚠️ RESTORE: Could not clean up corrupted restored files:`, cleanupError.message);
-              }
-              
-              // Set environment variable to prevent repeated attempts
-              process.env.SKIP_BACKUP_RESTORATION = 'true';
-              console.log(`⚠️ RESTORE: Setting SKIP_BACKUP_RESTORATION=true due to corrupted backup`);
-              return false;
-            }
-            
-            console.log(`✅ RESTORE: Restored database integrity verified successfully`);
-          } else {
-            console.error(`❌ RESTORE: Restored database file not found after restoration`);
-            return false;
           }
           
           // CRITICAL FIX: Reset database connection cache after restoration
@@ -285,69 +178,10 @@ export class DataPersistenceManager {
       const backupStats = fs.statSync(latestBackup);
       console.log(`📊 RESTORE: Local backup size: ${Math.round(backupStats.size / 1024)}KB`);
       
-      // Check backup integrity before restoring
-      console.log(`🔍 RESTORE: Verifying integrity of local backup before restoration...`);
-      const backupIntegrityCheck = await this.checkDatabaseIntegrity(latestBackup);
-      if (!backupIntegrityCheck.isValid) {
-        console.error(`❌ RESTORE: Local backup failed integrity check: ${backupIntegrityCheck.error}`);
-        console.log(`🗑️ RESTORE: Removing corrupted local backup: ${backups[0]}`);
-        
-        try {
-          fs.unlinkSync(latestBackup);
-          console.log(`✅ RESTORE: Corrupted backup file removed`);
-        } catch (cleanupError) {
-          console.warn(`⚠️ RESTORE: Could not remove corrupted backup:`, cleanupError.message);
-        }
-        
-        // Try next backup if available
-        const remainingBackups = backups.slice(1);
-        if (remainingBackups.length > 0) {
-          console.log(`🔄 RESTORE: Trying next backup: ${remainingBackups[0]}`);
-          // Recursive call to try next backup (but only once to avoid infinite loops)
-          const retryBackups = fs.readdirSync(this.backupDir)
-            .filter(file => file.startsWith('production_') && file.endsWith('.db'))
-            .sort()
-            .reverse();
-          
-          if (retryBackups.length > 0) {
-            const nextBackup = path.join(this.backupDir, retryBackups[0]);
-            const nextIntegrityCheck = await this.checkDatabaseIntegrity(nextBackup);
-            if (nextIntegrityCheck.isValid) {
-              fs.copyFileSync(nextBackup, prodDbPath);
-              console.log(`✅ RESTORE: Database restored from backup: ${retryBackups[0]}`);
-              return true;
-            }
-          }
-        }
-        
-        console.log(`❌ RESTORE: No valid local backups found`);
-        return false;
-      }
-      
       fs.copyFileSync(latestBackup, prodDbPath);
       console.log(`✅ RESTORE: Database restored from local backup: ${backups[0]}`);
       console.warn(`⚠️ RESTORE: Local backup restore will not work in production deployments`);
       
-      // Final verification of restored database
-      console.log(`🔍 RESTORE: Final verification of restored database...`);
-      const finalIntegrityCheck = await this.checkDatabaseIntegrity(prodDbPath);
-      if (!finalIntegrityCheck.isValid) {
-        console.error(`❌ RESTORE: Final verification failed: ${finalIntegrityCheck.error}`);
-        
-        // Clean up corrupted restoration
-        try {
-          if (fs.existsSync(prodDbPath)) fs.unlinkSync(prodDbPath);
-          if (fs.existsSync(prodDbPath + '-shm')) fs.unlinkSync(prodDbPath + '-shm');
-          if (fs.existsSync(prodDbPath + '-wal')) fs.unlinkSync(prodDbPath + '-wal');
-          console.log(`🗑️ RESTORE: Failed restoration cleaned up`);
-        } catch (cleanupError) {
-          console.warn(`⚠️ RESTORE: Could not clean up failed restoration:`, cleanupError.message);
-        }
-        
-        return false;
-      }
-      
-      console.log(`✅ RESTORE: Final verification passed - restoration complete`);
       return true;
     } catch (error) {
       console.error(`❌ RESTORE: Failed to restore from backup:`, error);

@@ -383,17 +383,19 @@ export class DatabaseBackupService {
 
   // Restore latest backup based on file modification timestamp
   async restoreLatestBackup(localDbPath: string): Promise<boolean> {
-    console.log(`🛡️ RESTORE: Attempting to restore database from Object Storage...`);
+    console.log(`🛡️ Attempting to restore database from Object Storage...`);
     
     try {
+      // TEMPORARY: Delete all existing backups to force fresh seeding
+      console.log(`🗑️ TEMP CODE: Deleting all existing backup files to force fresh database seeding...`);
+      await this.deleteAllBackups();
+      
       // Get all backup files with their metadata
       const bucket = this.getBucket();
       const [files] = await bucket.getFiles({ 
         prefix: 'database-backups/',
         maxResults: 1000
       });
-      
-      console.log(`📋 RESTORE: Found ${files.length} total files in Object Storage`);
       
       // Filter backup files and get their metadata
       const backupFiles = files
@@ -408,10 +410,8 @@ export class DatabaseBackupService {
           };
         });
       
-      console.log(`📋 RESTORE: Found ${backupFiles.length} backup files to process`);
-      
       if (backupFiles.length === 0) {
-        console.log(`❌ RESTORE: No backup files found in Object Storage - will trigger fresh seeding`);
+        console.log(`✅ No backup files found in Object Storage (all deleted) - will trigger fresh seeding`);
         return false;
       }
       
@@ -499,5 +499,44 @@ export class DatabaseBackupService {
     }
   }
 
-
+  // TEMPORARY: Delete all existing backup files to force fresh seeding
+  async deleteAllBackups(): Promise<void> {
+    try {
+      console.log(`🗑️ CLEANUP: Starting deletion of all existing backup files...`);
+      
+      const bucket = this.getBucket();
+      const [files] = await bucket.getFiles({ 
+        prefix: 'database-backups/',
+        maxResults: 1000
+      });
+      
+      const backupFiles = files.filter(file => 
+        file.name.startsWith('database-backups/') && file.name.endsWith('.db')
+      );
+      
+      if (backupFiles.length === 0) {
+        console.log(`📝 CLEANUP: No backup files found to delete`);
+        return;
+      }
+      
+      console.log(`🗑️ CLEANUP: Found ${backupFiles.length} backup files to delete:`);
+      
+      // Delete all backup files
+      const deletePromises = backupFiles.map(async (file, index) => {
+        try {
+          await file.delete();
+          console.log(`  ✓ Deleted backup ${index + 1}/${backupFiles.length}: ${file.name}`);
+        } catch (error) {
+          console.error(`  ✗ Failed to delete ${file.name}:`, error.message);
+        }
+      });
+      
+      await Promise.all(deletePromises);
+      console.log(`✅ CLEANUP: Backup deletion complete - ${backupFiles.length} files processed`);
+      
+    } catch (error) {
+      console.error(`❌ CLEANUP: Failed to delete backup files:`, error);
+      throw error;
+    }
+  }
 }

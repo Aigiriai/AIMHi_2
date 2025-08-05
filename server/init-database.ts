@@ -22,125 +22,69 @@ export async function initializeSQLiteDatabase() {
 
     // PRODUCTION DATA PROTECTION: Restore automatically if database missing
     if (process.env.NODE_ENV === 'production' && !fs.existsSync(dbPath)) {
-      // Check if backup restoration should be skipped (environment variable override)
-      if (process.env.SKIP_BACKUP_RESTORATION === 'true') {
-        console.log(`⚠️ PRODUCTION INIT: SKIP_BACKUP_RESTORATION is set - skipping backup restoration and creating fresh database`);
-        console.log(`🌱 PRODUCTION INIT: This will trigger fresh seeding for production environment`);
-      } else {
-        console.log(`🔄 PRODUCTION INIT: Database missing at ${dbPath} - attempting restoration from latest backup...`);
-        console.log(`🔄 PRODUCTION INIT: This will trigger backup deletion and fresh seeding if no backups exist`);
+      console.log(`🔄 PRODUCTION INIT: Database missing at ${dbPath} - attempting restoration from latest backup...`);
+      console.log(`🔄 PRODUCTION INIT: This will trigger backup deletion and fresh seeding if no backups exist`);
+      const restored = await dataPersistence.restoreFromLatestBackup();
+      if (restored) {
+        console.log(`✅ PRODUCTION INIT: Database restored successfully from backup`);
         
-        // Enhanced corruption detection before restoration attempt
+        // CRITICAL FIX: Reset any cached database connections
         try {
-          const restored = await dataPersistence.restoreFromLatestBackup();
-          if (restored) {
-            console.log(`✅ PRODUCTION INIT: Database restored successfully from backup`);
-            
-            // CRITICAL FIX: Reset any cached database connections
-            try {
-              const { resetDBConnection, markRestorationComplete } = await import('./db-connection');
-              resetDBConnection();
-              console.log(`🔄 Database connection cache reset after restoration`);
-            } catch (error) {
-              console.warn(`⚠️ Could not reset DB connection cache:`, error.message);
-            }
-            
-            // CRITICAL FIX: Small delay to ensure file system operations complete before opening connection
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            // Enhanced database integrity check after restoration
-            let sqlite: Database;
-            try {
-              sqlite = new Database(dbPath);
-              
-              // Comprehensive integrity check
-              const integrityResult = sqlite.pragma('integrity_check');
-              if (Array.isArray(integrityResult) && integrityResult.length > 0 && integrityResult[0] !== 'ok') {
-                throw new Error(`Database integrity check failed: ${integrityResult.join(', ')}`);
-              }
-              console.log(`✅ Restored database integrity verified`);
-              
-              // Additional corruption checks
-              try {
-                // Check if essential tables exist and are accessible
-                sqlite.prepare("SELECT COUNT(*) FROM organizations").get();
-                sqlite.prepare("SELECT COUNT(*) FROM users").get();
-                console.log(`✅ Essential tables verified and accessible`);
-              } catch (tableError: any) {
-                throw new Error(`Database tables corrupted or inaccessible: ${tableError.message}`);
-              }
-              
-            } catch (error: any) {
-              console.error(`❌ Restored database corruption detected:`, error.message);
-              if (sqlite!) sqlite.close();
-              
-              // Clean up corrupted restored database and related files
-              try {
-                if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
-                if (fs.existsSync(dbPath + '-shm')) fs.unlinkSync(dbPath + '-shm');
-                if (fs.existsSync(dbPath + '-wal')) fs.unlinkSync(dbPath + '-wal');
-                console.log('🗑️ Corrupted database files cleaned up');
-              } catch (cleanupError) {
-                console.warn('⚠️ Could not clean up corrupted files:', cleanupError.message);
-              }
-              
-              // Handle specific error types
-              if (error.code === 'SQLITE_IOERR' || error.code === 'SQLITE_IOERR_SHORT_READ' || 
-                  error.message?.includes('disk I/O error') || error.message?.includes('database disk image is malformed')) {
-                console.log('🔄 Database corruption or I/O error detected - proceeding with fresh database creation...');
-                // Will fall through to normal initialization path
-              } else {
-                // Set environment variable to skip future restoration attempts
-                process.env.SKIP_BACKUP_RESTORATION = 'true';
-                console.log('⚠️ Setting SKIP_BACKUP_RESTORATION=true to prevent repeated corruption issues');
-                // Will fall through to normal initialization path
-              }
-            }
-            
-            if (sqlite!) {
-              sqlite.pragma('journal_mode = WAL');
-              sqlite.pragma('synchronous = NORMAL');
-              sqlite.pragma('cache_size = 1000');
-              sqlite.pragma('temp_store = memory');
-              
-              console.log('✅ SQLite database initialized successfully');
-              
-              // Skip seeding - data already exists from backup
-              console.log(`🔄 PRODUCTION INIT: Database restored from backup - skipping initialization seeding`);
-              
-              // Mark restoration as complete to allow other database access
-              try {
-                const { markRestorationComplete } = await import('./db-connection');
-                markRestorationComplete();
-              } catch (error) {
-                console.warn(`⚠️ Could not mark restoration complete:`, error.message);
-              }
-              
-              // Return raw SQLite instance (consistent with normal path)
-              return sqlite;
-            }
-          } else {
-            console.log(`🔄 PRODUCTION INIT: No backups available (deleted or never existed) - proceeding with fresh database initialization...`);
-            console.log(`🌱 PRODUCTION INIT: This will trigger fresh seeding for production environment`);
-          }
-        } catch (restorationError: any) {
-          console.error(`❌ PRODUCTION INIT: Restoration failed with error:`, restorationError.message);
-          
-          // Clean up any partially restored files
-          try {
-            if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
-            if (fs.existsSync(dbPath + '-shm')) fs.unlinkSync(dbPath + '-shm');
-            if (fs.existsSync(dbPath + '-wal')) fs.unlinkSync(dbPath + '-wal');
-            console.log('🗑️ Partial restoration files cleaned up');
-          } catch (cleanupError) {
-            console.warn('⚠️ Could not clean up partial restoration files:', cleanupError.message);
-          }
-          
-          // Set environment variable to skip future restoration attempts
-          process.env.SKIP_BACKUP_RESTORATION = 'true';
-          console.log('⚠️ Setting SKIP_BACKUP_RESTORATION=true due to restoration failure');
-          console.log('🌱 PRODUCTION INIT: Proceeding with fresh database creation...');
+          const { resetDBConnection, markRestorationComplete } = await import('./db-connection');
+          resetDBConnection();
+          console.log(`🔄 Database connection cache reset after restoration`);
+        } catch (error) {
+          console.warn(`⚠️ Could not reset DB connection cache:`, error.message);
         }
+        
+        // CRITICAL FIX: Small delay to ensure file system operations complete before opening connection
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Database was restored, now open it with integrity check
+        const sqlite = new Database(dbPath);
+        
+        // Test database integrity immediately after restoration
+        try {
+          sqlite.pragma('integrity_check');
+          console.log(`✅ Restored database integrity verified`);
+        } catch (error: any) {
+          console.error(`❌ Restored database corruption detected:`, error.message);
+          sqlite.close();
+          
+          // Handle I/O errors during restoration
+          if (error.code === 'SQLITE_IOERR' || error.code === 'SQLITE_IOERR_SHORT_READ' || error.message?.includes('disk I/O error')) {
+            console.log('🔄 I/O error on restored database - removing and creating fresh...');
+            fs.unlinkSync(dbPath);
+            // Will fall through to normal initialization path
+          } else {
+            fs.unlinkSync(dbPath);
+            throw new Error(`Restored database is corrupted: ${error.message}`);
+          }
+        }
+        
+        sqlite.pragma('journal_mode = WAL');
+        sqlite.pragma('synchronous = NORMAL');
+        sqlite.pragma('cache_size = 1000');
+        sqlite.pragma('temp_store = memory');
+        
+        console.log('✅ SQLite database initialized successfully');
+        
+        // Skip seeding - data already exists from backup
+        console.log(`🔄 PRODUCTION INIT: Database restored from backup - skipping initialization seeding`);
+        
+        // Mark restoration as complete to allow other database access
+        try {
+          const { markRestorationComplete } = await import('./db-connection');
+          markRestorationComplete();
+        } catch (error) {
+          console.warn(`⚠️ Could not mark restoration complete:`, error.message);
+        }
+        
+        // Return raw SQLite instance (consistent with normal path)
+        return sqlite;
+      } else {
+        console.log(`🔄 PRODUCTION INIT: No backups available (deleted or never existed) - proceeding with fresh database initialization...`);
+        console.log(`🌱 PRODUCTION INIT: This will trigger fresh seeding for production environment`);
       }
     } else if (process.env.NODE_ENV === 'production') {
       console.log(`📊 PRODUCTION INIT: Database already exists at ${dbPath}`);

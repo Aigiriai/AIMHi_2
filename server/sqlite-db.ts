@@ -407,42 +407,27 @@ export async function initializeSQLiteDB() {
     
     console.log(`🔍 BEFORE SEEDING CHECK: Found ${existingOrgs.count} organizations, ${existingUsers.count} users`);
     
-    // DEVELOPMENT SEEDING: Enable seeding for development environment
-    if (process.env.NODE_ENV !== 'production') {
-      if (existingOrgs.count === 0 && existingUsers.count === 0) {
-        console.log(`📦 DEVELOPMENT SEEDING: No existing data found - proceeding with development seeding`);
-        await seedInitialData(db, sqlite);
-      } else {
-        console.log(`🔍 DEVELOPMENT: Found existing data - checking super admin`);
-        
-        // Check if super admin exists and create if missing (development only)
-        const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
-        
-        if (!existingSuperAdmin) {
-          console.log(`🔧 DEVELOPMENT: Super admin missing - creating super admin user`);
-          await seedInitialData(db, sqlite);
-        }
-        
-        // DEBUG: Show what organizations exist
-        const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
-        console.log(`🔍 DEVELOPMENT ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
-        console.log(`🔍 DEVELOPMENT DATA COUNT: ${existingOrgs.count} organizations, ${existingUsers.count} users`);
-      }
+    // TEMPORARY: Enable seeding for BOTH development and production to create fresh database
+    console.log(`🌱 TEMP CHANGE: Enabling fresh database seeding for both development and production`);
+    
+    if (existingOrgs.count === 0 && existingUsers.count === 0) {
+      console.log(`📦 FRESH SEEDING: No existing data found - proceeding with fresh seeding (${process.env.NODE_ENV})`);
+      await seedInitialData(db, sqlite);
     } else {
-      // PRODUCTION PROTECTION: Only seed if truly no data exists (fresh deployment)
-      console.log(`🛡️ PRODUCTION: Data protection enabled - checking if seeding needed`);
+      console.log(`🔍 EXISTING DATA: Found data - checking super admin (${process.env.NODE_ENV})`);
       
-      if (existingOrgs.count === 0 && existingUsers.count === 0) {
-        console.log(`📦 PRODUCTION: No existing data found - this appears to be a fresh deployment, enabling seeding`);
+      // Check if super admin exists and create if missing
+      const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
+      
+      if (!existingSuperAdmin) {
+        console.log(`🔧 SUPER ADMIN: Missing - creating super admin user (${process.env.NODE_ENV})`);
         await seedInitialData(db, sqlite);
-      } else {
-        console.log(`✅ PRODUCTION: Existing data found - seeding skipped to preserve user data`);
-        
-        // DEBUG: Show what organizations exist in production
-        const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
-        console.log(`🔍 PRODUCTION ORGANIZATIONS:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
-        console.log(`🔍 PRODUCTION DATA COUNT: ${existingOrgs.count} organizations, ${existingUsers.count} users`);
       }
+      
+      // DEBUG: Show what organizations exist
+      const orgs = sqlite.prepare('SELECT id, name, domain FROM organizations').all();
+      console.log(`🔍 ORGANIZATIONS (${process.env.NODE_ENV}):`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+      console.log(`🔍 DATA COUNT (${process.env.NODE_ENV}): ${existingOrgs.count} organizations, ${existingUsers.count} users`);
     }
     
   } catch (error) {
@@ -455,23 +440,24 @@ export async function initializeSQLiteDB() {
 
 async function seedInitialData(db: any, sqlite: any) {
   try {
-    console.log(`🌱 SEED START: Beginning database seeding for ${process.env.NODE_ENV} environment`);
+    console.log(`🌱 SEED START: Beginning fresh database seeding for ${process.env.NODE_ENV} environment`);
     
-    // PRODUCTION DATA PROTECTION: Check if we have existing data in production
+    // TEMPORARY: Remove production data protection to allow fresh seeding
+    // Original protection code commented out for this fresh deployment
+    /*
     if (process.env.NODE_ENV === 'production') {
       const orgCount = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get();
       const userCount = sqlite.prepare('SELECT COUNT(*) as count FROM users').get();
       
       if (orgCount.count > 0 || userCount.count > 0) {
-        console.log(`📊 PRODUCTION: Existing data found during seeding attempt:`);
-        console.log(`  Organizations: ${orgCount.count}`);
-        console.log(`  Users: ${userCount.count}`);
-        console.log(`🛡️ PRODUCTION: Seeding skipped - existing data preserved`);
+        console.log('📊 Existing production data found:');
+        console.log(`Organizations: ${orgCount.count}`);
+        console.log(`Users: ${userCount.count}`);
+        console.log('🛡️ Seeding skipped - existing data preserved');
         return;
       }
-      
-      console.log(`🌱 PRODUCTION: No existing data found - proceeding with fresh seeding`);
     }
+    */
     
     // Check if super admin user exists (more comprehensive check)
     const existingSuperAdmin = sqlite.prepare('SELECT id FROM users WHERE email = ? AND role = ?').get('superadmin@aimhi.app', 'super_admin');
