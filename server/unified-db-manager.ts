@@ -5,7 +5,7 @@
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "../unified-schema";  // ✅ FIXED: Correct schema import
-import { readFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
+import { readFileSync, existsSync, mkdirSync, unlinkSync, statSync } from "fs";
 import { join, resolve } from "path";
 
 interface DatabaseInstance {
@@ -303,7 +303,7 @@ async function createFreshDatabase(dbPath: string): Promise<DatabaseInstance> {
 
   // Enhanced pre-creation logging
   if (existsSync(dbPath)) {
-    const stats = require('fs').statSync(dbPath);
+    const stats = statSync(dbPath);
     console.log(`🗑️ DB_MANAGER: Removing existing database file (${Math.round(stats.size / 1024)}KB, modified: ${stats.mtime.toISOString()})`);
     unlinkSync(dbPath);
     console.log(`✅ DB_MANAGER: Existing database file removed successfully`);
@@ -372,7 +372,7 @@ async function createFreshDatabase(dbPath: string): Promise<DatabaseInstance> {
     
     // Final database statistics
     const dbStats = {
-      size: require('fs').statSync(dbPath).size,
+      size: statSync(dbPath).size,
       pageCount: sqlite.pragma('page_count', { simple: true }),
       pageSize: sqlite.pragma('page_size', { simple: true }),
       encoding: sqlite.pragma('encoding', { simple: true })
