@@ -43,7 +43,20 @@ export class ProductionStartupHandler {
         return false;
       }
 
-      const markerContent = fs.readFileSync(this.markerPath, 'utf-8');
+      console.log("🔍 PRODUCTION: Found fresh database marker file");
+      
+      let markerContent = fs.readFileSync(this.markerPath, 'utf-8');
+      console.log("📄 PRODUCTION: Raw marker content:", markerContent.substring(0, 200) + "...");
+      
+      // Clean up PowerShell-generated JSON formatting issues
+      markerContent = markerContent
+        .replace(/\s+/g, ' ')  // Normalize whitespace
+        .replace(/,\s*}/g, '}')  // Remove trailing commas
+        .replace(/,\s*]/g, ']')  // Remove trailing commas in arrays
+        .trim();
+      
+      console.log("📄 PRODUCTION: Cleaned marker content:", markerContent.substring(0, 200) + "...");
+      
       const marker: FreshProductionMarker = JSON.parse(markerContent);
       
       console.log("🚨 PRODUCTION: Fresh database marker detected!");
@@ -54,6 +67,17 @@ export class ProductionStartupHandler {
       return true;
     } catch (error) {
       console.error("❌ PRODUCTION: Error reading fresh database marker:", error);
+      console.log("🔄 PRODUCTION: Treating as invalid marker - proceeding with normal startup");
+      
+      // If marker file is corrupted, rename it and proceed with normal startup
+      try {
+        const corruptedPath = this.markerPath + '.corrupted';
+        fs.renameSync(this.markerPath, corruptedPath);
+        console.log(`📁 PRODUCTION: Moved corrupted marker to: ${corruptedPath}`);
+      } catch (renameError) {
+        console.log("⚠️ PRODUCTION: Could not rename corrupted marker file");
+      }
+      
       return false;
     }
   }
@@ -357,14 +381,32 @@ export class ProductionStartupHandler {
 export async function handleProductionStartup(dataDir: string = "./data"): Promise<boolean> {
   const handler = new ProductionStartupHandler(dataDir);
   
-  // Check if fresh production is required
-  const needsFreshDb = await handler.checkForFreshProductionMarker();
-  
-  if (needsFreshDb) {
-    // Handle fresh production database creation
-    return await handler.handleFreshProduction();
+  try {
+    console.log("🔍 PRODUCTION: Starting fresh database check...");
+    
+    // Check if fresh production is required
+    const needsFreshDb = await handler.checkForFreshProductionMarker();
+    
+    if (needsFreshDb) {
+      console.log("🚨 PRODUCTION: Fresh database required - proceeding with creation");
+      // Handle fresh production database creation
+      const success = await handler.handleFreshProduction();
+      
+      if (success) {
+        console.log("✅ PRODUCTION: Fresh database creation completed successfully");
+        return true;
+      } else {
+        console.error("❌ PRODUCTION: Fresh database creation failed");
+        return false;
+      }
+    }
+    
+    // Normal startup - no marker detected
+    console.log("📊 PRODUCTION: No fresh database required - normal startup");
+    return false;
+    
+  } catch (error) {
+    console.error("❌ PRODUCTION: Error in startup handler:", error);
+    return false;
   }
-  
-  // Normal startup - no marker detected
-  return false;
 }

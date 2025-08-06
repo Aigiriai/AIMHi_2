@@ -1,8 +1,0 @@
-﻿{
-    "originalSchemas":  [
-                            "./shared/schema.ts",
-                            "./server/sqlite-schema.ts"
-                        ],
-    "timestamp":  "2025-08-06T20:34:41.1575828+05:30",
-    "reason":  "Schema unification deployment - require fresh production database"
-}
