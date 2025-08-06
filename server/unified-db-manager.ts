@@ -63,6 +63,11 @@ export async function getDatabase(): Promise<DatabaseInstance> {
     } catch (error) {
       const waitTime = Date.now() - waitStart;
       console.error(`❌ DB_MANAGER[${requestId}]: Failed while waiting for initialization (wait: ${waitTime}ms):`, error);
+      
+      // ✅ FIX: Clear mutex on failure to prevent permanent blocking
+      initializationMutex = null;
+      console.log(`🧹 DB_MANAGER[${requestId}]: Cleared failed initialization mutex`);
+      
       throw error;
     }
   }
@@ -98,19 +103,43 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
   console.log(`📊 DB_MANAGER: Environment - NODE_ENV: ${process.env.NODE_ENV || 'undefined'}, CWD: ${process.cwd()}`);
   console.log(`💾 DB_MANAGER: Memory usage before init:`, process.memoryUsage());
   
-  // Create timeout promise with detailed logging
+  // Create timeout promise with detailed logging and early completion detection
   const timeoutPromise = new Promise<never>((_, reject) => {
-    const timeoutId = setTimeout(() => {
+    let timeoutId: any;
+    let warningId: any;
+    
+    const cleanup = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      if (warningId) clearTimeout(warningId);
+    };
+    
+    timeoutId = setTimeout(() => {
       const elapsed = Date.now() - initStartTime;
+      
+      // ✅ FIX: Check if initialization actually completed before timing out
+      if (initState.isComplete && dbInstance) {
+        console.log(`ℹ️ DB_MANAGER: Timeout fired but initialization is already complete - ignoring timeout`);
+        cleanup();
+        return;
+      }
+      
       console.error(`⏰ DB_MANAGER: TIMEOUT after ${elapsed}ms (limit: ${timeoutMs}ms)`);
       console.error(`📊 DB_MANAGER: Timeout context - State: ${JSON.stringify(initState)}`);
       console.error(`💾 DB_MANAGER: Memory at timeout:`, process.memoryUsage());
+      cleanup();
       reject(new Error(`Database initialization timeout after ${elapsed}ms (limit: ${timeoutMs}ms)`));
     }, timeoutMs);
     
     // Log timeout warning at 50% mark
-    setTimeout(() => {
+    warningId = setTimeout(() => {
       const elapsed = Date.now() - initStartTime;
+      
+      // ✅ FIX: Don't warn if already complete
+      if (initState.isComplete && dbInstance) {
+        console.log(`ℹ️ DB_MANAGER: Warning timer fired but initialization is already complete`);
+        return;
+      }
+      
       if (elapsed < timeoutMs) {
         console.warn(`⚠️ DB_MANAGER: Initialization taking longer than expected (${elapsed}ms / ${timeoutMs}ms)`);
         console.warn(`📊 DB_MANAGER: Current state:`, initState);
@@ -120,6 +149,13 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
 
   try {
     console.log(`🚀 DB_MANAGER: Racing initialization vs timeout...`);
+    
+    // ✅ FIX: Check if already complete before starting race
+    if (initState.isComplete && dbInstance) {
+      const elapsed = Date.now() - initStartTime;
+      console.log(`✅ DB_MANAGER: Initialization already complete - returning existing instance (${elapsed}ms)`);
+      return dbInstance;
+    }
     
     // Race between initialization and timeout
     const result = await Promise.race([

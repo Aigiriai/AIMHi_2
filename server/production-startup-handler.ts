@@ -48,13 +48,32 @@ export class ProductionStartupHandler {
 
       console.log("🔍 PRODUCTION_STARTUP: Found fresh database marker file");
       
-      let markerContent = readFileSync(this.markerPath, 'utf-8');
-      console.log("📄 PRODUCTION_STARTUP: Raw marker content length:", markerContent.length);
-      console.log("📄 PRODUCTION_STARTUP: Raw marker content FULL:", markerContent);
+      // Read file with explicit encoding and error handling
+      let markerContent: string;
+      try {
+        markerContent = readFileSync(this.markerPath, 'utf-8');
+        console.log("📄 PRODUCTION_STARTUP: File read successfully");
+        console.log("📊 PRODUCTION_STARTUP: Raw content length:", markerContent.length);
+        console.log("📄 PRODUCTION_STARTUP: Raw content (first 200 chars):", markerContent.substring(0, 200));
+      } catch (readError) {
+        console.error("❌ PRODUCTION_STARTUP: Failed to read marker file:", readError);
+        return false;
+      }
       
       // Validate and parse marker
       const marker = await this.validateAndParseMarker(markerContent);
       if (!marker) {
+        console.log("❌ PRODUCTION_STARTUP: Marker validation failed - treating as invalid");
+        
+        // ✅ SAFETY: Remove corrupted marker file to prevent repeated failures
+        try {
+          console.log("🧹 PRODUCTION_STARTUP: Removing corrupted marker file to prevent future issues");
+          unlinkSync(this.markerPath);
+          console.log("✅ PRODUCTION_STARTUP: Corrupted marker file removed successfully");
+        } catch (removeError) {
+          console.error("⚠️ PRODUCTION_STARTUP: Failed to remove corrupted marker file:", removeError);
+        }
+        
         return false;
       }
       
@@ -65,7 +84,7 @@ export class ProductionStartupHandler {
       
       return true;
     } catch (error) {
-      console.error("❌ PRODUCTION_STARTUP: Error reading fresh database marker:", error);
+      console.error("❌ PRODUCTION_STARTUP: Error in marker detection process:", error);
       console.log("🔄 PRODUCTION_STARTUP: Treating as invalid marker - proceeding with normal startup");
       return false;
     }
@@ -76,39 +95,54 @@ export class ProductionStartupHandler {
    */
   private async validateAndParseMarker(markerContent: string): Promise<FreshProductionMarker | null> {
     try {
+      console.log("🔍 PRODUCTION_STARTUP: Validating marker content...");
+      console.log(`📊 PRODUCTION_STARTUP: Content length: ${markerContent.length}`);
+      console.log(`📄 PRODUCTION_STARTUP: First 100 chars: "${markerContent.substring(0, 100)}"`);
+      console.log(`📄 PRODUCTION_STARTUP: Last 50 chars: "${markerContent.substring(Math.max(0, markerContent.length - 50))}"`);
+      
       // Check if file is empty
       if (!markerContent.trim()) {
         console.log("❌ PRODUCTION_STARTUP: Marker file is empty - treating as invalid");
         return null;
       }
       
+      // Clean up any whitespace/newlines and handle Windows line endings
+      const cleanedContent = markerContent.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      console.log(`📊 PRODUCTION_STARTUP: Cleaned content length: ${cleanedContent.length}`);
+      
       // Check for truncation issues
-      if (markerContent.length < 50) {
+      if (cleanedContent.length < 50) {
         console.log("❌ PRODUCTION_STARTUP: Marker file appears truncated - too short");
+        console.log(`📄 PRODUCTION_STARTUP: Full cleaned content: "${cleanedContent}"`);
         return null;
       }
-      
-      // Clean up formatting issues
-      const originalContent = markerContent;
-      markerContent = markerContent
-        .replace(/\s+/g, ' ')
-        .replace(/,\s*}/g, '}')
-        .replace(/,\s*]/g, ']')
-        .trim();
-      
-      console.log("📄 PRODUCTION_STARTUP: Content changed during cleanup:", originalContent !== markerContent);
       
       // Validate JSON structure
-      if (!markerContent.startsWith('{') || !markerContent.endsWith('}')) {
+      if (!cleanedContent.startsWith('{') || !cleanedContent.endsWith('}')) {
         console.log("❌ PRODUCTION_STARTUP: Content doesn't look like JSON object");
+        console.log(`📄 PRODUCTION_STARTUP: Starts with: "${cleanedContent.charAt(0)}" (should be '{')`);
+        console.log(`📄 PRODUCTION_STARTUP: Ends with: "${cleanedContent.charAt(cleanedContent.length - 1)}" (should be '}')`);
+        console.log(`📄 PRODUCTION_STARTUP: Full content for debug: "${cleanedContent}"`);
         return null;
       }
       
-      const marker: FreshProductionMarker = JSON.parse(markerContent);
+      console.log("✅ PRODUCTION_STARTUP: Content looks like valid JSON, attempting to parse...");
+      const marker: FreshProductionMarker = JSON.parse(cleanedContent);
+      
+      // Validate required fields
+      if (!marker.timestamp || !marker.reason) {
+        console.log("❌ PRODUCTION_STARTUP: Missing required fields in marker");
+        console.log(`📊 PRODUCTION_STARTUP: Has timestamp: ${!!marker.timestamp}`);
+        console.log(`📊 PRODUCTION_STARTUP: Has reason: ${!!marker.reason}`);
+        return null;
+      }
+      
+      console.log("✅ PRODUCTION_STARTUP: Marker parsed and validated successfully");
       return marker;
       
     } catch (error) {
       console.error("❌ PRODUCTION_STARTUP: Failed to parse marker:", error);
+      console.log(`📄 PRODUCTION_STARTUP: Raw content that failed: "${markerContent}"`);
       return null;
     }
   }
