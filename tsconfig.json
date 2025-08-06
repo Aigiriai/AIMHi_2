@@ -10,14 +10,16 @@
     "lib": ["esnext", "dom", "dom.iterable"],
     "jsx": "preserve",
     "esModuleInterop": true,
-    "skipLibCheck": true,
+    "skipLibCheck": true,              // ✅ This helps skip problematic checks
     "allowImportingTsExtensions": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",        // ✅ FIXED: Changed from "bundler" to "node"
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./client/src/*"],
       "@shared/*": ["./shared/*"]
-    }
+    },
+    "allowSyntheticDefaultImports": true,  // ✅ ADDED: Helps with module imports
+    "forceConsistentCasingInFileNames": true // ✅ ADDED: Prevents import issues
   }
 }

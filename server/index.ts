@@ -5,8 +5,8 @@ import { WebSocketServer } from "ws";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { handleMediaStream, initializeCallContext } from "./ai-calling";
-// Removed Pinggy dependency - using direct Replit URLs
-import { initializeSQLiteDatabase } from "./init-database";
+// Updated to use unified database manager
+import { getDatabase } from "./unified-db-manager";
 
 // Function to get direct domain based on environment
 function getDirectDomain(): string {
@@ -90,9 +90,9 @@ app.use((req, res, next) => {
   // Single Node.js backend for cost optimization - disable Python backend for AI calling
   log('Initializing consolidated Node.js backend...');
   
-  // Initialize SQLite database first
-  log('📦 Initializing SQLite database...');
-  await initializeSQLiteDatabase();
+  // Initialize unified database manager first
+  log('📦 Initializing unified database manager...');
+  await getDatabase();
   
   // Using direct Replit URLs for AI calling (eliminates Pinggy tunnel dependency)
   log('🔗 AI calling configured for direct webhooks (no tunnel required)');
