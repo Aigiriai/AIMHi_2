@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import fs from "fs";
 import path from "path";
+import { handleProductionStartup } from "./production-startup-handler";
 
 // Initialize SQLite database with proper schema
 export async function initializeSQLiteDatabase() {
@@ -25,7 +26,33 @@ export async function initializeSQLiteDatabase() {
       `📁 Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV || "undefined"})`,
     );
 
-    // PRODUCTION DATA PROTECTION: Restore always
+    // SCHEMA UNIFICATION: Check for fresh production marker FIRST
+    if (process.env.NODE_ENV === "production") {
+      console.log("🔍 PRODUCTION: Checking for schema unification marker...");
+      
+      const freshDbRequired = await handleProductionStartup(dataDir);
+      
+      if (freshDbRequired) {
+        console.log("✅ PRODUCTION: Fresh database created with unified schema");
+        console.log("🚀 PRODUCTION: Skipping backup restoration - using clean unified schema");
+        
+        // Database is already created by the startup handler, just validate it
+        const sqlite = new Database(dbPath);
+        
+        try {
+          sqlite.pragma("integrity_check");
+          console.log("✅ PRODUCTION: Database integrity verified");
+          sqlite.close();
+          return;
+        } catch (error) {
+          console.error("❌ PRODUCTION: Database integrity check failed:", error);
+          sqlite.close();
+          throw error;
+        }
+      }
+    }
+
+    // PRODUCTION DATA PROTECTION: Restore from backup (normal flow when no marker)
     if (process.env.NODE_ENV === "production") {
       console.log(
         `🔄 PRODUCTION INIT: attempting restoration from latest backup...`,
