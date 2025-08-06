@@ -29,12 +29,14 @@ export async function initializeSQLiteDatabase() {
     // SCHEMA UNIFICATION: Check for fresh production marker FIRST
     if (process.env.NODE_ENV === "production") {
       console.log("🔍 PRODUCTION: Checking for schema unification marker...");
+      console.log("🚨 SCHEMA_UNIFICATION: *** CHECKING FOR FRESH DATABASE MARKER ***");
       
       const freshDbRequired = await handleProductionStartup(dataDir);
       
       if (freshDbRequired) {
         console.log("✅ PRODUCTION: Fresh database created with unified schema");
         console.log("🚀 PRODUCTION: Skipping backup restoration - using clean unified schema");
+        console.log("🚨 SCHEMA_UNIFICATION: *** FRESH DATABASE CREATION COMPLETED ***");
         
         // Database is already created by the startup handler, just validate it
         const sqlite = new Database(dbPath);
@@ -49,6 +51,8 @@ export async function initializeSQLiteDatabase() {
           sqlite.close();
           throw error;
         }
+      } else {
+        console.log("🚨 SCHEMA_UNIFICATION: *** NO FRESH DATABASE REQUIRED - PROCEEDING WITH NORMAL BACKUP RESTORATION ***");
       }
     }
 

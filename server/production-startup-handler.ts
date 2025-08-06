@@ -37,45 +37,72 @@ export class ProductionStartupHandler {
    * This should be called BEFORE any backup restoration attempts
    */
   async checkForFreshProductionMarker(): Promise<boolean> {
+    console.log("🔍 MARKER_CHECK: Starting marker detection process...");
+    console.log(`📁 MARKER_CHECK: Looking for marker at: ${this.markerPath}`);
+    
     try {
       if (!fs.existsSync(this.markerPath)) {
-        console.log("📊 PRODUCTION: No fresh database marker found - normal startup");
+        console.log("📊 MARKER_CHECK: No fresh database marker found - normal startup");
         return false;
       }
 
-      console.log("🔍 PRODUCTION: Found fresh database marker file");
+      console.log("🔍 MARKER_CHECK: Found fresh database marker file");
       
       let markerContent = fs.readFileSync(this.markerPath, 'utf-8');
-      console.log("📄 PRODUCTION: Raw marker content:", markerContent.substring(0, 200) + "...");
+      console.log("📄 MARKER_CHECK: Raw marker content length:", markerContent.length);
+      console.log("📄 MARKER_CHECK: Raw marker content FULL:", markerContent);
+      
+      // Check if file is empty
+      if (!markerContent.trim()) {
+        console.log("❌ MARKER_CHECK: Marker file is empty - treating as invalid");
+        return false;
+      }
+      
+      // Check for truncation issues
+      if (markerContent.length < 50) {
+        console.log("❌ MARKER_CHECK: Marker file appears truncated - too short");
+        console.log("📄 MARKER_CHECK: Expected JSON structure, got:", markerContent);
+        return false;
+      }
       
       // Clean up PowerShell-generated JSON formatting issues
+      const originalContent = markerContent;
       markerContent = markerContent
         .replace(/\s+/g, ' ')  // Normalize whitespace
         .replace(/,\s*}/g, '}')  // Remove trailing commas
         .replace(/,\s*]/g, ']')  // Remove trailing commas in arrays
         .trim();
       
-      console.log("📄 PRODUCTION: Cleaned marker content:", markerContent.substring(0, 200) + "...");
+      console.log("📄 MARKER_CHECK: Cleaned marker content FULL:", markerContent);
+      console.log("📄 MARKER_CHECK: Content changed during cleanup:", originalContent !== markerContent);
+      
+      // Validate JSON structure before parsing
+      if (!markerContent.startsWith('{') || !markerContent.endsWith('}')) {
+        console.log("❌ MARKER_CHECK: Content doesn't look like JSON object");
+        console.log("📄 MARKER_CHECK: Starts with:", markerContent.substring(0, 10));
+        console.log("📄 MARKER_CHECK: Ends with:", markerContent.substring(markerContent.length - 10));
+        return false;
+      }
       
       const marker: FreshProductionMarker = JSON.parse(markerContent);
       
-      console.log("🚨 PRODUCTION: Fresh database marker detected!");
-      console.log(`📅 PRODUCTION: Marker timestamp: ${marker.timestamp}`);
-      console.log(`📝 PRODUCTION: Reason: ${marker.reason}`);
-      console.log("🔄 PRODUCTION: Will create fresh database with unified schema");
+      console.log("🚨 MARKER_CHECK: Fresh database marker detected!");
+      console.log(`📅 MARKER_CHECK: Marker timestamp: ${marker.timestamp}`);
+      console.log(`📝 MARKER_CHECK: Reason: ${marker.reason}`);
+      console.log("🔄 MARKER_CHECK: Will create fresh database with unified schema");
       
       return true;
     } catch (error) {
-      console.error("❌ PRODUCTION: Error reading fresh database marker:", error);
-      console.log("🔄 PRODUCTION: Treating as invalid marker - proceeding with normal startup");
+      console.error("❌ MARKER_CHECK: Error reading fresh database marker:", error);
+      console.log("🔄 MARKER_CHECK: Treating as invalid marker - proceeding with normal startup");
       
       // If marker file is corrupted, rename it and proceed with normal startup
       try {
         const corruptedPath = this.markerPath + '.corrupted';
         fs.renameSync(this.markerPath, corruptedPath);
-        console.log(`📁 PRODUCTION: Moved corrupted marker to: ${corruptedPath}`);
+        console.log(`📁 MARKER_CHECK: Moved corrupted marker to: ${corruptedPath}`);
       } catch (renameError) {
-        console.log("⚠️ PRODUCTION: Could not rename corrupted marker file");
+        console.log("⚠️ MARKER_CHECK: Could not rename corrupted marker file");
       }
       
       return false;
@@ -379,34 +406,38 @@ export class ProductionStartupHandler {
 
 // Export convenience function for easy integration
 export async function handleProductionStartup(dataDir: string = "./data"): Promise<boolean> {
+  console.log("🚀 STARTUP_HANDLER: Production startup handler called");
+  console.log(`📁 STARTUP_HANDLER: Data directory: ${dataDir}`);
+  console.log(`🌍 STARTUP_HANDLER: NODE_ENV: ${process.env.NODE_ENV}`);
+  
   const handler = new ProductionStartupHandler(dataDir);
   
   try {
-    console.log("🔍 PRODUCTION: Starting fresh database check...");
+    console.log("🔍 STARTUP_HANDLER: Starting fresh database check...");
     
     // Check if fresh production is required
     const needsFreshDb = await handler.checkForFreshProductionMarker();
     
     if (needsFreshDb) {
-      console.log("🚨 PRODUCTION: Fresh database required - proceeding with creation");
+      console.log("🚨 STARTUP_HANDLER: Fresh database required - proceeding with creation");
       // Handle fresh production database creation
       const success = await handler.handleFreshProduction();
       
       if (success) {
-        console.log("✅ PRODUCTION: Fresh database creation completed successfully");
+        console.log("✅ STARTUP_HANDLER: Fresh database creation completed successfully");
         return true;
       } else {
-        console.error("❌ PRODUCTION: Fresh database creation failed");
+        console.error("❌ STARTUP_HANDLER: Fresh database creation failed");
         return false;
       }
     }
     
     // Normal startup - no marker detected
-    console.log("📊 PRODUCTION: No fresh database required - normal startup");
+    console.log("📊 STARTUP_HANDLER: No fresh database required - normal startup");
     return false;
     
   } catch (error) {
-    console.error("❌ PRODUCTION: Error in startup handler:", error);
+    console.error("❌ STARTUP_HANDLER: Error in startup handler:", error);
     return false;
   }
 }
