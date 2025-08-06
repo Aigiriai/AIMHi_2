@@ -358,44 +358,97 @@ router.post('/organizations', authenticateToken, requireSuperAdmin, async (req: 
 
 // GET /auth/organizations - List all organizations (Super Admin only)
 router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
+  const requestId = Math.random().toString(36).substr(2, 9);
+  const startTime = Date.now();
+  
+  console.log(`� AUTH_ROUTES[${requestId}]: ============= ORGANIZATIONS ENDPOINT START =============`);
+  console.log(`🔍 AUTH_ROUTES[${requestId}]: Request details:`, {
+    method: req.method,
+    path: req.path,
+    originalUrl: req.originalUrl,
+    headers: {
+      'content-type': req.headers['content-type'],
+      'authorization': req.headers.authorization ? 'Bearer [TOKEN]' : 'None',
+      'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
+    },
+    query: req.query,
+    ip: req.ip
+  });
+  console.log(`👤 AUTH_ROUTES[${requestId}]: Authenticated user:`, {
+    id: req.user?.id,
+    email: req.user?.email,
+    role: req.user?.role,
+    organizationId: req.user?.organizationId
+  });
+  
   try {
-    console.log('🔍 AUTH_ROUTES: Organizations endpoint called by user:', req.user?.id, 'role:', req.user?.role);
-    
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Getting database connection...`);
+    const dbStart = Date.now();
     const db = await getDB();
+    const dbTime = Date.now() - dbStart;
+    console.log(`✅ AUTH_ROUTES[${requestId}]: Database connection obtained in ${dbTime}ms`);
+    
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
-    console.log('📊 AUTH_ROUTES: Pagination - page:', page, 'limit:', limit, 'offset:', offset);
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Pagination parameters:`, { page, limit, offset });
 
     // Get total count first
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Counting total organizations...`);
+    const countStart = Date.now();
     const [totalResult] = await db.select({ count: sql<number>`count(*)` })
       .from(organizations);
     const totalOrgs = totalResult.count;
-    
-    console.log('📊 AUTH_ROUTES: Total organizations:', totalOrgs);
+    const countTime = Date.now() - countStart;
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Total organizations: ${totalOrgs} (counted in ${countTime}ms)`);
 
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Fetching organizations with pagination...`);
+    const fetchStart = Date.now();
     const orgs = await db.select()
       .from(organizations)
       .orderBy(desc(organizations.id))
       .limit(limit)
       .offset(offset);
+    const fetchTime = Date.now() - fetchStart;
       
-    console.log('📊 AUTH_ROUTES: Retrieved organizations:', orgs.length);
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Retrieved ${orgs.length} organizations in ${fetchTime}ms`);
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Organizations list:`, orgs.map(org => ({ id: org.id, name: org.name })));
 
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Getting detailed stats for each organization...`);
     const orgStats = await Promise.all(
-      orgs.map(async (org) => {
-        console.log('📊 AUTH_ROUTES: Getting stats for organization:', org.id, org.name);
+      orgs.map(async (org, index) => {
+        const orgStartTime = Date.now();
+        console.log(`📊 AUTH_ROUTES[${requestId}]: [${index + 1}/${orgs.length}] Processing organization:`, {
+          id: org.id,
+          name: org.name,
+          domain: org.domain
+        });
         
         try {
+          console.log(`📊 AUTH_ROUTES[${requestId}]: Getting stats for organization ${org.id}...`);
+          const statsStart = Date.now();
           const stats = await organizationManager.getOrganizationWithStats(org.id);
-          console.log('✅ AUTH_ROUTES: Got stats for org', org.id);
+          const statsTime = Date.now() - statsStart;
+          console.log(`✅ AUTH_ROUTES[${requestId}]: Got stats for org ${org.id} in ${statsTime}ms:`, {
+            userCount: stats.userCount,
+            teamCount: stats.teamCount,
+            jobCount: stats.jobCount,
+            candidateCount: stats.candidateCount
+          });
           
           // Get stored credentials for this organization
+          console.log(`📊 AUTH_ROUTES[${requestId}]: Getting credentials for organization ${org.id}...`);
+          const credStart = Date.now();
           const [credentials] = await db.select()
             .from(organizationCredentials)
             .where(eq(organizationCredentials.organizationId, org.id))
             .limit(1);
+          const credTime = Date.now() - credStart;
+          console.log(`✅ AUTH_ROUTES[${requestId}]: Got credentials for org ${org.id} in ${credTime}ms`);
+
+          const orgTime = Date.now() - orgStartTime;
+          console.log(`✅ AUTH_ROUTES[${requestId}]: Organization ${org.id} processed in ${orgTime}ms`);
 
           return {
             ...stats,
@@ -407,7 +460,11 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
             } : null
           };
         } catch (statsError) {
-          console.error('❌ AUTH_ROUTES: Error getting stats for org', org.id, ':', statsError);
+          const orgTime = Date.now() - orgStartTime;
+          console.error(`❌ AUTH_ROUTES[${requestId}]: Error getting stats for org ${org.id} after ${orgTime}ms:`, {
+            error: statsError.message,
+            stack: statsError.stack?.split('\n').slice(0, 3)
+          });
           // Return basic org data without stats if there's an error
           return {
             ...org,
@@ -421,9 +478,10 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
       })
     );
 
-    console.log('✅ AUTH_ROUTES: Successfully processed all organizations');
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ AUTH_ROUTES[${requestId}]: Successfully processed all organizations in ${totalTime}ms`);
 
-    res.json({
+    const response = {
       organizations: orgStats,
       pagination: {
         page,
@@ -433,10 +491,25 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
         hasNext: page < Math.ceil(totalOrgs / limit),
         hasPrev: page > 1,
       },
+    };
+
+    console.log(`📊 AUTH_ROUTES[${requestId}]: Response summary:`, {
+      organizationCount: orgStats.length,
+      pagination: response.pagination,
+      responseSize: JSON.stringify(response).length
     });
-  } catch (error) {
-    console.error('❌ AUTH_ROUTES: List organizations error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+
+    console.log(`🚀 AUTH_ROUTES[${requestId}]: ============= ORGANIZATIONS ENDPOINT SUCCESS =============`);
+    res.json(response);
+  } catch (error: any) {
+    const totalTime = Date.now() - startTime;
+    console.error(`❌ AUTH_ROUTES[${requestId}]: Organizations endpoint FAILED after ${totalTime}ms:`, {
+      error: error?.message || 'Unknown error',
+      stack: error?.stack?.split('\n').slice(0, 5),
+      type: error?.constructor?.name || 'Unknown'
+    });
+    console.log(`🚀 AUTH_ROUTES[${requestId}]: ============= ORGANIZATIONS ENDPOINT ERROR =============`);
+    res.status(500).json({ message: 'Internal server error', requestId });
   }
 });
 

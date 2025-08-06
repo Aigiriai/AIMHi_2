@@ -48,26 +48,57 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 
 // Authentication middleware
 export async function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
+  const authId = Math.random().toString(36).substr(2, 9);
+  const authStart = Date.now();
+  
+  console.log(`🔐 AUTH[${authId}]: ============= AUTHENTICATION START =============`);
+  console.log(`🔐 AUTH[${authId}]: Request details:`, {
+    method: (req as any).method,
+    path: (req as any).path,
+    originalUrl: (req as any).originalUrl,
+    ip: (req as any).ip,
+    userAgent: (req as any).headers?.['user-agent']?.substring(0, 50) + '...'
+  });
+  
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  console.log(`🔐 AUTH[${authId}]: Authorization header present:`, !!authHeader);
+  console.log(`🔐 AUTH[${authId}]: Token extracted:`, !!token);
+
   if (!token) {
+    console.log(`❌ AUTH[${authId}]: No token provided - returning 401`);
+    console.log(`🔐 AUTH[${authId}]: ============= AUTHENTICATION FAILED =============`);
     return res.status(401).json({ message: 'Access token required' });
   }
 
   try {
+    console.log(`🔐 AUTH[${authId}]: Verifying JWT token...`);
+    const verifyStart = Date.now();
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    console.log(`🔐 AUTH: Token decoded for user ${decoded.userId}`);
+    const verifyTime = Date.now() - verifyStart;
+    console.log(`🔐 AUTH[${authId}]: Token decoded for user ${decoded.userId} in ${verifyTime}ms`);
+    console.log(`🔐 AUTH[${authId}]: Token payload:`, {
+      userId: decoded.userId,
+      iat: decoded.iat,
+      exp: decoded.exp,
+      expiresIn: new Date(decoded.exp * 1000).toISOString()
+    });
     
     let retryCount = 0;
     const maxRetries = 2;
     
     while (retryCount <= maxRetries) {
       try {
+        console.log(`🔐 AUTH[${authId}]: Getting database connection (attempt ${retryCount + 1}/${maxRetries + 1})...`);
+        const dbStart = Date.now();
         const { db, schema } = await getDB();
-        console.log(`🔐 AUTH: Database connection obtained (attempt ${retryCount + 1})`);
+        const dbTime = Date.now() - dbStart;
+        console.log(`🔐 AUTH[${authId}]: Database connection obtained in ${dbTime}ms (attempt ${retryCount + 1})`);
         
         // Fetch fresh user data
+        console.log(`🔐 AUTH[${authId}]: Querying user data for user ${decoded.userId}...`);
+        const userStart = Date.now();
         const user = await db
           .select()
           .from(schema.users)
@@ -76,16 +107,18 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
             eq(schema.users.isActive, 1)
           ))
           .limit(1);
+        const userTime = Date.now() - userStart;
 
-        console.log(`🔐 AUTH: User query returned ${user.length} results for user ${decoded.userId}`);
+        console.log(`🔐 AUTH[${authId}]: User query returned ${user.length} results for user ${decoded.userId} in ${userTime}ms`);
         
         if (!user.length) {
-          console.log(`🔐 AUTH: No active user found for ID ${decoded.userId}`);
+          console.log(`❌ AUTH[${authId}]: No active user found for ID ${decoded.userId} - returning 401`);
+          console.log(`🔐 AUTH[${authId}]: ============= AUTHENTICATION FAILED =============`);
           return res.status(401).json({ message: 'Invalid token' });
         }
         
         // Success - break out of retry loop
-        req.user = {
+        const userData = {
           id: user[0].id,
           organizationId: user[0].organizationId,
           email: user[0].email,
@@ -94,24 +127,40 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
           role: user[0].role,
           permissions: user[0].permissions,
         };
+        
+        req.user = userData;
         req.organizationId = user[0].organizationId;
-        console.log(`🔐 AUTH: Authentication successful for user ${user[0].id} (${user[0].role})`);
+        
+        const totalTime = Date.now() - authStart;
+        console.log(`✅ AUTH[${authId}]: Authentication successful for user ${user[0].id} (${user[0].role}) in ${totalTime}ms`);
+        console.log(`🔐 AUTH[${authId}]: User data:`, {
+          id: userData.id,
+          email: userData.email,
+          role: userData.role,
+          organizationId: userData.organizationId
+        });
+        console.log(`🔐 AUTH[${authId}]: ============= AUTHENTICATION SUCCESS =============`);
         return next();
         
-      } catch (dbError) {
+      } catch (dbError: any) {
         retryCount++;
-        console.error(`🔐 DB ERROR (attempt ${retryCount}):`, dbError.message);
+        console.error(`❌ AUTH[${authId}]: DB ERROR (attempt ${retryCount}/${maxRetries + 1}):`, {
+          error: dbError?.message || 'Unknown error',
+          type: dbError?.constructor?.name || 'Unknown',
+          stack: dbError?.stack?.split('\n').slice(0, 3)
+        });
         
         if (retryCount > maxRetries) {
+          console.error(`❌ AUTH[${authId}]: All database retry attempts failed - throwing error`);
           throw dbError; // Final attempt failed
         }
         
         // Reset connection and try again
         const { resetDBConnection } = await import('./db-connection');
         resetDBConnection();
-        console.log(`🔄 AUTH: Resetting DB connection for retry ${retryCount}`);
+        console.log(`🔄 AUTH[${authId}]: Resetting DB connection for retry ${retryCount}`);
         
-        // Small delay before retry
+        console.log(`🔄 AUTH[${authId}]: Waiting 100ms before retry...`);
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
