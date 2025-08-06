@@ -81,18 +81,34 @@ export interface IStorage {
 export class SQLiteStorage implements IStorage {
   private db: any;
   private sqlite: any;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    this.initializeConnection();
+    // ✅ FIX: Don't call async function in constructor
+    // Initialize on first use instead
   }
 
-  private async initializeConnection() {
+  private async initializeConnection(): Promise<void> {
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      return;
+    }
+
+    this.initializationPromise = this.performInitialization();
+    await this.initializationPromise;
+  }
+
+  private async performInitialization(): Promise<void> {
     try {
+      console.log('🔄 SQLiteStorage: Initializing database connection...');
       const dbInstance = await getSQLiteDB();
       this.db = dbInstance.db;
       this.sqlite = dbInstance.sqlite;
+      console.log('✅ SQLiteStorage: Database connection initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize SQLite connection:', error);
+      console.error('❌ SQLiteStorage: Failed to initialize SQLite connection:', error);
+      this.initializationPromise = null; // Reset on failure
+      throw error;
     }
   }
 

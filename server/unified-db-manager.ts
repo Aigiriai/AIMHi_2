@@ -104,9 +104,11 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
   console.log(`💾 DB_MANAGER: Memory usage before init:`, process.memoryUsage());
   
   // Create timeout promise with detailed logging and early completion detection
+  let timeoutCleanup: (() => void) | null = null;
+  
   const timeoutPromise = new Promise<never>((_, reject) => {
-    let timeoutId: NodeJS.Timeout | null = null;
-    let warningId: NodeJS.Timeout | null = null;
+    let timeoutId: any = null;
+    let warningId: any = null;
     
     const cleanup = () => {
       if (timeoutId) {
@@ -118,6 +120,9 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
         warningId = null;
       }
     };
+    
+    // ✅ FIX: Expose cleanup function without circular reference
+    timeoutCleanup = cleanup;
     
     timeoutId = setTimeout(() => {
       const elapsed = Date.now() - initStartTime;
@@ -152,9 +157,6 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
         console.warn(`📊 DB_MANAGER: Current state:`, initState);
       }
     }, timeoutMs * 0.5);
-    
-    // ✅ FIX: Expose cleanup function so it can be called on success
-    (timeoutPromise as any).cleanup = cleanup;
   });
 
   try {
@@ -178,8 +180,8 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
     console.log(`💾 DB_MANAGER: Memory usage after init:`, process.memoryUsage());
     
     // ✅ FIX: Clean up timeout timers on successful completion
-    if ((timeoutPromise as any).cleanup) {
-      (timeoutPromise as any).cleanup();
+    if (timeoutCleanup) {
+      timeoutCleanup();
       console.log(`🧹 DB_MANAGER: Timeout timers cleaned up after successful initialization`);
     }
     
