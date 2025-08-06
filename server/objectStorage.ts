@@ -457,7 +457,9 @@ export class DatabaseBackupService {
 
   // Restore latest backup based on file modification timestamp
   async restoreLatestBackup(localDbPath: string): Promise<boolean> {
-    console.log(`🛡️ Attempting to restore database from Object Storage...`);
+    console.log(
+      `🛡️ restoreLatestBackup: Attempting to restore database from Object Storage...`,
+    );
 
     try {
       // TEMPORARY: Delete all existing backups to force fresh seeding
