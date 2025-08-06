@@ -105,12 +105,18 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
   
   // Create timeout promise with detailed logging and early completion detection
   const timeoutPromise = new Promise<never>((_, reject) => {
-    let timeoutId: any;
-    let warningId: any;
+    let timeoutId: NodeJS.Timeout | null = null;
+    let warningId: NodeJS.Timeout | null = null;
     
     const cleanup = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      if (warningId) clearTimeout(warningId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+      if (warningId) {
+        clearTimeout(warningId);
+        warningId = null;
+      }
     };
     
     timeoutId = setTimeout(() => {
@@ -137,6 +143,7 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
       // ✅ FIX: Don't warn if already complete
       if (initState.isComplete && dbInstance) {
         console.log(`ℹ️ DB_MANAGER: Warning timer fired but initialization is already complete`);
+        cleanup();
         return;
       }
       
@@ -145,6 +152,9 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
         console.warn(`📊 DB_MANAGER: Current state:`, initState);
       }
     }, timeoutMs * 0.5);
+    
+    // ✅ FIX: Expose cleanup function so it can be called on success
+    (timeoutPromise as any).cleanup = cleanup;
   });
 
   try {
@@ -166,6 +176,12 @@ async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
     const elapsed = Date.now() - initStartTime;
     console.log(`✅ DB_MANAGER: Initialization completed successfully in ${elapsed}ms`);
     console.log(`💾 DB_MANAGER: Memory usage after init:`, process.memoryUsage());
+    
+    // ✅ FIX: Clean up timeout timers on successful completion
+    if ((timeoutPromise as any).cleanup) {
+      (timeoutPromise as any).cleanup();
+      console.log(`🧹 DB_MANAGER: Timeout timers cleaned up after successful initialization`);
+    }
     
     return result;
   } catch (error) {

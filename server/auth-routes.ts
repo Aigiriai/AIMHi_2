@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { eq, and, ne, inArray, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
-import { getSQLiteDB } from './sqlite-db';
+import { getSQLiteDB } from './unified-db-manager';
 import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from './sqlite-schema';
 
-// Database connection helper
+// Database connection helper - using unified database manager
 async function getDB() {
   const { db } = await getSQLiteDB();
   return db;
 }
 
-// SQLite database helper for raw queries
+// SQLite database helper for raw queries - using unified database manager
 async function getSQLite() {
   const { sqlite } = await getSQLiteDB();
   return sqlite;
@@ -359,43 +359,69 @@ router.post('/organizations', authenticateToken, requireSuperAdmin, async (req: 
 // GET /auth/organizations - List all organizations (Super Admin only)
 router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
+    console.log('🔍 AUTH_ROUTES: Organizations endpoint called by user:', req.user?.id, 'role:', req.user?.role);
+    
     const db = await getDB();
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const offset = (page - 1) * limit;
 
+    console.log('📊 AUTH_ROUTES: Pagination - page:', page, 'limit:', limit, 'offset:', offset);
+
     // Get total count first
     const [totalResult] = await db.select({ count: sql<number>`count(*)` })
       .from(organizations);
     const totalOrgs = totalResult.count;
+    
+    console.log('📊 AUTH_ROUTES: Total organizations:', totalOrgs);
 
     const orgs = await db.select()
       .from(organizations)
       .orderBy(desc(organizations.id))
       .limit(limit)
       .offset(offset);
+      
+    console.log('📊 AUTH_ROUTES: Retrieved organizations:', orgs.length);
 
     const orgStats = await Promise.all(
       orgs.map(async (org) => {
-        const stats = await organizationManager.getOrganizationWithStats(org.id);
+        console.log('📊 AUTH_ROUTES: Getting stats for organization:', org.id, org.name);
         
-        // Get stored credentials for this organization
-        const [credentials] = await db.select()
-          .from(organizationCredentials)
-          .where(eq(organizationCredentials.organizationId, org.id))
-          .limit(1);
+        try {
+          const stats = await organizationManager.getOrganizationWithStats(org.id);
+          console.log('✅ AUTH_ROUTES: Got stats for org', org.id);
+          
+          // Get stored credentials for this organization
+          const [credentials] = await db.select()
+            .from(organizationCredentials)
+            .where(eq(organizationCredentials.organizationId, org.id))
+            .limit(1);
 
-        return {
-          ...stats,
-          temporaryCredentials: credentials ? {
-            email: credentials.email,
-            password: credentials.temporaryPassword,
-            loginUrl: `${req.protocol}://${req.get('host')}/login`,
-            isPasswordChanged: credentials.isPasswordChanged
-          } : null
-        };
+          return {
+            ...stats,
+            temporaryCredentials: credentials ? {
+              email: credentials.email,
+              password: credentials.temporaryPassword,
+              loginUrl: `${req.protocol}://${req.get('host')}/login`,
+              isPasswordChanged: credentials.isPasswordChanged
+            } : null
+          };
+        } catch (statsError) {
+          console.error('❌ AUTH_ROUTES: Error getting stats for org', org.id, ':', statsError);
+          // Return basic org data without stats if there's an error
+          return {
+            ...org,
+            userCount: 0,
+            teamCount: 0,
+            jobCount: 0,
+            candidateCount: 0,
+            temporaryCredentials: null
+          };
+        }
       })
     );
+
+    console.log('✅ AUTH_ROUTES: Successfully processed all organizations');
 
     res.json({
       organizations: orgStats,
@@ -409,7 +435,7 @@ router.get('/organizations', authenticateToken, requireSuperAdmin, async (req: A
       },
     });
   } catch (error) {
-    console.error('List organizations error:', error);
+    console.error('❌ AUTH_ROUTES: List organizations error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
