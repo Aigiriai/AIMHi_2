@@ -26,21 +26,23 @@ export class DataPersistenceManager {
   }
 
   /**
-   * Create a backup of the production database using Object Storage
+   * Create a backup of the current database (single backup file approach)
+   * This replaces any existing backup with the current database state
    */
   async createBackup(): Promise<string | null> {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const prodDbPath = path.join(this.dataDir, 'production.db');
+    // Use environment-appropriate database file
+    const dbName = process.env.NODE_ENV === "production" ? "production.db" : "development.db";
+    const currentDbPath = path.join(this.dataDir, dbName);
     
-    if (!fs.existsSync(prodDbPath)) {
-      console.log('⚠️  No production database found to backup');
+    if (!fs.existsSync(currentDbPath)) {
+      console.log(`⚠️ BACKUP: No database found to backup at: ${currentDbPath}`);
       return null;
     }
 
     // CRITICAL: Validate database has proper schema before backup
     try {
       const Database = (await import('better-sqlite3')).default;
-      const db = new Database(prodDbPath, { readonly: true });
+      const db = new Database(currentDbPath, { readonly: true });
       
       // Check if organizations table exists
       const tablesResult = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='organizations'").get();
@@ -52,7 +54,7 @@ export class DataPersistenceManager {
       
       // Check if there are organizations (debug info) - but don't block backup if empty
       const orgs = db.prepare('SELECT id, name, domain FROM organizations').all();
-      console.log(`🔍 DEBUG: Organizations BEFORE backup creation:`, orgs.map(o => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
+      console.log(`🔍 BACKUP: Organizations in database:`, orgs.map((o: any) => `${o.name} (${o.domain || 'no-domain'})`).join(', ') || 'None');
       
       // Additional validation: check if we have essential tables
       const essentialTables = ['users', 'organizations'];
@@ -68,28 +70,46 @@ export class DataPersistenceManager {
       db.close();
       console.log(`✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup`);
     } catch (error) {
-      console.log(`⚠️ DEBUG: Could not validate database before backup:`, error.message);
+      console.log(`⚠️ BACKUP: Could not validate database before backup:`, (error as Error).message);
       console.log(`🚫 BACKUP BLOCKED: Database validation failed - will not backup potentially corrupt database`);
       return null;
     }
 
+    // Define backup file path (single backup file)
+    const backupFileName = `backup.db`; // Single backup file name
+    const localBackupPath = path.join(this.backupDir, backupFileName);
+
     try {
+      console.log(`🔄 BACKUP: Creating backup from ${dbName} database...`);
+      console.log(`📁 BACKUP: Source: ${currentDbPath}`);
+      console.log(`📁 BACKUP: Target: ${localBackupPath}`);
+
       // Try cloud backup first (persistent)
       if (this.cloudBackupService) {
-        const cloudBackupName = await this.cloudBackupService.createTimestampedBackup(prodDbPath);
+        const cloudBackupName = await this.cloudBackupService.createTimestampedBackup(currentDbPath);
         console.log(`✅ Database backup created in Object Storage: ${cloudBackupName}`);
+        
+        // Also create local backup for faster restore
+        fs.copyFileSync(currentDbPath, localBackupPath);
+        console.log(`✅ Local backup copy created: ${localBackupPath}`);
+        
         return cloudBackupName;
       }
       
-      // Fallback to local backup (will be lost on deployment)
-      const backupPath = path.join(this.backupDir, `production_${timestamp}.db`);
-      fs.copyFileSync(prodDbPath, backupPath);
+      // Fallback to local backup only
+      // Remove existing backup if it exists
+      if (fs.existsSync(localBackupPath)) {
+        const existingStats = fs.statSync(localBackupPath);
+        console.log(`🗑️ BACKUP: Removing existing backup (${Math.round(existingStats.size / 1024)}KB)`);
+        fs.unlinkSync(localBackupPath);
+      }
       
-      await this.cleanOldBackups();
+      fs.copyFileSync(currentDbPath, localBackupPath);
+      const newStats = fs.statSync(localBackupPath);
       
-      console.log(`✅ Database backup created locally: ${backupPath}`);
+      console.log(`✅ Database backup created locally: ${localBackupPath} (${Math.round(newStats.size / 1024)}KB)`);
       console.warn('⚠️ Local backup will not persist between deployments');
-      return backupPath;
+      return localBackupPath;
     } catch (error) {
       console.error('❌ Failed to create backup:', error);
       return null;
@@ -97,14 +117,17 @@ export class DataPersistenceManager {
   }
 
   /**
-   * Restore database from the latest backup (Object Storage first, then local fallback)
+   * Restore database from the latest backup (single backup file approach)
+   * Works in both development and production environments
    */
   async restoreFromLatestBackup(): Promise<boolean> {
-    const prodDbPath = path.join(this.dataDir, 'production.db');
+    // Use environment-appropriate database file
+    const dbName = process.env.NODE_ENV === "production" ? "production.db" : "development.db";
+    const targetDbPath = path.join(this.dataDir, dbName);
     
     console.log(`🔄 RESTORE: Starting database restoration process...`);
-    console.log(`📁 RESTORE: Target database path: ${prodDbPath}`);
-    console.log(`🌍 RESTORE: Environment: ${process.env.NODE_ENV}`);
+    console.log(`📁 RESTORE: Target database path: ${targetDbPath}`);
+    console.log(`🌍 RESTORE: Environment: ${process.env.NODE_ENV || 'development'}`);
     
     // Ensure data directory exists
     if (!fs.existsSync(this.dataDir)) {
@@ -114,9 +137,9 @@ export class DataPersistenceManager {
       console.log(`📁 RESTORE: Data directory already exists: ${this.dataDir}`);
     }
 
-    // Check if production database already exists
-    if (fs.existsSync(prodDbPath)) {
-      const stats = fs.statSync(prodDbPath);
+    // Check if target database already exists
+    if (fs.existsSync(targetDbPath)) {
+      const stats = fs.statSync(targetDbPath);
       console.log(`📊 RESTORE: Existing database found (${Math.round(stats.size / 1024)}KB), will be replaced if restoration succeeds`);
     } else {
       console.log(`📊 RESTORE: No existing database found at target path`);
@@ -126,60 +149,76 @@ export class DataPersistenceManager {
       // Try cloud backup first (persistent)
       if (this.cloudBackupService) {
         console.log(`☁️ RESTORE: Attempting restoration from Object Storage...`);
-        const restored = await this.cloudBackupService.restoreLatestBackup(prodDbPath);
+        const restored = await this.cloudBackupService.restoreLatestBackup(targetDbPath);
         if (restored) {
           console.log(`✅ RESTORE: Database successfully restored from Object Storage backup`);
           
           // Verify restored database
-          if (fs.existsSync(prodDbPath)) {
-            const restoredStats = fs.statSync(prodDbPath);
+          if (fs.existsSync(targetDbPath)) {
+            const restoredStats = fs.statSync(targetDbPath);
             console.log(`📊 RESTORE: Restored database size: ${Math.round(restoredStats.size / 1024)}KB`);
           }
           
-          // Skip connection reset - connection will be cached in init-database.ts
-          console.log(`🔄 RESTORE: Database connection will be cached after restoration`);
-          
           return true;
         }
-        console.log(`⚠️ RESTORE: No backups found in Object Storage (likely deleted), will trigger fresh seeding...`);
+        console.log(`⚠️ RESTORE: No backups found in Object Storage, trying local backup...`);
       } else {
-        console.log(`⚠️ RESTORE: Object Storage service not available, trying local fallback...`);
+        console.log(`⚠️ RESTORE: Object Storage service not available, trying local backup...`);
       }
       
-      // Fallback to local backup (won't work in production deployments)
-      console.log(`📁 RESTORE: Checking for local backups in: ${this.backupDir}`);
+      // Try local backup (single backup.db file)
+      const localBackupPath = path.join(this.backupDir, 'backup.db');
+      console.log(`📁 RESTORE: Checking for local backup: ${localBackupPath}`);
       
-      if (!fs.existsSync(this.backupDir)) {
-        console.log(`📁 RESTORE: Local backup directory does not exist`);
-        return false;
-      }
-      
-      const backups = fs.readdirSync(this.backupDir)
-        .filter(file => file.startsWith('production_') && file.endsWith('.db'))
-        .sort()
-        .reverse();
-
-      console.log(`📋 RESTORE: Found ${backups.length} local backup files`);
-
-      if (backups.length === 0) {
-        console.log(`❌ RESTORE: No local backups found to restore from`);
+      if (!fs.existsSync(localBackupPath)) {
+        console.log(`📁 RESTORE: No local backup file found`);
         return false;
       }
 
-      const latestBackup = path.join(this.backupDir, backups[0]);
-      console.log(`🔄 RESTORE: Restoring from local backup: ${backups[0]}`);
+      const backupStats = fs.statSync(localBackupPath);
+      console.log(`📊 RESTORE: Local backup found (${Math.round(backupStats.size / 1024)}KB, modified: ${backupStats.mtime.toISOString()})`);
       
-      const backupStats = fs.statSync(latestBackup);
-      console.log(`📊 RESTORE: Local backup size: ${Math.round(backupStats.size / 1024)}KB`);
+      // Validate backup before restoration
+      try {
+        console.log(`� RESTORE: Validating backup file before restoration...`);
+        const Database = (await import('better-sqlite3')).default;
+        const backupDb = new Database(localBackupPath, { readonly: true });
+        
+        // Check integrity
+        const integrityResult = backupDb.pragma('integrity_check', { simple: true });
+        if (integrityResult !== 'ok') {
+          backupDb.close();
+          console.error(`❌ RESTORE: Backup file is corrupted (integrity check failed: ${integrityResult})`);
+          return false;
+        }
+        
+        // Check essential tables
+        const essentialTables = ['organizations', 'users'];
+        for (const tableName of essentialTables) {
+          const tableExists = backupDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+          if (!tableExists) {
+            backupDb.close();
+            console.error(`❌ RESTORE: Backup file missing essential table: ${tableName}`);
+            return false;
+          }
+        }
+        
+        backupDb.close();
+        console.log(`✅ RESTORE: Backup file validation passed`);
+      } catch (validationError) {
+        console.error(`❌ RESTORE: Backup validation failed:`, (validationError as Error).message);
+        return false;
+      }
       
-      fs.copyFileSync(latestBackup, prodDbPath);
-      console.log(`✅ RESTORE: Database restored from local backup: ${backups[0]}`);
-      console.warn(`⚠️ RESTORE: Local backup restore will not work in production deployments`);
+      // Perform restoration
+      console.log(`🔄 RESTORE: Restoring from local backup: backup.db`);
+      fs.copyFileSync(localBackupPath, targetDbPath);
+      console.log(`✅ RESTORE: Database restored from local backup`);
       
       return true;
     } catch (error) {
       console.error(`❌ RESTORE: Failed to restore from backup:`, error);
-      console.error(`❌ RESTORE: Error details:`, error.message);
+      console.error(`❌ RESTORE: Error details:`, (error as Error).message);
       return false;
     }
   }
@@ -210,28 +249,37 @@ export class DataPersistenceManager {
   }
 
   /**
-   * Check if production database exists
+   * Check if current environment database exists
    */
-  hasProductionDatabase(): boolean {
-    const prodDbPath = path.join(this.dataDir, 'production.db');
-    return fs.existsSync(prodDbPath);
+  hasCurrentDatabase(): boolean {
+    const dbName = process.env.NODE_ENV === "production" ? "production.db" : "development.db";
+    const dbPath = path.join(this.dataDir, dbName);
+    return fs.existsSync(dbPath);
   }
 
   /**
-   * Get database size and record counts for verification
+   * Legacy method for backwards compatibility
+   */
+  hasProductionDatabase(): boolean {
+    return this.hasCurrentDatabase();
+  }
+
+  /**
+   * Get database size and record counts for verification (environment-aware)
    */
   async getDatabaseStats(): Promise<any> {
-    const prodDbPath = path.join(this.dataDir, 'production.db');
+    const dbName = process.env.NODE_ENV === "production" ? "production.db" : "development.db";
+    const dbPath = path.join(this.dataDir, dbName);
     
-    if (!fs.existsSync(prodDbPath)) {
-      return { exists: false };
+    if (!fs.existsSync(dbPath)) {
+      return { exists: false, environment: process.env.NODE_ENV || 'development' };
     }
 
     try {
-      const stats = fs.statSync(prodDbPath);
+      const stats = fs.statSync(dbPath);
       
       // Get record counts using better-sqlite3
-      const db = new Database(prodDbPath, { readonly: true });
+      const db = new Database(dbPath, { readonly: true });
       
       const orgCount = (db.prepare('SELECT COUNT(*) as count FROM organizations').get() as any)?.count || 0;
       const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as any)?.count || 0;
@@ -258,30 +306,30 @@ export class DataPersistenceManager {
   }
 
   /**
-   * Pre-deployment data protection workflow using Object Storage
+   * Pre-deployment data protection workflow (environment-aware)
    */
   async protectDataBeforeDeployment(): Promise<void> {
-    console.log('🛡️  Starting pre-deployment data protection...');
+    console.log('🛡️ Starting pre-deployment data protection...');
     
-    if (this.hasProductionDatabase()) {
+    if (this.hasCurrentDatabase()) {
       const stats = await this.getDatabaseStats();
       console.log('📊 Current database stats:', stats);
       
       const backupName = await this.createBackup();
       if (backupName) {
-        console.log('✅ Pre-deployment backup completed in Object Storage');
+        console.log('✅ Pre-deployment backup completed');
       } else {
         console.log('⚠️ Backup failed - continuing with deployment');
       }
     } else {
-      console.log('⚠️  No production database found');
+      console.log('⚠️ No current database found');
       
       // Automatically attempt restoration from latest backup
       console.log('🔄 Attempting automatic restoration from latest backup...');
       const restored = await this.restoreFromLatestBackup();
       
       if (restored) {
-        console.log('✅ Database restored from Object Storage backup');
+        console.log('✅ Database restored from backup');
       } else {
         console.log('📦 No backup available - fresh database will be created');
       }
@@ -289,11 +337,11 @@ export class DataPersistenceManager {
   }
 
   /**
-   * Auto-backup after important operations
+   * Auto-backup after important operations (environment-aware)
    */
   async autoBackupIfNeeded(reason: string = 'auto'): Promise<void> {
-    if (!this.hasProductionDatabase()) {
-      console.log(`⚠️ Auto-backup skipped: No production database found for reason: ${reason}`);
+    if (!this.hasCurrentDatabase()) {
+      console.log(`⚠️ Auto-backup skipped: No database found for reason: ${reason}`);
       return;
     }
 

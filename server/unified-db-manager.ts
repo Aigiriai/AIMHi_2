@@ -219,9 +219,9 @@ async function performInitialization(): Promise<DatabaseInstance> {
       }
     }
 
-    // Step 3: Handle backup restoration (if no fresh DB was created)
+    // Step 3: Handle backup restoration (in all environments if no fresh DB was created)
     let restoredFromBackup = false;
-    if (process.env.NODE_ENV === "production" && !freshDbCreated) {
+    if (!freshDbCreated) {
       restoredFromBackup = await attemptBackupRestoration(dbPath);
       if (restoredFromBackup) {
         console.log("✅ DB_MANAGER: Database restored from backup, skipping seeding");
@@ -236,9 +236,44 @@ async function performInitialization(): Promise<DatabaseInstance> {
       }
     }
 
-    // Step 4: Normal initialization (fresh database or development)
-    console.log("🔄 DB_MANAGER: Proceeding with normal database initialization...");
-    const result = await createFreshDatabase(dbPath);
+    // Step 4: Smart initialization with data preservation
+    console.log("🔄 DB_MANAGER: Proceeding with smart database initialization...");
+    
+    // ✅ ENHANCED LOGIC: Smart decision making for database initialization
+    let result: DatabaseInstance;
+    if (existsSync(dbPath)) {
+      console.log("📂 DB_MANAGER: Existing database found - attempting to open and validate...");
+      try {
+        result = await openAndValidateDatabase(dbPath);
+        console.log("✅ DB_MANAGER: Existing database opened successfully - data preserved!");
+      } catch (error) {
+        console.warn("⚠️ DB_MANAGER: Existing database validation failed:", (error as Error).message);
+        console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
+        
+        // Try backup restoration before creating fresh database
+        const backupRestored = await attemptBackupRestoration(dbPath);
+        if (backupRestored) {
+          console.log("✅ DB_MANAGER: Database restored from backup after validation failure!");
+          result = await openAndValidateDatabase(dbPath);
+        } else {
+          console.log("⚠️ DB_MANAGER: No backup available, creating fresh database");
+          result = await createFreshDatabase(dbPath, true); // Force recreate on validation failure
+        }
+      }
+    } else {
+      console.log("📂 DB_MANAGER: No existing database found");
+      console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
+      
+      // Try backup restoration first
+      const backupRestored = await attemptBackupRestoration(dbPath);
+      if (backupRestored) {
+        console.log("✅ DB_MANAGER: Database restored from backup!");
+        result = await openAndValidateDatabase(dbPath);
+      } else {
+        console.log("📦 DB_MANAGER: No backup available - creating fresh database...");
+        result = await createFreshDatabase(dbPath, false); // Don't force since no existing file
+      }
+    }
     
     // ✅ FIXED: Update state on success
     initState.isInitializing = false;
@@ -271,16 +306,37 @@ async function handleProductionStartup(dataDir: string): Promise<boolean> {
 }
 
 /**
- * BACKUP RESTORATION LOGIC
+ * BACKUP RESTORATION LOGIC (Environment-Agnostic)
+ * Works in both development and production environments
  */
 async function attemptBackupRestoration(dbPath: string): Promise<boolean> {
   try {
     console.log("🔄 DB_MANAGER: Attempting backup restoration...");
+    console.log(`📁 DB_MANAGER: Target database path: ${dbPath}`);
+    
     const { dataPersistence } = await import("./data-persistence");
     const restored = await dataPersistence.restoreFromLatestBackup();
     
     if (restored && existsSync(dbPath)) {
       console.log("✅ DB_MANAGER: Successfully restored from backup");
+      
+      // Verify the restored database
+      try {
+        const sqlite = new Database(dbPath, { readonly: true });
+        const integrityResult = sqlite.pragma("integrity_check", { simple: true });
+        sqlite.close();
+        
+        if (integrityResult !== 'ok') {
+          console.error("❌ DB_MANAGER: Restored database failed integrity check");
+          return false;
+        }
+        
+        console.log("✅ DB_MANAGER: Restored database passed integrity check");
+      } catch (verificationError) {
+        console.error("❌ DB_MANAGER: Error verifying restored database:", verificationError);
+        return false;
+      }
+      
       return true;
     }
     
@@ -294,19 +350,30 @@ async function attemptBackupRestoration(dbPath: string): Promise<boolean> {
 
 /**
  * FRESH DATABASE CREATION WITH UNIFIED SCHEMA
+ * ✅ FIXED: Only removes existing database when forced or corrupted
  */
-async function createFreshDatabase(dbPath: string): Promise<DatabaseInstance> {
+async function createFreshDatabase(dbPath: string, forceRecreate: boolean = false): Promise<DatabaseInstance> {
   const createStartTime = Date.now();
   
   console.log(`🆕 DB_MANAGER: Creating fresh database with unified schema...`);
   console.log(`📁 DB_MANAGER: Target path: ${dbPath}`);
+  console.log(`🔧 DB_MANAGER: Force recreate: ${forceRecreate}`);
 
-  // Enhanced pre-creation logging
+  // ✅ FIX: Only remove existing database if forced or we need to recreate
   if (existsSync(dbPath)) {
-    const stats = statSync(dbPath);
-    console.log(`🗑️ DB_MANAGER: Removing existing database file (${Math.round(stats.size / 1024)}KB, modified: ${stats.mtime.toISOString()})`);
-    unlinkSync(dbPath);
-    console.log(`✅ DB_MANAGER: Existing database file removed successfully`);
+    if (forceRecreate) {
+      const stats = statSync(dbPath);
+      console.log(`🗑️ DB_MANAGER: Force recreate - removing existing database file (${Math.round(stats.size / 1024)}KB, modified: ${stats.mtime.toISOString()})`);
+      unlinkSync(dbPath);
+      console.log(`✅ DB_MANAGER: Existing database file removed successfully`);
+    } else {
+      console.warn(`⚠️ DB_MANAGER: Database file exists but createFreshDatabase called without forceRecreate=true`);
+      console.warn(`⚠️ DB_MANAGER: This may indicate a logic error - proceeding anyway`);
+      const stats = statSync(dbPath);
+      console.log(`🗑️ DB_MANAGER: Removing existing database file (${Math.round(stats.size / 1024)}KB, modified: ${stats.mtime.toISOString()})`);
+      unlinkSync(dbPath);
+      console.log(`✅ DB_MANAGER: Existing database file removed`);
+    }
   } else {
     console.log(`ℹ️ DB_MANAGER: No existing database file to remove`);
   }
@@ -418,26 +485,64 @@ async function createFreshDatabase(dbPath: string): Promise<DatabaseInstance> {
 }
 
 /**
- * OPEN AND VALIDATE EXISTING DATABASE
+ * OPEN AND VALIDATE EXISTING DATABASE  
+ * ✅ ENHANCED: Better validation and schema repair
  */
 async function openAndValidateDatabase(dbPath: string): Promise<DatabaseInstance> {
+  const validationStart = Date.now();
   console.log("🔍 DB_MANAGER: Opening and validating existing database...");
+  console.log(`📁 DB_MANAGER: Database path: ${dbPath}`);
 
   const sqlite = new Database(dbPath);
   
   try {
-    // Validate database integrity
-    sqlite.pragma("integrity_check");
+    // Step 1: Basic integrity check
+    console.log("🔍 DB_MANAGER: Performing integrity check...");
+    const integrityResult = sqlite.pragma("integrity_check", { simple: true });
+    if (integrityResult !== 'ok') {
+      throw new Error(`Database integrity check failed: ${integrityResult}`);
+    }
     console.log("✅ DB_MANAGER: Database integrity check passed");
 
-    // Set pragmas
+    // Step 2: Check database size and basic info
+    const dbStats = statSync(dbPath);
+    console.log(`📊 DB_MANAGER: Database file size: ${Math.round(dbStats.size / 1024)}KB`);
+    console.log(`📊 DB_MANAGER: Last modified: ${dbStats.mtime.toISOString()}`);
+
+    // Step 3: Set pragmas
+    console.log("⚙️ DB_MANAGER: Configuring pragmas for existing database...");
     sqlite.pragma("foreign_keys = ON");
     sqlite.pragma("journal_mode = WAL");
     sqlite.pragma("synchronous = NORMAL");
     sqlite.pragma("cache_size = 1000000");
     sqlite.pragma("temp_store = memory");
 
+    // Step 4: Validate essential tables exist
+    console.log("🔍 DB_MANAGER: Checking essential table structure...");
+    const essentialTables = ['organizations', 'users', 'jobs', 'candidates'];
+    const missingTables: string[] = [];
+    
+    for (const tableName of essentialTables) {
+      const tableExists = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+      if (!tableExists) {
+        missingTables.push(tableName);
+        console.error(`❌ DB_MANAGER: Essential table '${tableName}' is missing`);
+      } else {
+        // Check record count for informational purposes  
+        const count = sqlite.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get() as { count: number };
+        console.log(`✅ DB_MANAGER: Table '${tableName}' exists (${count.count} records)`);
+      }
+    }
+    
+    if (missingTables.length > 0) {
+      throw new Error(`Essential tables missing: ${missingTables.join(', ')}. Database structure is incomplete.`);
+    }
+
+    // Step 5: Create Drizzle instance
     const db = drizzle(sqlite, { schema });
+    
+    const validationTime = Date.now() - validationStart;
+    console.log(`✅ DB_MANAGER: Existing database validated successfully in ${validationTime}ms`);
 
     return {
       db,
@@ -446,8 +551,16 @@ async function openAndValidateDatabase(dbPath: string): Promise<DatabaseInstance
     };
 
   } catch (error) {
-    console.error("❌ DB_MANAGER: Database validation failed:", error);
-    sqlite.close();
+    const elapsed = Date.now() - validationStart;
+    console.error(`❌ DB_MANAGER: Database validation failed after ${elapsed}ms:`, error);
+    
+    try {
+      sqlite.close();
+      console.log("🧹 DB_MANAGER: Database connection closed after validation failure");
+    } catch (closeError) {
+      console.error("⚠️ DB_MANAGER: Error closing database after validation failure:", closeError);
+    }
+    
     throw error;
   }
 }
