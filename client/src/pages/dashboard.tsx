@@ -47,10 +47,18 @@ export default function Dashboard() {
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
+    // Override global 4-hour cache for frequently changing data
+    staleTime: 2 * 60 * 1000,   // 2 minutes for jobs
+    gcTime: 10 * 60 * 1000,     // Keep in cache for 10 minutes
+    refetchOnMount: true,       // Always fetch fresh data when component mounts
   });
 
   const { data: candidates = [], isLoading: candidatesLoading } = useQuery<Candidate[]>({
     queryKey: ["/api/candidates"],
+    // Override global 4-hour cache for frequently changing data
+    staleTime: 2 * 60 * 1000,   // 2 minutes for candidates
+    gcTime: 10 * 60 * 1000,     // Keep in cache for 10 minutes
+    refetchOnMount: true,       // Always fetch fresh data when component mounts
   });
 
   const { data: interviews = [], isLoading: interviewsLoading } = useQuery({

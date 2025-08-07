@@ -63,12 +63,17 @@ export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploa
     onSuccess: (result: UploadResult) => {
       onUploadStateChange?.(false);
       setUploadResult(result);
+      
+      // Aggressively invalidate and refetch data after upload
       if (uploadType === 'jobs') {
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        queryClient.refetchQueries({ queryKey: ["/api/jobs"] }); // Force immediate refetch
       } else {
         queryClient.invalidateQueries({ queryKey: ["/api/candidates"] });
+        queryClient.refetchQueries({ queryKey: ["/api/candidates"] }); // Force immediate refetch
       }
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      queryClient.refetchQueries({ queryKey: ["/api/stats"] }); // Force immediate refetch
       
       // Use the custom message from backend if available, otherwise use default
       const message = result.message || `Successfully processed ${result.created} ${uploadType}, ignored ${result.ignored} files`;
