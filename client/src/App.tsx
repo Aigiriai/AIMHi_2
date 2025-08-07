@@ -22,7 +22,7 @@ import OnboardingDashboard from "@/pages/onboarding-dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  console.log('Router component initializing...');
+
   const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isAuthenticated());
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(() => authService.getUser()?.role || null);
@@ -57,7 +57,7 @@ function Router() {
           const user = await authService.getCurrentUser();
           setIsAuthenticated(true);
           setUserRole(user.role);
-          console.log('Authentication successful:', user.role);
+
         } catch (userError) {
           console.error('Failed to get user data:', userError);
           // Clear auth state on error
@@ -66,7 +66,7 @@ function Router() {
           setUserRole(null);
         }
       } else {
-        console.log('No authentication token found');
+
         setIsAuthenticated(false);
         setUserRole(null);
       }
@@ -182,7 +182,7 @@ function Router() {
 }
 
 function App() {
-  console.log('App component rendering...');
+
   
   try {
     return (
