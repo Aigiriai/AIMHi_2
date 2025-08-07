@@ -73,8 +73,6 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-export import { QueryClient } from '@tanstack/react-query';
-
 // Create query client with 4-hour authentication caching strategy
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,7 +88,7 @@ const queryClient = new QueryClient({
       refetchInterval: false,         // No automatic polling
       
       // Retry strategy for network resilience
-      retry: (failureCount, error: any) => {
+      retry: (failureCount: number, error: any) => {
         // Don't retry on auth failures (401/403) - these are real auth issues
         if (error?.status === 401 || error?.status === 403) {
           return false;
@@ -98,11 +96,11 @@ const queryClient = new QueryClient({
         // Retry network errors up to 2 times
         return failureCount < 2;
       },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+      retryDelay: (attemptIndex: number) => Math.min(1000 * 2 ** attemptIndex, 10000),
     },
     mutations: {
       // Mutations should still retry network errors
-      retry: (failureCount, error: any) => {
+      retry: (failureCount: number, error: any) => {
         if (error?.status === 401 || error?.status === 403) {
           return false;
         }
@@ -111,3 +109,5 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+export default queryClient;
