@@ -257,7 +257,12 @@ async function performInitialization(): Promise<DatabaseInstance> {
     console.log(`📁 DB_MANAGER: Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV})`);
 
     // Step 2: Handle production startup (marker-based fresh DB)
+    // ✅ TEMPORARY FIX: Bypass production startup handler to isolate hanging issue
     let freshDbCreated = false;
+    console.log("⚠️ DB_MANAGER: TEMPORARILY BYPASSING production startup handler to fix hanging issue");
+    console.log("⚠️ DB_MANAGER: This means fresh database markers will be ignored");
+    
+    /*
     if (process.env.NODE_ENV === "production") {
       freshDbCreated = await handleProductionStartup(dataDir);
       if (freshDbCreated) {
@@ -272,9 +277,15 @@ async function performInitialization(): Promise<DatabaseInstance> {
         return result;
       }
     }
+    */
 
     // Step 3: Handle backup restoration (in all environments if no fresh DB was created)
+    // ✅ TEMPORARY FIX: Bypass backup restoration to isolate hanging issue
     let restoredFromBackup = false;
+    console.log("⚠️ DB_MANAGER: TEMPORARILY BYPASSING backup restoration to fix hanging issue");
+    console.log("⚠️ DB_MANAGER: This means no automatic backup restoration will occur");
+    
+    /*
     if (!freshDbCreated) {
       restoredFromBackup = await attemptBackupRestoration(dbPath);
       if (restoredFromBackup) {
@@ -289,6 +300,7 @@ async function performInitialization(): Promise<DatabaseInstance> {
         return result;
       }
     }
+    */
 
     // Step 4: Smart initialization with data preservation
     console.log("🔄 DB_MANAGER: Proceeding with smart database initialization...");
@@ -350,11 +362,31 @@ async function performInitialization(): Promise<DatabaseInstance> {
  * PRODUCTION STARTUP HANDLER INTEGRATION
  */
 async function handleProductionStartup(dataDir: string): Promise<boolean> {
+  console.log("🚀 DB_MANAGER: handleProductionStartup() called");
+  console.log(`📁 DB_MANAGER: dataDir = ${dataDir}`);
+  console.log(`🌍 DB_MANAGER: NODE_ENV = ${process.env.NODE_ENV}`);
+  
   try {
+    console.log("📦 DB_MANAGER: Importing production-startup-handler...");
+    const startImportTime = Date.now();
     const { handleProductionStartup: startupHandler } = await import("./production-startup-handler");
-    return await startupHandler(dataDir);
+    const importTime = Date.now() - startImportTime;
+    console.log(`✅ DB_MANAGER: Import completed in ${importTime}ms`);
+    
+    console.log("🔄 DB_MANAGER: Calling production startup handler...");
+    const startHandlerTime = Date.now();
+    const result = await startupHandler(dataDir);
+    const handlerTime = Date.now() - startHandlerTime;
+    console.log(`✅ DB_MANAGER: Production startup handler completed in ${handlerTime}ms with result: ${result}`);
+    
+    return result;
   } catch (error) {
     console.error("❌ DB_MANAGER: Production startup handler failed:", error);
+    console.error("❌ DB_MANAGER: Error details:", {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack?.substring(0, 300)
+    });
     return false;
   }
 }
@@ -364,21 +396,32 @@ async function handleProductionStartup(dataDir: string): Promise<boolean> {
  * Works in both development and production environments
  */
 async function attemptBackupRestoration(dbPath: string): Promise<boolean> {
+  console.log("🔄 DB_MANAGER: attemptBackupRestoration() started");
+  console.log(`📁 DB_MANAGER: Target database path: ${dbPath}`);
+  
   try {
-    console.log("🔄 DB_MANAGER: Attempting backup restoration...");
-    console.log(`📁 DB_MANAGER: Target database path: ${dbPath}`);
-    
+    console.log("📦 DB_MANAGER: Importing data-persistence...");
+    const startImportTime = Date.now();
     const { dataPersistence } = await import("./data-persistence");
+    const importTime = Date.now() - startImportTime;
+    console.log(`✅ DB_MANAGER: data-persistence imported in ${importTime}ms`);
+    
+    console.log("🔄 DB_MANAGER: Calling restoreFromLatestBackup...");
+    const startRestoreTime = Date.now();
     const restored = await dataPersistence.restoreFromLatestBackup();
+    const restoreTime = Date.now() - startRestoreTime;
+    console.log(`✅ DB_MANAGER: restoreFromLatestBackup completed in ${restoreTime}ms with result: ${restored}`);
     
     if (restored && existsSync(dbPath)) {
       console.log("✅ DB_MANAGER: Successfully restored from backup");
       
       // Verify the restored database
       try {
+        console.log("🔍 DB_MANAGER: Verifying restored database integrity...");
         const sqlite = new Database(dbPath, { readonly: true });
         const integrityResult = sqlite.pragma("integrity_check", { simple: true });
         sqlite.close();
+        console.log(`🔍 DB_MANAGER: Integrity check result: ${integrityResult}`);
         
         if (integrityResult !== 'ok') {
           console.error("❌ DB_MANAGER: Restored database failed integrity check");
