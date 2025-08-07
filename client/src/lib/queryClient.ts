@@ -110,4 +110,6 @@ const queryClient = new QueryClient({
   },
 });
 
+// Export both default and named export for compatibility
 export default queryClient;
+export { queryClient };
