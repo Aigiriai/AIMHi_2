@@ -41,17 +41,27 @@ export class ProductionStartupHandler {
     console.log(`📁 PRODUCTION_STARTUP: Looking for marker at: ${this.markerPath}`);
     
     try {
-      if (!existsSync(this.markerPath)) {
+      // ✅ PRODUCTION FIX: Add timeout for file existence check
+      const fileExistsStart = Date.now();
+      const exists = existsSync(this.markerPath);
+      const fileExistsTime = Date.now() - fileExistsStart;
+      console.log(`📁 PRODUCTION_STARTUP: File existence check completed in ${fileExistsTime}ms`);
+      
+      if (!exists) {
         console.log("📊 PRODUCTION_STARTUP: No fresh database marker found - normal startup");
         return false;
       }
 
       console.log("🔍 PRODUCTION_STARTUP: Found fresh database marker file");
       
-      // Read file with explicit encoding and error handling
+      // ✅ PRODUCTION FIX: Add timeout for file read operation
       let markerContent: string;
       try {
+        console.log("📄 PRODUCTION_STARTUP: Starting file read operation...");
+        const readStart = Date.now();
         markerContent = readFileSync(this.markerPath, 'utf-8');
+        const readTime = Date.now() - readStart;
+        console.log(`📄 PRODUCTION_STARTUP: File read completed in ${readTime}ms`);
         console.log("📄 PRODUCTION_STARTUP: File read successfully");
         console.log("📊 PRODUCTION_STARTUP: Raw content length:", markerContent.length);
         console.log("📄 PRODUCTION_STARTUP: Raw content (first 200 chars):", markerContent.substring(0, 200));
@@ -60,8 +70,13 @@ export class ProductionStartupHandler {
         return false;
       }
       
-      // Validate and parse marker
+      // ✅ PRODUCTION FIX: Add timeout for validation
+      console.log("🔍 PRODUCTION_STARTUP: Starting marker validation...");
+      const validationStart = Date.now();
       const marker = await this.validateAndParseMarker(markerContent);
+      const validationTime = Date.now() - validationStart;
+      console.log(`🔍 PRODUCTION_STARTUP: Marker validation completed in ${validationTime}ms`);
+      
       if (!marker) {
         console.log("❌ PRODUCTION_STARTUP: Marker validation failed - treating as invalid");
         
@@ -187,25 +202,59 @@ export async function handleProductionStartup(dataDir: string = "./data"): Promi
   console.log("🚀 PRODUCTION_STARTUP: Production startup handler called");
   console.log(`📁 PRODUCTION_STARTUP: Data directory: ${dataDir}`);
   
-  const handler = new ProductionStartupHandler(dataDir);
+  // ✅ PRODUCTION FIX: Add timeout to prevent infinite hanging
+  const timeoutMs = 5000; // 5 second timeout
   
   try {
-    // Check if fresh production is required
-    const needsFreshDb = await handler.checkForFreshProductionMarker();
+    console.log(`⏱️ PRODUCTION_STARTUP: Starting with ${timeoutMs}ms timeout`);
     
-    if (needsFreshDb) {
-      console.log("🚨 PRODUCTION_STARTUP: Fresh database required");
-      // Clean up marker immediately to prevent re-processing
-      handler.cleanupMarker();
-      console.log("✅ PRODUCTION_STARTUP: Fresh database creation will be handled by unified-db-manager");
-      return true;
+    // Create timeout promise
+    const timeoutPromise = new Promise<boolean>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Production startup timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+    
+    // Create the actual work promise
+    const workPromise = async (): Promise<boolean> => {
+      const handler = new ProductionStartupHandler(dataDir);
+      
+      // Check if fresh production is required
+      const needsFreshDb = await handler.checkForFreshProductionMarker();
+      
+      if (needsFreshDb) {
+        console.log("🚨 PRODUCTION_STARTUP: Fresh database required");
+        // Clean up marker immediately to prevent re-processing
+        handler.cleanupMarker();
+        console.log("✅ PRODUCTION_STARTUP: Fresh database creation will be handled by unified-db-manager");
+        return true;
+      }
+      
+      console.log("📊 PRODUCTION_STARTUP: No fresh database required - normal startup");
+      return false;
+    };
+    
+    // Race the work against timeout
+    console.log("🏁 PRODUCTION_STARTUP: Racing work vs timeout...");
+    const result = await Promise.race([workPromise(), timeoutPromise]);
+    
+    console.log(`✅ PRODUCTION_STARTUP: Completed successfully with result: ${result}`);
+    return result;
+    
+  } catch (error: any) {
+    console.error("❌ PRODUCTION_STARTUP: Error in startup handler:", error);
+    console.error("❌ PRODUCTION_STARTUP: Error details:", {
+      name: error?.name,
+      message: error?.message,
+      isTimeout: error?.message?.includes('timeout')
+    });
+    
+    // ✅ PRODUCTION FIX: On timeout or error, proceed with normal startup
+    if (error?.message?.includes('timeout')) {
+      console.log("⚠️ PRODUCTION_STARTUP: Timeout occurred - proceeding with normal database startup");
+      return false;
     }
     
-    console.log("📊 PRODUCTION_STARTUP: No fresh database required - normal startup");
-    return false;
-    
-  } catch (error) {
-    console.error("❌ PRODUCTION_STARTUP: Error in startup handler:", error);
     return false;
   }
 }

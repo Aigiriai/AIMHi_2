@@ -257,12 +257,7 @@ async function performInitialization(): Promise<DatabaseInstance> {
     console.log(`📁 DB_MANAGER: Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV})`);
 
     // Step 2: Handle production startup (marker-based fresh DB)
-    // ✅ TEMPORARY FIX: Bypass production startup handler to isolate hanging issue
     let freshDbCreated = false;
-    console.log("⚠️ DB_MANAGER: TEMPORARILY BYPASSING production startup handler to fix hanging issue");
-    console.log("⚠️ DB_MANAGER: This means fresh database markers will be ignored");
-    
-    /*
     if (process.env.NODE_ENV === "production") {
       freshDbCreated = await handleProductionStartup(dataDir);
       if (freshDbCreated) {
@@ -277,15 +272,9 @@ async function performInitialization(): Promise<DatabaseInstance> {
         return result;
       }
     }
-    */
 
     // Step 3: Handle backup restoration (in all environments if no fresh DB was created)
-    // ✅ TEMPORARY FIX: Bypass backup restoration to isolate hanging issue
     let restoredFromBackup = false;
-    console.log("⚠️ DB_MANAGER: TEMPORARILY BYPASSING backup restoration to fix hanging issue");
-    console.log("⚠️ DB_MANAGER: This means no automatic backup restoration will occur");
-    
-    /*
     if (!freshDbCreated) {
       restoredFromBackup = await attemptBackupRestoration(dbPath);
       if (restoredFromBackup) {
@@ -300,7 +289,6 @@ async function performInitialization(): Promise<DatabaseInstance> {
         return result;
       }
     }
-    */
 
     // Step 4: Smart initialization with data preservation
     console.log("🔄 DB_MANAGER: Proceeding with smart database initialization...");

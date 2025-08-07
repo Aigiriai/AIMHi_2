@@ -20,7 +20,11 @@ import SettingsPage from "@/pages/settings";
 export const TabContext = createContext({ isInTab: false });
 
 function ManagementDashboard() {
+  console.log(`🏢 MANAGEMENT: ManagementDashboard component mounted`);
+  console.log(`🏢 MANAGEMENT: Current URL:`, window.location.href);
+  
   const [activeTab, setActiveTab] = useState("dashboard");
+  console.log(`🏢 MANAGEMENT: Active tab:`, activeTab);
 
   const tabs = [
     { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -61,6 +65,7 @@ function ManagementDashboard() {
 
             {/* Dashboard Tab */}
             <TabsContent value="dashboard" className="mt-0">
+              {console.log(`🏢 MANAGEMENT: Rendering dashboard tab content`)}
               <div style={{ display: 'contents' }}>
                 <style dangerouslySetInnerHTML={{
                   __html: `
@@ -72,7 +77,9 @@ function ManagementDashboard() {
                   `
                 }} />
                 <div className="tab-content">
+                  {console.log(`🏢 MANAGEMENT: About to render SuperAdminDashboard`)}
                   <SuperAdminDashboard />
+                  {console.log(`🏢 MANAGEMENT: SuperAdminDashboard rendered`)}
                 </div>
               </div>
             </TabsContent>
