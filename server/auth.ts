@@ -1,11 +1,17 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { Request, Response, NextFunction } from 'express';
-import { getDB } from './db-connection';
+import { getSQLiteDB } from './unified-db-manager';
 import { eq, and, sql } from 'drizzle-orm';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-jwt-secret-key';
 const SALT_ROUNDS = 12;
+
+// Database connection helper - using unified database manager
+async function getDB() {
+  const { db } = await getSQLiteDB();
+  return { db, schema: { users: (await import('./sqlite-schema')).users, organizations: (await import('./sqlite-schema')).organizations } };
+}
 
 export interface AuthenticatedUser {
   id: number;

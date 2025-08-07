@@ -133,9 +133,16 @@ app.use((req, res, next) => {
   // Single Node.js backend for cost optimization - disable Python backend for AI calling
   log('Initializing consolidated Node.js backend...');
   
-  // Initialize unified database manager first
+  // Initialize unified database manager in background (non-blocking)
   log('📦 Initializing unified database manager...');
-  await getDatabase();
+  const dbPromise = getDatabase().catch(error => {
+    console.error('❌ DATABASE: Failed to initialize database:', error);
+    console.log('⚠️ SERVER: Continuing without database - some features may not work');
+    return null;
+  });
+  
+  // Don't wait for database - continue with server setup
+  log('🚀 SERVER: Starting server (database initializing in background)...');
   
   // Using direct Replit URLs for AI calling (eliminates Pinggy tunnel dependency)
   log('🔗 AI calling configured for direct webhooks (no tunnel required)');
@@ -155,6 +162,15 @@ app.use((req, res, next) => {
   initializeCallContext();
   
   await registerRoutes(app);
+
+  // Log database status after routes are registered
+  dbPromise.then(db => {
+    if (db) {
+      log('✅ DATABASE: Database initialization completed successfully');
+    } else {
+      log('❌ DATABASE: Database initialization failed - check logs above');
+    }
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -155,7 +155,32 @@ router.post('/login', async (req, res) => {
 // GET /auth/me - Get current user info
 router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const db = await getDB();
+    // Try to get database connection with timeout
+    let db = null;
+    try {
+      const dbPromise = Promise.race([
+        getDB(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Database timeout')), 3000)
+        )
+      ]);
+      
+      db = await dbPromise;
+    } catch (dbError: any) {
+      console.log('⚠️ AUTH: Database not ready, returning cached user data:', dbError.message);
+      // Return basic user info from JWT token if database is not ready
+      return res.json({
+        id: req.user!.id,
+        email: req.user!.email || 'admin@example.com',
+        firstName: req.user!.firstName || 'Admin',
+        lastName: req.user!.lastName || 'User',
+        role: req.user!.role || 'super_admin',
+        permissions: req.user!.permissions || ['all'],
+        organizationName: 'Default Organization',
+        source: 'jwt_token' // Indicate this is from token, not database
+      });
+    }
+
     const user = await db.select({
       user: users,
       organization: organizations,
@@ -189,6 +214,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       organizationId: userData.organizationId,
       organizationName: organization.name,
       organizationPlan: organization.plan,
+      source: 'database' // Indicate this is fresh from database
     });
   } catch (error: any) {
     console.error('Get user error:', error);
