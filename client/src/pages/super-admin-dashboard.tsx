@@ -36,102 +36,18 @@ interface Organization {
 }
 
 export default function SuperAdminDashboard() {
-  console.log(`🚀 CLIENT: SuperAdminDashboard component mounted`);
-  console.log(`🚀 CLIENT: Current URL:`, window.location.href);
-  console.log(`🚀 CLIENT: User agent:`, navigator.userAgent);
-  
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
-  console.log(`🔄 CLIENT: SuperAdminDashboard state:`, { currentPage, pageSize });
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Fetch organizations with pagination
   const { data: organizationsData, isLoading: orgsLoading, error: orgsError } = useQuery({
     queryKey: ['/api/auth/organizations', currentPage, pageSize],
     queryFn: async () => {
-      const requestId = Math.random().toString(36).substr(2, 9);
-      console.log(`🔄 CLIENT[${requestId}]: ============= FETCHING ORGANIZATIONS =============`);
-      console.log(`🔄 CLIENT[${requestId}]: Request params:`, { currentPage, pageSize });
-      
       const token = authService.getToken();
-      console.log(`🔄 CLIENT[${requestId}]: Token available:`, !!token);
-      console.log(`🔄 CLIENT[${requestId}]: Token length:`, token?.length || 0);
-      
       const url = `/api/auth/organizations?page=${currentPage}&limit=${pageSize}`;
-      console.log(`🔄 CLIENT[${requestId}]: Fetching URL:`, url);
-      console.log(`🔄 CLIENT[${requestId}]: Base URL:`, window.location.origin);
-      console.log(`🔄 CLIENT[${requestId}]: Full URL:`, window.location.origin + url);
       
-      const fetchStart = Date.now();
-      
-      try {
-        console.log(`📤 CLIENT[${requestId}]: Sending fetch request...`);
-        const response = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        const fetchTime = Date.now() - fetchStart;
-        console.log(`📥 CLIENT[${requestId}]: Response received in ${fetchTime}ms`);
-        console.log(`📥 CLIENT[${requestId}]: Response status:`, response.status, response.statusText);
-        console.log(`📥 CLIENT[${requestId}]: Response headers:`, Object.fromEntries(response.headers.entries()));
-        console.log(`📥 CLIENT[${requestId}]: Response ok:`, response.ok);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`❌ CLIENT[${requestId}]: HTTP Error:`, {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText
-          });
-          throw new Error(`Failed to fetch organizations: ${response.status} ${response.statusText}`);
-        }
-        
-        console.log(`📋 CLIENT[${requestId}]: Parsing JSON response...`);
-        const parseStart = Date.now();
-        const data = await response.json();
-        const parseTime = Date.now() - parseStart;
-        
-        console.log(`✅ CLIENT[${requestId}]: JSON parsed in ${parseTime}ms`);
-        console.log(`✅ CLIENT[${requestId}]: Response data:`, {
-          organizationCount: data.organizations?.length || 0,
-          pagination: data.pagination,
-          totalSize: JSON.stringify(data).length
-        });
-        console.log(`🔄 CLIENT[${requestId}]: ============= FETCH SUCCESS =============`);
-        
-        return data;
-      } catch (error: any) {
-        const fetchTime = Date.now() - fetchStart;
-        console.error(`❌ CLIENT[${requestId}]: Fetch failed after ${fetchTime}ms:`, {
-          error: error.message,
-          type: error.constructor.name,
-          stack: error.stack?.split('\n').slice(0, 3)
-        });
-        console.log(`🔄 CLIENT[${requestId}]: ============= FETCH ERROR =============`);
-        throw error;
-      }
-    },
-    retry: (failureCount, error) => {
-      console.log(`🔄 CLIENT: Retry attempt ${failureCount} for organizations fetch:`, error.message);
-      return failureCount < 3; // Retry up to 3 times
-    },
-    retryDelay: (attemptIndex) => {
-      const delay = Math.min(1000 * 2 ** attemptIndex, 30000);
-      console.log(`⏳ CLIENT: Retrying in ${delay}ms (attempt ${attemptIndex + 1})`);
-      return delay;
-    }
-  });
-
-  // Fetch all organizations for stats calculation (without pagination)
-  const { data: allOrganizationsData } = useQuery({
-    queryKey: ['/api/auth/organizations-all'],
-    queryFn: async () => {
-      console.log(`🔄 CLIENT: Fetching all organizations for stats...`);
-      const token = authService.getToken();
-      const response = await fetch(`/api/auth/organizations?page=1&limit=1000`, {
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -139,14 +55,26 @@ export default function SuperAdminDashboard() {
       });
       
       if (!response.ok) {
-        console.error(`❌ CLIENT: Failed to fetch all organizations:`, response.status, response.statusText);
-        throw new Error('Failed to fetch all organizations');
+        throw new Error(`Failed to fetch organizations: ${response.status} ${response.statusText}`);
       }
       
-      const data = await response.json();
-      console.log(`✅ CLIENT: All organizations fetched:`, data.organizations?.length || 0);
-      return data;
-      return data;
+      return response.json();
+    },
+  });
+
+  // Fetch all organizations for stats calculation (without pagination)
+  const { data: allOrganizationsData } = useQuery({
+    queryKey: ['/api/auth/organizations-all'],
+    queryFn: async () => {
+      const token = authService.getToken();
+      const response = await fetch(`/api/auth/organizations?page=1&limit=1000`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) throw new Error('Failed to fetch all organizations');
+      return response.json();
     },
   });
 
@@ -191,13 +119,6 @@ export default function SuperAdminDashboard() {
         return 'bg-gray-100 text-gray-800';
     }
   };
-
-  console.log(`🔄 CLIENT: SuperAdminDashboard component state:`, {
-    orgsLoading,
-    orgsError: orgsError?.message,
-    organizationsData: !!organizationsData,
-    organizationCount: organizationsData?.organizations?.length || 0
-  });
 
   return (
     <ProtectedRoute requiredRoles={['super_admin']}>
