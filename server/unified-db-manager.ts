@@ -97,7 +97,7 @@ export async function getDatabase(): Promise<DatabaseInstance> {
  */
 async function performInitializationWithTimeout(): Promise<DatabaseInstance> {
   const initStartTime = Date.now();
-  const timeoutMs = 60000;
+  const timeoutMs = process.env.NODE_ENV === "production" ? 15000 : 60000; // 15s for production, 60s for dev
   
   console.log(`⏱️ DB_MANAGER: Starting initialization with ${timeoutMs/1000}s timeout`);
   console.log(`📊 DB_MANAGER: Environment - NODE_ENV: ${process.env.NODE_ENV || 'undefined'}, CWD: ${process.cwd()}`);
@@ -261,42 +261,39 @@ async function performInitialization(): Promise<DatabaseInstance> {
     
     // ✅ ENHANCED LOGIC: Smart decision making for database initialization
     let result: DatabaseInstance;
-    if (existsSync(dbPath)) {
-      console.log("📂 DB_MANAGER: Existing database found - attempting to open and validate...");
+    
+    // PRODUCTION: Ultra-simplified initialization to prevent timeouts
+    if (process.env.NODE_ENV === "production") {
+      console.log("🏭 DB_MANAGER: Production mode - using simplified initialization");
+      
+      // Clean up any existing files
       try {
-        result = await openAndValidateDatabase(dbPath);
-        console.log("✅ DB_MANAGER: Existing database opened successfully - data preserved!");
-      } catch (error) {
-        console.warn("⚠️ DB_MANAGER: Existing database validation failed:", (error as Error).message);
-        
-        // In production, if database is corrupted/missing tables, clean up and create fresh database
-        if (process.env.NODE_ENV === "production") {
-          console.log("🏭 DB_MANAGER: Production environment - removing corrupted database and creating fresh one");
-          
-          // Remove the corrupted database file
-          try {
-            if (existsSync(dbPath)) {
-              unlinkSync(dbPath);
-              console.log("🗑️ DB_MANAGER: Removed corrupted database file from production");
-            }
-            
-            // Also clean up any backup files that might be corrupted
-            const backupPath = join(dataDir, "backup.db");
-            if (existsSync(backupPath)) {
-              try {
-                unlinkSync(backupPath);
-                console.log("🗑️ DB_MANAGER: Removed potentially corrupted backup file");
-              } catch (backupDeleteError) {
-                console.warn("⚠️ DB_MANAGER: Could not remove backup file:", backupDeleteError);
-              }
-            }
-          } catch (deleteError) {
-            console.warn("⚠️ DB_MANAGER: Could not remove corrupted database file:", deleteError);
-            // Continue anyway - createFreshDatabase will overwrite
-          }
-          
-          result = await createFreshDatabase(dbPath, true); // Force recreate after cleanup
-        } else {
+        if (existsSync(dbPath)) {
+          unlinkSync(dbPath);
+          console.log("🗑️ DB_MANAGER: Removed existing production database");
+        }
+        const backupPath = join(dataDir, "backup.db");
+        if (existsSync(backupPath)) {
+          unlinkSync(backupPath);
+          console.log("🗑️ DB_MANAGER: Removed existing backup");
+        }
+      } catch (cleanupError) {
+        console.warn("⚠️ DB_MANAGER: Cleanup warning (continuing):", cleanupError);
+      }
+      
+      // Direct fresh database creation - no validation, no backup logic
+      console.log("📦 DB_MANAGER: Creating fresh production database (simplified)");
+      result = await createFreshDatabase(dbPath, false);
+      console.log("✅ DB_MANAGER: Production database created successfully");
+    } else {
+      // DEVELOPMENT: Full logic with validation and backup restoration
+      if (existsSync(dbPath)) {
+        console.log("📂 DB_MANAGER: Existing database found - attempting to open and validate...");
+        try {
+          result = await openAndValidateDatabase(dbPath);
+          console.log("✅ DB_MANAGER: Existing database opened successfully - data preserved!");
+        } catch (error) {
+          console.warn("⚠️ DB_MANAGER: Existing database validation failed:", (error as Error).message);
           console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
           
           // Try backup restoration before creating fresh database
@@ -309,27 +306,8 @@ async function performInitialization(): Promise<DatabaseInstance> {
             result = await createFreshDatabase(dbPath, true); // Force recreate on validation failure
           }
         }
-      }
-    } else {
-      console.log("📂 DB_MANAGER: No existing database found");
-      
-      // In production, create fresh database immediately
-      if (process.env.NODE_ENV === "production") {
-        console.log("🏭 DB_MANAGER: Production environment - creating fresh database");
-        
-        // Clean up any stray backup files to ensure clean slate
-        try {
-          const backupPath = join(dataDir, "backup.db");
-          if (existsSync(backupPath)) {
-            unlinkSync(backupPath);
-            console.log("🗑️ DB_MANAGER: Removed existing backup file for clean production start");
-          }
-        } catch (backupDeleteError) {
-          console.warn("⚠️ DB_MANAGER: Could not remove existing backup file:", backupDeleteError);
-        }
-        
-        result = await createFreshDatabase(dbPath, false);
       } else {
+        console.log("📂 DB_MANAGER: No existing database found");
         console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
         
         // Try backup restoration first
@@ -458,6 +436,7 @@ async function createFreshDatabase(dbPath: string, forceRecreate: boolean = fals
   console.log(`🆕 DB_MANAGER: Creating fresh database with unified schema...`);
   console.log(`📁 DB_MANAGER: Target path: ${dbPath}`);
   console.log(`🔧 DB_MANAGER: Force recreate: ${forceRecreate}`);
+  console.log(`🏭 DB_MANAGER: Environment: ${process.env.NODE_ENV}`);
 
   // ✅ FIX: Only remove existing database if forced or we need to recreate
   if (existsSync(dbPath)) {
@@ -672,6 +651,7 @@ async function openAndValidateDatabase(dbPath: string): Promise<DatabaseInstance
 async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
   const tableStartTime = Date.now();
   console.log(`📝 DB_MANAGER: Creating unified schema tables...`);
+  console.log(`🏭 DB_MANAGER: Environment: ${process.env.NODE_ENV}`);
 
   // Define table creation statements with metadata
   const tableDefinitions = [
@@ -694,6 +674,8 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
     { name: 'usage_metrics', description: 'Billing and usage tracking' },
     { name: 'audit_logs', description: 'System audit and security logs' }
   ];
+  
+  console.log(`📊 DB_MANAGER: Will create ${tableDefinitions.length} tables`);
 
   const tableSQL = `
     -- Organizations table
@@ -1052,12 +1034,23 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
   try {
     console.log(`📊 DB_MANAGER: Executing unified schema creation (${tableDefinitions.length} tables)...`);
     
+    // Production: Add progress logging to detect where hanging occurs
+    if (process.env.NODE_ENV === "production") {
+      console.log(`🏭 DB_MANAGER: [PROD] About to execute SQL schema creation...`);
+      console.log(`🏭 DB_MANAGER: [PROD] SQL length: ${tableSQL.length} characters`);
+      console.log(`🏭 DB_MANAGER: [PROD] Starting SQL execution now...`);
+    }
+    
     // Log SQL execution with timing
     const sqlStart = Date.now();
     sqlite.exec(tableSQL);
     const sqlTime = Date.now() - sqlStart;
     
     console.log(`✅ DB_MANAGER: SQL execution completed in ${sqlTime}ms`);
+    
+    if (process.env.NODE_ENV === "production") {
+      console.log(`🏭 DB_MANAGER: [PROD] SQL execution successful, proceeding to verification...`);
+    }
     
     // Verify table creation with detailed logging
     console.log(`🔍 DB_MANAGER: Verifying table creation...`);
@@ -1129,6 +1122,10 @@ async function createPerformanceIndexes(sqlite: Database.Database): Promise<void
  */
 async function seedInitialData(sqlite: Database.Database): Promise<void> {
   console.log("🌱 DB_MANAGER: Starting unified seeding process...");
+  
+  if (process.env.NODE_ENV === "production") {
+    console.log("🏭 DB_MANAGER: [PROD] Starting seeding process...");
+  }
 
   // Check if database is empty
   const orgCount = sqlite.prepare('SELECT COUNT(*) as count FROM organizations').get() as { count: number };
@@ -1140,9 +1137,17 @@ async function seedInitialData(sqlite: Database.Database): Promise<void> {
   }
 
   console.log("🌱 DB_MANAGER: Database is empty - proceeding with seeding...");
+  
+  if (process.env.NODE_ENV === "production") {
+    console.log("🏭 DB_MANAGER: [PROD] Database confirmed empty, starting seeding...");
+  }
 
   try {
     // Create system organization
+    if (process.env.NODE_ENV === "production") {
+      console.log("🏭 DB_MANAGER: [PROD] Creating system organization...");
+    }
+    
     const orgResult = sqlite.prepare(`
       INSERT INTO organizations (name, domain, plan, status, created_at, updated_at) 
       VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
@@ -1151,9 +1156,22 @@ async function seedInitialData(sqlite: Database.Database): Promise<void> {
     const orgId = orgResult.lastInsertRowid;
     console.log(`✅ DB_MANAGER: Created system organization with ID ${orgId}`);
 
+    if (process.env.NODE_ENV === "production") {
+      console.log("🏭 DB_MANAGER: [PROD] Organization created, importing bcrypt...");
+    }
+    
     // Create super admin user
     const bcrypt = await import('bcrypt');
+    
+    if (process.env.NODE_ENV === "production") {
+      console.log("🏭 DB_MANAGER: [PROD] bcrypt imported, starting password hashing...");
+    }
+    
     const hashedPassword = await bcrypt.hash('SuperAdmin123!@#', 10);
+    
+    if (process.env.NODE_ENV === "production") {
+      console.log("🏭 DB_MANAGER: [PROD] Password hashed, inserting user...");
+    }
 
     sqlite.prepare(`
       INSERT INTO users (organization_id, email, first_name, last_name, password_hash, role, has_temporary_password, created_at, updated_at)
@@ -1161,6 +1179,10 @@ async function seedInitialData(sqlite: Database.Database): Promise<void> {
     `).run(orgId, 'superadmin@aimhi.app', 'Super', 'Admin', hashedPassword, 'super_admin', 0);
 
     console.log("✅ DB_MANAGER: Created super admin user");
+    
+    if (process.env.NODE_ENV === "production") {
+      console.log("🏭 DB_MANAGER: [PROD] User created successfully, seeding complete!");
+    }
     
     // Display credentials
     console.log('=== LOGIN CREDENTIALS ===');
