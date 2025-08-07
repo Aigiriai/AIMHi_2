@@ -10,7 +10,8 @@ const SALT_ROUNDS = 12;
 // Database connection helper - using unified database manager
 async function getDB() {
   const { db } = await getSQLiteDB();
-  return { db, schema: { users: (await import('./sqlite-schema')).users, organizations: (await import('./sqlite-schema')).organizations } };
+  const schema = await import('../unified-schema');
+  return { db, schema };
 }
 
 export interface AuthenticatedUser {
@@ -162,8 +163,8 @@ export async function authenticateToken(req: AuthRequest, res: Response, next: N
         }
         
         // Reset connection and try again
-        const { resetDBConnection } = await import('./db-connection');
-        resetDBConnection();
+        const { resetDatabase } = await import('./unified-db-manager');
+        resetDatabase();
         console.log(`🔄 AUTH[${authId}]: Resetting DB connection for retry ${retryCount}`);
         
         console.log(`🔄 AUTH[${authId}]: Waiting 100ms before retry...`);

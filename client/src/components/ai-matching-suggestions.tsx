@@ -32,15 +32,10 @@ export function AiMatchingSuggestions({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Get AI matching suggestions
+  // Get AI matching suggestions - using global queryFn with authentication
   const { data: suggestionsData, isLoading, refetch } = useQuery({
-    queryKey: [`/api/applications/suggestions`, { minScore: currentMinScore }],
-    queryFn: () => 
-      fetch(`/api/applications/suggestions?minScore=${currentMinScore}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-        },
-      }).then((res) => res.json()),
+    queryKey: [`/api/applications/suggestions?minScore=${currentMinScore}`],
+    // Global queryFn automatically handles authentication via getAuthHeaders()
   });
 
   const suggestions = Array.isArray(suggestionsData) ? suggestionsData : (suggestionsData?.suggestions || []);

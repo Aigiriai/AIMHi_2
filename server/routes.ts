@@ -11,7 +11,7 @@ import authRoutes from "./auth-routes";
 import settingsRoutes from "./settings-routes";
 import pipelineRoutes from "./pipeline-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
-import { getDB } from "./db-connection";
+import { getDB } from "./db-helper";
 import { eq, and, or, desc, inArray, sql, gte } from "drizzle-orm";
 // Consolidated seeding moved to sqlite-db.ts initialization
 import multer from "multer";
@@ -282,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if team with this name already exists in the organization
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       const existingTeam = await db.select()
         .from(schema.teams)
         .where(and(
@@ -989,7 +989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const createdCandidates = allCandidates.filter(candidate => candidate.addedBy === currentUser.id);
           
           // Get candidate assignments for this user
-          const { db, schema } = await getDB();
+          const { db } = await getDatabase(); const schema = await import('../unified-schema');
           const assignedCandidateResults = await db
             .select({ candidateId: schema.candidateAssignments.candidateId })
             .from(schema.candidateAssignments)
@@ -1017,7 +1017,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const allCandidates = await storage.getCandidatesByOrganization(organizationId);
           
           // Get candidate assignments for this user
-          const { db, schema } = await getDB();
+          const { db } = await getDatabase(); const schema = await import('../unified-schema');
           const assignedCandidateResults = await db
             .select({ candidateId: schema.candidateAssignments.candidateId })
             .from(schema.candidateAssignments)
@@ -1817,7 +1817,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Job assignment routes
   app.get('/api/jobs/:jobId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       const jobId = parseInt(req.params.jobId);
       const currentUser = req.user!;
 
@@ -1861,7 +1861,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/jobs/:jobId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       const jobId = parseInt(req.params.jobId);
       const currentUser = req.user!;
       const { userId, role } = req.body;
@@ -1939,7 +1939,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/jobs/:jobId/assignments/:assignmentId', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       const jobId = parseInt(req.params.jobId);
       const assignmentId = parseInt(req.params.assignmentId);
       const currentUser = req.user!;
@@ -1981,7 +1981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Candidate assignment routes with comprehensive error handling and logging
   app.get('/api/candidates/:candidateId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       const candidateId = parseInt(req.params.candidateId);
       const currentUser = req.user!;
 
@@ -2064,7 +2064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/candidates/:candidateId/assignments', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       const candidateId = parseInt(req.params.candidateId);
       const currentUser = req.user!;
       const { userId, role } = req.body;
@@ -2238,7 +2238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/candidates/:candidateId/assignments/:assignmentId', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {
     try {
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       const candidateId = parseInt(req.params.candidateId);
       const assignmentId = parseInt(req.params.assignmentId);
       const currentUser = req.user!;
@@ -2383,7 +2383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if user has permission to access both candidate and job
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       
       // Check job assignment
       const jobAssignment = await db
@@ -2494,7 +2494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔍 SUGGESTIONS: Getting application suggestions for user ${currentUser.id} with min score ${minScore}%`);
 
       // Get user's assigned jobs and candidates
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       
       let accessibleJobIds: number[] = [];
       let accessibleCandidateIds: number[] = [];
@@ -2605,7 +2605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = currentUser.organizationId!;
 
       // Get user's accessible jobs
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       
       let accessibleJobs: any[] = [];
 
@@ -2660,7 +2660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = currentUser.organizationId!;
 
       // Get user's accessible candidates
-      const { db, schema } = await getDB();
+      const { db } = await getDatabase(); const schema = await import('../unified-schema');
       
       let accessibleCandidates: any[] = [];
 
