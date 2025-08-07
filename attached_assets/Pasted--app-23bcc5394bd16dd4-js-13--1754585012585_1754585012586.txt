@@ -1,0 +1,134 @@
+_app-23bcc5394bd16dd4.js:13 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+_app-23bcc5394bd16dd4.js:13 [LaunchDarkly] LaunchDarkly client initialized
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+Error while parsing the 'sandbox' attribute: 'allow-downloads-without-user-activation' is an invalid sandbox flag.
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'ambient-light-sensor'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'battery'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'execution-while-not-rendered'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'execution-while-out-of-viewport'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'layout-animations'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'legacy-image-formats'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'navigation-override'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'oversized-images'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'publickey-credentials'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'speaker-selection'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'unoptimized-images'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'unsized-media'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Unrecognized feature: 'pointer-lock'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Allow attribute will take precedence over 'allowfullscreen'.
+_ @ framework-904731c5b6fb1461.js:1
+framework-904731c5b6fb1461.js:1 Allow attribute will take precedence over 'allowpaymentrequest'.
+_ @ framework-904731c5b6fb1461.js:1
+analytics.tiktok.com/i18n/pixel/events.js?sdkid=D004GE3C77U8PIVDSDJG&lib=ttq:1  Failed to load resource: net::ERR_CONNECTION_TIMED_OUT
+cf0b802887d7d8a12c1bb66f7c4fe2d6:1  Failed to load resource: the server responded with a status of 404 ()
+AITalentMatch:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+cf0b802887d7d8a12c1bb66f7c4fe2d6:1  Failed to load resource: the server responded with a status of 404 ()
+cf0b802887d7d8a12c1bb66f7c4fe2d6:1  Failed to load resource: the server responded with a status of 404 ()
+cf0b802887d7d8a12c1bb66f7c4fe2d6:1  Failed to load resource: the server responded with a status of 404 ()
+cf0b802887d7d8a12c1bb66f7c4fe2d6:1  Failed to load resource: the server responded with a status of 404 ()
+cf0b802887d7d8a12c1bb66f7c4fe2d6:1  Failed to load resource: the server responded with a status of 404 ()
+workspace_iframe.html:32 Unrecognized feature: 'ambient-light-sensor'.
+workspace_iframe.html:32 Unrecognized feature: 'battery'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-not-rendered'.
+workspace_iframe.html:32 Unrecognized feature: 'execution-while-out-of-viewport'.
+workspace_iframe.html:32 Unrecognized feature: 'layout-animations'.
+workspace_iframe.html:32 Unrecognized feature: 'legacy-image-formats'.
+workspace_iframe.html:32 Unrecognized feature: 'navigation-override'.
+workspace_iframe.html:32 Unrecognized feature: 'oversized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'publickey-credentials'.
+workspace_iframe.html:32 Unrecognized feature: 'speaker-selection'.
+workspace_iframe.html:32 Unrecognized feature: 'unoptimized-images'.
+workspace_iframe.html:32 Unrecognized feature: 'unsized-media'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowfullscreen'.
+workspace_iframe.html:32 Allow attribute will take precedence over 'allowpaymentrequest'.
+Network.js:227 WebSocket connection to 'wss://ba72e664-d777-441a-9d68-2a70c7da29a3-00-oyr9cxrker3j.kirk.replit.dev/?token=eqcog0avMxf1' failed: 
+t @ Network.js:227
+cf0b802887d7d8a12c1bb66f7c4fe2d6:1  Failed to load resource: the server responded with a status of 404 ()
+Network.js:227 WebSocket connection to 'wss://ba72e664-d777-441a-9d68-2a70c7da29a3-00-oyr9cxrker3j.kirk.replit.dev/?token=eqcog0avMxf1' failed: 
+t @ Network.js:227
+Network.js:227 Uncaught (in promise) SyntaxError: Failed to construct 'WebSocket': The URL 'wss://localhost:undefined/?token=eqcog0avMxf1' is invalid.
+    at new t (Network.js:227:18)
+    at setupWebSocket (client:536:19)
+    at fallback (client:509:16)
+    at WebSocket.<anonymous> (client:555:7)
+Console.js:61 App component rendering...
+Console.js:61 Router component initializing...
+Console.js:61 🎯 AUTH: Using cached user data (4-hour strategy)
+Console.js:61 Authentication successful: super_admin
+Console.js:61 Router component initializing...
+Console.js:61 📋 JOBS_QUERY: Loading: true Error: null Count: 0 Jobs: Array(0)
+Console.js:61 🔐 USER_QUERY: Loading: true Error: null Data: undefined
+Console.js:61 🔐 PERMISSIONS: API user data: undefined
+Console.js:61 🔐 PERMISSIONS: Cached user data: Object
+Console.js:61 🔐 PERMISSIONS: Effective user: Object
+Console.js:61 🔐 PERMISSIONS: User role: super_admin
+Console.js:61 🔐 PERMISSIONS: canCreateJobs = true for role: super_admin
+Console.js:61 🎯 AUTH: Using cached user data (4-hour strategy)
+Console.js:61 ProtectedRoute: User authenticated: super_admin
+Console.js:61 📋 JOBS_QUERY: Loading: true Error: null Count: 0 Jobs: Array(0)
+Console.js:61 🔐 USER_QUERY: Loading: true Error: null Data: undefined
+Console.js:61 🔐 PERMISSIONS: API user data: undefined
+Console.js:61 🔐 PERMISSIONS: Cached user data: Object
+Console.js:61 🔐 PERMISSIONS: Effective user: Object
+Console.js:61 🔐 PERMISSIONS: User role: super_admin
+Console.js:61 🔐 PERMISSIONS: canCreateJobs = true for role: super_admin
+Console.js:61 📋 JOBS_QUERY: Loading: false Error: Error: Missing queryFn: '["/api/jobs"]'
+    at @tanstack_react-query.js?v=5c6ed570:255:33
+    at Object.fetchFn [as fn] (@tanstack_react-query.js?v=5c6ed570:840:14)
+    at run (@tanstack_react-query.js?v=5c6ed570:494:49)
+    at @tanstack_react-query.js?v=5c6ed570:519:11 Count: 0 Jobs: Array(0)
+Console.js:61 🔐 USER_QUERY: Loading: true Error: null Data: undefined
+Console.js:61 🔐 PERMISSIONS: API user data: undefined
+Console.js:61 🔐 PERMISSIONS: Cached user data: Object
+Console.js:61 🔐 PERMISSIONS: Effective user: Object
+Console.js:61 🔐 PERMISSIONS: User role: super_admin
+Console.js:61 🔐 PERMISSIONS: canCreateJobs = true for role: super_admin
+Console.js:61 📋 JOBS_QUERY: Loading: false Error: Error: Missing queryFn: '["/api/jobs"]'
+    at @tanstack_react-query.js?v=5c6ed570:255:33
+    at Object.fetchFn [as fn] (@tanstack_react-query.js?v=5c6ed570:840:14)
+    at run (@tanstack_react-query.js?v=5c6ed570:494:49)
+    at @tanstack_react-query.js?v=5c6ed570:519:11 Count: 0 Jobs: Array(0)
+Console.js:61 🔐 USER_QUERY: Loading: false Error: Error: Missing queryFn: '["/api/auth/me"]'
+    at @tanstack_react-query.js?v=5c6ed570:255:33
+    at Object.fetchFn [as fn] (@tanstack_react-query.js?v=5c6ed570:840:14)
+    at run (@tanstack_react-query.js?v=5c6ed570:494:49)
+    at @tanstack_react-query.js?v=5c6ed570:519:11 Data: undefined
+Console.js:61 🔐 PERMISSIONS: API user data: undefined
+Console.js:61 🔐 PERMISSIONS: Cached user data: Object
+Console.js:61 🔐 PERMISSIONS: Effective user: Object
+Console.js:61 🔐 PERMISSIONS: User role: super_admin
+Console.js:61 🔐 PERMISSIONS: canCreateJobs = true for role: super_admin

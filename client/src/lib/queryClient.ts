@@ -77,6 +77,7 @@ export const getQueryFn: <T>(options: {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      queryFn: getQueryFn({ on401: "returnNull" }), // CRITICAL: This was missing!
       // 4-hour authentication cache - reduces auth calls to ~6 per day
       staleTime: 4 * 60 * 60 * 1000, // 4 hours in milliseconds
       gcTime: 8 * 60 * 60 * 1000,    // Keep in cache for 8 hours
