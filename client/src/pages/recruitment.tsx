@@ -89,14 +89,16 @@ function RecruitmentDashboard() {
     queryKey: ["/api/matches"],
   });
 
-  const { data: jobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
+  const { data: jobs = [], isLoading: jobsLoading, error: jobsError } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
     // Override global 4-hour cache for frequently changing data
-    staleTime: 2 * 60 * 1000,   // 2 minutes for jobs (they change frequently)
-    gcTime: 10 * 60 * 1000,     // Keep in cache for 10 minutes
+    staleTime: 0,               // Always fetch fresh data - temporarily for debugging
+    gcTime: 1000,               // Keep in cache for 1 second - temporarily for debugging  
     refetchOnMount: true,       // Always fetch fresh data when component mounts
-
   });
+
+  // Debug jobs query
+  console.log('📋 JOBS_QUERY: Loading:', jobsLoading, 'Error:', jobsError, 'Count:', jobs?.length || 0, 'Jobs:', jobs?.slice(0,2));
 
   const { data: candidates = [], isLoading: candidatesLoading } = useQuery<Candidate[]>({
     queryKey: ["/api/candidates"],
