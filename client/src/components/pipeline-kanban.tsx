@@ -99,15 +99,15 @@ export function PipelineKanban() {
   // Fetch pipeline data
   const { data: pipelineData, isLoading } = useQuery({
     queryKey: ['/api/pipeline'],
-    refetchInterval: 5000, // Refresh every 5 seconds to see debug logs
-    staleTime: 0, // Always fetch fresh data
+    refetchInterval: 30000, // Reduced from 5 seconds to 30 seconds  
+    staleTime: 15000, // Cache data for 15 seconds
   });
 
   const { data: statsData } = useQuery({
     queryKey: ['/api/pipeline/stats'],
-    refetchInterval: 3000, // Refresh every 3 seconds for real-time updates
-    staleTime: 0, // Always treat data as stale to force fresh fetches
-    gcTime: 0, // TanStack Query v5 property (replaces cacheTime)
+    refetchInterval: 60000, // Reduced from 3 seconds to 60 seconds
+    staleTime: 30000, // Cache data for 30 seconds
+    gcTime: 300000, // Keep in cache for 5 minutes
   });
 
   // Move application mutation

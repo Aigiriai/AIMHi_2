@@ -35,21 +35,42 @@ function Router() {
       setIsLoading(false);
     });
     
-    // Set up a simple interval to check authentication periodically
+    // Set up a periodic check for authentication (reduced frequency)
     const interval = setInterval(() => {
+      // Only check local state, don't make API calls
       const currentAuthState = authService.isAuthenticated();
-      const currentUser = authService.getUser();
+      const currentUser = authService.getUser(); // This gets cached user, no API call
       
-      if (currentAuthState !== isAuthenticated || currentUser?.role !== userRole) {
+      // Only update state if there's actually a change
+      if (currentAuthState !== isAuthenticated) {
         setIsAuthenticated(currentAuthState);
+        
+        // If user logged out, clear role
+        if (!currentAuthState) {
+          setUserRole(null);
+        }
+      }
+      
+      // Only update role if user is authenticated and role changed
+      if (currentAuthState && currentUser?.role !== userRole) {
         setUserRole(currentUser?.role || null);
       }
-    }, 1000);
+      
+      // If token expired or became invalid, try to refresh once
+      if (currentAuthState && !currentUser) {
+        console.log('🔄 AUTH: Token present but no user data, refreshing...');
+        checkAuthentication().catch(() => {
+          // If refresh fails, user will be logged out
+          setIsAuthenticated(false);
+          setUserRole(null);
+        });
+      }
+    }, 30000); // ✅ Check every 30 seconds instead of 1 second
 
     return () => clearInterval(interval);
   }, [isAuthenticated, userRole]);
 
-  const checkAuthentication = async () => {
+    const checkAuthentication = async () => {
     setIsLoading(true);
     try {
       if (authService.isAuthenticated()) {
@@ -58,21 +79,32 @@ function Router() {
           setIsAuthenticated(true);
           setUserRole(user.role);
           console.log('Authentication successful:', user.role);
-
-        } catch (userError) {
-          console.error('Failed to get user data:', userError);
-          // Clear auth state on error
-          authService.clearAuth();
-          setIsAuthenticated(false);
-          setUserRole(null);
+        } catch (error: any) {
+          console.error('Failed to get current user:', error);
+          // Only logout on 401/403 errors (session expired), not on network errors
+          if (error.message?.includes('Session expired') || error.message?.includes('401') || error.message?.includes('403')) {
+            console.log('🚪 AUTH: Session expired, logging out...');
+            setIsAuthenticated(false);
+            setUserRole(null);
+          } else {
+            console.log('⚠️ AUTH: Network error, keeping user logged in with cached data');
+            // Keep user logged in with cached data during network issues
+            const cachedUser = authService.getUser();
+            if (cachedUser) {
+              setIsAuthenticated(true);
+              setUserRole(cachedUser.role);
+            } else {
+              setIsAuthenticated(false);
+              setUserRole(null);
+            }
+          }
         }
       } else {
-        console.log('No authentication token found');
         setIsAuthenticated(false);
         setUserRole(null);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('Authentication check failed:', error);
       setIsAuthenticated(false);
       setUserRole(null);
     } finally {
