@@ -268,30 +268,44 @@ async function performInitialization(): Promise<DatabaseInstance> {
         console.log("✅ DB_MANAGER: Existing database opened successfully - data preserved!");
       } catch (error) {
         console.warn("⚠️ DB_MANAGER: Existing database validation failed:", (error as Error).message);
-        console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
         
-        // Try backup restoration before creating fresh database
-        const backupRestored = await attemptBackupRestoration(dbPath);
-        if (backupRestored) {
-          console.log("✅ DB_MANAGER: Database restored from backup after validation failure!");
-          result = await openAndValidateDatabase(dbPath);
-        } else {
-          console.log("⚠️ DB_MANAGER: No backup available, creating fresh database");
+        // In production, if database is corrupted/missing tables, create fresh database immediately
+        if (process.env.NODE_ENV === "production") {
+          console.log("🏭 DB_MANAGER: Production environment - creating fresh database to fix missing tables");
           result = await createFreshDatabase(dbPath, true); // Force recreate on validation failure
+        } else {
+          console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
+          
+          // Try backup restoration before creating fresh database
+          const backupRestored = await attemptBackupRestoration(dbPath);
+          if (backupRestored) {
+            console.log("✅ DB_MANAGER: Database restored from backup after validation failure!");
+            result = await openAndValidateDatabase(dbPath);
+          } else {
+            console.log("⚠️ DB_MANAGER: No backup available, creating fresh database");
+            result = await createFreshDatabase(dbPath, true); // Force recreate on validation failure
+          }
         }
       }
     } else {
       console.log("📂 DB_MANAGER: No existing database found");
-      console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
       
-      // Try backup restoration first
-      const backupRestored = await attemptBackupRestoration(dbPath);
-      if (backupRestored) {
-        console.log("✅ DB_MANAGER: Database restored from backup!");
-        result = await openAndValidateDatabase(dbPath);
+      // In production, create fresh database immediately
+      if (process.env.NODE_ENV === "production") {
+        console.log("🏭 DB_MANAGER: Production environment - creating fresh database");
+        result = await createFreshDatabase(dbPath, false);
       } else {
-        console.log("📦 DB_MANAGER: No backup available - creating fresh database...");
-        result = await createFreshDatabase(dbPath, false); // Don't force since no existing file
+        console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
+        
+        // Try backup restoration first
+        const backupRestored = await attemptBackupRestoration(dbPath);
+        if (backupRestored) {
+          console.log("✅ DB_MANAGER: Database restored from backup!");
+          result = await openAndValidateDatabase(dbPath);
+        } else {
+          console.log("📦 DB_MANAGER: No backup available - creating fresh database...");
+          result = await createFreshDatabase(dbPath, false); // Don't force since no existing file
+        }
       }
     }
     

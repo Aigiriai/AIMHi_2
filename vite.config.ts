@@ -28,4 +28,10 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
   },
+  server: {
+    hmr: {
+      // Disable WebSocket HMR in Replit to avoid connection errors
+      port: process.env.REPL_ID ? false : undefined,
+    },
+  },
 });
