@@ -94,6 +94,7 @@ function RecruitmentDashboard() {
     staleTime: 2 * 60 * 1000,   // 2 minutes for jobs (they change frequently)
     gcTime: 10 * 60 * 1000,     // Keep in cache for 10 minutes
     refetchOnMount: true,       // Always fetch fresh data when component mounts
+
   });
 
   const { data: candidates = [], isLoading: candidatesLoading } = useQuery<Candidate[]>({

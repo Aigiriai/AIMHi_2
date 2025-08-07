@@ -61,19 +61,35 @@ export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploa
       return response.json();
     },
     onSuccess: (result: UploadResult) => {
+      console.log('✅ BULK_UPLOAD: Upload mutation successful, starting post-processing...', { result });
       onUploadStateChange?.(false);
       setUploadResult(result);
       
+      console.log('🔄 CACHE_INVALIDATION: Starting cache invalidation after successful upload', { uploadType, result });
+      
       // Aggressively invalidate and refetch data after upload
       if (uploadType === 'jobs') {
+        console.log('🔄 CACHE_INVALIDATION: Invalidating jobs queries...');
         queryClient.invalidateQueries({ queryKey: ["/api/jobs"] });
+        console.log('🔄 CACHE_INVALIDATION: Forcing immediate refetch of jobs...');
         queryClient.refetchQueries({ queryKey: ["/api/jobs"] }); // Force immediate refetch
       } else {
+        console.log('🔄 CACHE_INVALIDATION: Invalidating candidates queries...');
         queryClient.invalidateQueries({ queryKey: ["/api/candidates"] });
+        console.log('🔄 CACHE_INVALIDATION: Forcing immediate refetch of candidates...');
         queryClient.refetchQueries({ queryKey: ["/api/candidates"] }); // Force immediate refetch
       }
+      console.log('🔄 CACHE_INVALIDATION: Invalidating stats queries...');
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      console.log('🔄 CACHE_INVALIDATION: Forcing immediate refetch of stats...');
       queryClient.refetchQueries({ queryKey: ["/api/stats"] }); // Force immediate refetch
+      
+      console.log('✅ CACHE_INVALIDATION: All cache invalidation and refetch operations completed');
+      
+      // Now call the external onSuccess callback
+      console.log('🎯 BULK_UPLOAD: Calling external onSuccess callback...');
+      onSuccess?.(result);
+      console.log('✅ BULK_UPLOAD: External onSuccess callback completed');
       
       // Use the custom message from backend if available, otherwise use default
       const message = result.message || `Successfully processed ${result.created} ${uploadType}, ignored ${result.ignored} files`;

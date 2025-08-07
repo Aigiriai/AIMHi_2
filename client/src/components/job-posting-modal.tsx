@@ -24,7 +24,9 @@ export default function JobPostingModal({ open, onOpenChange, onSuccess }: JobPo
         <BulkFileUpload
           uploadType="jobs"
           onSuccess={() => {
+            console.log('🎯 JOB_MODAL: BulkFileUpload onSuccess callback triggered');
             onSuccess?.();
+            console.log('🎯 JOB_MODAL: Parent onSuccess callback executed');
           }}
           onClose={() => onOpenChange(false)}
         />
