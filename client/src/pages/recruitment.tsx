@@ -30,6 +30,7 @@ import { SimpleReportBuilder } from "@/components/reporting/SimpleReportBuilder"
 
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
 import * as XLSX from 'xlsx';
+import { authService } from "@/lib/auth";
 
 interface Stats {
   activeJobs: number;
@@ -110,21 +111,32 @@ function RecruitmentDashboard() {
   });
 
   // Get current user info for permission checking
-  const { data: currentUser } = useQuery({
+  const { data: currentUser, error: userError, isLoading: userLoading } = useQuery({
     queryKey: ["/api/auth/me"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Debug user query
+  console.log('🔐 USER_QUERY: Loading:', userLoading, 'Error:', userError, 'Data:', currentUser);
+
+  // FALLBACK: Use cached user data if API fails (temporary fix for token issues)
+  const cachedUser = authService.getUser();
+  const effectiveUser = currentUser || cachedUser;
+  
   // Add debugging for user permissions
-  console.log('🔐 PERMISSIONS: Current user data:', currentUser);
-  console.log('🔐 PERMISSIONS: User role:', currentUser?.role);
+  console.log('🔐 PERMISSIONS: API user data:', currentUser);
+  console.log('🔐 PERMISSIONS: Cached user data:', cachedUser);
+  console.log('🔐 PERMISSIONS: Effective user:', effectiveUser);
+  console.log('🔐 PERMISSIONS: User role:', effectiveUser?.role);
 
   // Comprehensive permission checks based on the Detailed Permission Matrix
-  const userRole = currentUser?.role;
+  const userRole = effectiveUser?.role;
   
   // Job Management Permissions
   const canCreateJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   console.log('🔐 PERMISSIONS: canCreateJobs =', canCreateJobs, 'for role:', userRole);
+
+  // All role checks using effectiveUser role
   const canEditJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   const canChangeJobStatus = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   const canDeleteJobs = userRole && ['super_admin', 'org_admin'].includes(userRole);

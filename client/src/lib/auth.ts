@@ -182,5 +182,7 @@ export const authService = new AuthService();
 // Add authorization header to all API requests
 export function getAuthHeaders(): Record<string, string> {
   const token = authService.getToken();
+  console.log('🔐 AUTH_HEADERS: Token exists:', !!token, 'Token preview:', token ? token.substring(0, 20) + '...' : 'null');
+  console.log('🔐 AUTH_HEADERS: User data:', authService.getUser());
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
