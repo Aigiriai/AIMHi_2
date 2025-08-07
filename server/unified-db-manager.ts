@@ -269,10 +269,33 @@ async function performInitialization(): Promise<DatabaseInstance> {
       } catch (error) {
         console.warn("⚠️ DB_MANAGER: Existing database validation failed:", (error as Error).message);
         
-        // In production, if database is corrupted/missing tables, create fresh database immediately
+        // In production, if database is corrupted/missing tables, clean up and create fresh database
         if (process.env.NODE_ENV === "production") {
-          console.log("🏭 DB_MANAGER: Production environment - creating fresh database to fix missing tables");
-          result = await createFreshDatabase(dbPath, true); // Force recreate on validation failure
+          console.log("🏭 DB_MANAGER: Production environment - removing corrupted database and creating fresh one");
+          
+          // Remove the corrupted database file
+          try {
+            if (existsSync(dbPath)) {
+              unlinkSync(dbPath);
+              console.log("🗑️ DB_MANAGER: Removed corrupted database file from production");
+            }
+            
+            // Also clean up any backup files that might be corrupted
+            const backupPath = join(dataDir, "backup.db");
+            if (existsSync(backupPath)) {
+              try {
+                unlinkSync(backupPath);
+                console.log("🗑️ DB_MANAGER: Removed potentially corrupted backup file");
+              } catch (backupDeleteError) {
+                console.warn("⚠️ DB_MANAGER: Could not remove backup file:", backupDeleteError);
+              }
+            }
+          } catch (deleteError) {
+            console.warn("⚠️ DB_MANAGER: Could not remove corrupted database file:", deleteError);
+            // Continue anyway - createFreshDatabase will overwrite
+          }
+          
+          result = await createFreshDatabase(dbPath, true); // Force recreate after cleanup
         } else {
           console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
           
@@ -293,6 +316,18 @@ async function performInitialization(): Promise<DatabaseInstance> {
       // In production, create fresh database immediately
       if (process.env.NODE_ENV === "production") {
         console.log("🏭 DB_MANAGER: Production environment - creating fresh database");
+        
+        // Clean up any stray backup files to ensure clean slate
+        try {
+          const backupPath = join(dataDir, "backup.db");
+          if (existsSync(backupPath)) {
+            unlinkSync(backupPath);
+            console.log("🗑️ DB_MANAGER: Removed existing backup file for clean production start");
+          }
+        } catch (backupDeleteError) {
+          console.warn("⚠️ DB_MANAGER: Could not remove existing backup file:", backupDeleteError);
+        }
+        
         result = await createFreshDatabase(dbPath, false);
       } else {
         console.log("🔄 DB_MANAGER: Attempting backup restoration before creating fresh database...");
