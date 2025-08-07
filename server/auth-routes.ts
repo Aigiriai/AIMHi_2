@@ -6,15 +6,8 @@ import { users, organizations, auditLogs, organizationCredentials, userTeams, te
 
 // Database connection helper - using unified database manager
 async function getDB() {
-  console.log("🔗 getDB(): Starting database connection...");
-  try {
-    const result = await getSQLiteDB();
-    console.log("✅ getDB(): Database connection successful");
-    return result.db;
-  } catch (error) {
-    console.error("❌ getDB(): Database connection failed:", error);
-    throw error;
-  }
+  const { db } = await getSQLiteDB();
+  return db;
 }
 
 // SQLite database helper for raw queries - using unified database manager
@@ -161,27 +154,8 @@ router.post('/login', async (req, res) => {
 
 // GET /auth/me - Get current user info
 router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
-  const requestId = Math.random().toString(36).substr(2, 9);
-  const startTime = Date.now();
-  console.log(`🔍 /auth/me[${requestId}]: Handler started for user ${req.user?.id}`);
-  
   try {
-    console.log(`🔍 /auth/me[${requestId}]: About to call getDB()...`);
-    
-    // Add timeout to database connection
-    const dbPromise = getDB();
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`Database connection timeout after 30 seconds`));
-      }, 30000);
-    });
-    
-    const db = await Promise.race([dbPromise, timeoutPromise]);
-    const dbTime = Date.now() - startTime;
-    console.log(`✅ /auth/me[${requestId}]: getDB() completed in ${dbTime}ms`);
-    
-    console.log(`🔍 /auth/me[${requestId}]: About to query user data...`);
-    const queryStart = Date.now();
+    const db = await getDB();
     const user = await db.select({
       user: users,
       organization: organizations,
@@ -190,16 +164,11 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       .where(eq(users.id, req.user!.id))
       .limit(1);
 
-    const queryTime = Date.now() - queryStart;
-    console.log(`✅ /auth/me[${requestId}]: User query completed in ${queryTime}ms`);
-
     if (!user.length) {
-      console.log(`❌ /auth/me[${requestId}]: User not found for ID ${req.user!.id}`);
       return res.status(404).json({ message: 'User not found' });
     }
 
     const { user: userData, organization } = user[0];
-    console.log(`✅ /auth/me[${requestId}]: Successfully retrieved user data for ${userData.email}`);
 
     // Set cache control headers to prevent caching issues
     res.set({
@@ -207,9 +176,6 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       'Pragma': 'no-cache',
       'Expires': '0'
     });
-
-    const totalTime = Date.now() - startTime;
-    console.log(`✅ /auth/me[${requestId}]: Request completed successfully in ${totalTime}ms`);
 
     res.json({
       id: userData.id,
@@ -225,13 +191,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       organizationPlan: organization.plan,
     });
   } catch (error: any) {
-    const errorTime = Date.now() - startTime;
-    console.error(`❌ /auth/me[${requestId}]: Request failed after ${errorTime}ms:`, error);
-    console.error(`❌ /auth/me[${requestId}]: Error details:`, {
-      name: error?.name,
-      message: error?.message,
-      stack: error?.stack?.substring(0, 500)
-    });
+    console.error('Get user error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });

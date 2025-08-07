@@ -256,41 +256,7 @@ async function performInitialization(): Promise<DatabaseInstance> {
     
     console.log(`📁 DB_MANAGER: Database path: ${dbPath} (NODE_ENV: ${process.env.NODE_ENV})`);
 
-    // Step 2: Handle production startup (marker-based fresh DB)
-    let freshDbCreated = false;
-    if (process.env.NODE_ENV === "production") {
-      freshDbCreated = await handleProductionStartup(dataDir);
-      if (freshDbCreated) {
-        console.log("✅ DB_MANAGER: Fresh production database created, skipping other initialization");
-        const result = await openAndValidateDatabase(dbPath);
-        
-        // ✅ FIXED: Update state on success
-        initState.isInitializing = false;
-        initState.isComplete = true;
-        dbInstance = result;
-        
-        return result;
-      }
-    }
-
-    // Step 3: Handle backup restoration (in all environments if no fresh DB was created)
-    let restoredFromBackup = false;
-    if (!freshDbCreated) {
-      restoredFromBackup = await attemptBackupRestoration(dbPath);
-      if (restoredFromBackup) {
-        console.log("✅ DB_MANAGER: Database restored from backup, skipping seeding");
-        const result = await openAndValidateDatabase(dbPath);
-        
-        // ✅ FIXED: Update state on success
-        initState.isInitializing = false;
-        initState.isComplete = true;
-        dbInstance = result;
-        
-        return result;
-      }
-    }
-
-    // Step 4: Smart initialization with data preservation
+    // Step 2: Proceed directly to smart initialization
     console.log("🔄 DB_MANAGER: Proceeding with smart database initialization...");
     
     // ✅ ENHANCED LOGIC: Smart decision making for database initialization
