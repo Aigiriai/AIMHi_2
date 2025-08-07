@@ -41,4 +41,13 @@ fi
 pkill -f "node dist/index.js" 2>/dev/null
 
 echo "🎯 Deployment preparation complete!"
-echo "   To deploy: NODE_ENV=production node dist/index.js"
+echo ""
+echo "🚀 DEPLOYMENT INSTRUCTIONS:"
+echo "   1. Deploy using: NODE_ENV=production node dist/index.js"
+echo "   2. Super Admin Login Credentials:"
+echo "      Email: superadmin@aimhi.app"
+echo "      Password: SuperAdmin123!@#"
+echo "      Organization: AIM Hi System"
+echo ""
+echo "   ⚠️  IMPORTANT: All three fields are required for login!"
+echo "   📝 Note: The organization name is case-sensitive."

@@ -163,6 +163,8 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // CRITICAL: Static file serving must come AFTER API routes registration
+  // This ensures API routes are handled before the catch-all static handler
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
