@@ -115,11 +115,16 @@ function RecruitmentDashboard() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Add debugging for user permissions
+  console.log('🔐 PERMISSIONS: Current user data:', currentUser);
+  console.log('🔐 PERMISSIONS: User role:', currentUser?.role);
+
   // Comprehensive permission checks based on the Detailed Permission Matrix
   const userRole = currentUser?.role;
   
   // Job Management Permissions
   const canCreateJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
+  console.log('🔐 PERMISSIONS: canCreateJobs =', canCreateJobs, 'for role:', userRole);
   const canEditJobs = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   const canChangeJobStatus = userRole && ['super_admin', 'org_admin', 'hiring_manager'].includes(userRole);
   const canDeleteJobs = userRole && ['super_admin', 'org_admin'].includes(userRole);
