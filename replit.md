@@ -79,6 +79,7 @@ Preferred communication style: Simple, everyday language.
 - **Connection Type Consistency Fix (Aug 2025)**: Resolved "select(...).limit is not a function" errors by standardizing initializeSQLiteDatabase() return types and adding I/O error recovery with automatic database restoration for production resilience.
 - **Enhanced Authentication Resilience**: Added retry logic and connection reset capabilities to authentication middleware, ensuring robust token validation even during database connection issues.
 - **Deployment Static File Fix (Aug 2025)**: Resolved critical deployment issue where Management view failed to load in production environment due to missing static build files. Created automated build process that correctly places React build artifacts in server/public directory, enabling proper static file serving in deployment.
+- **SPA Routing Fix (Aug 2025)**: Fixed 404 errors for routes like /management in deployment by adding explicit SPA routing catch-all handler in production mode. Ensures all React routes are properly served with index.html while preserving API route handling.
 
 ## External Dependencies
 

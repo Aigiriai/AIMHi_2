@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
+import path from "path";
 
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
@@ -167,6 +168,31 @@ app.use((req, res, next) => {
   // This ensures API routes are handled before the catch-all static handler
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
+    
+    // ✅ DEPLOYMENT FIX: Add explicit SPA routing catch-all for deployment
+    // This ensures /management and other SPA routes work in production
+    app.get("*", (req, res, next) => {
+      // Skip API routes (already handled above)
+      if (req.path.startsWith('/api/')) {
+        return next();
+      }
+      
+      // Skip static assets
+      if (req.path.startsWith('/assets/') || 
+          req.path.match(/\.(js|css|ico|png|jpg|svg)$/)) {
+        return next();
+      }
+      
+      // Serve index.html for all SPA routes
+      const indexPath = path.resolve(import.meta.dirname, "public", "index.html");
+      console.log(`🔄 SPA_ROUTE: Serving ${req.path} -> index.html`);
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          console.error(`❌ SPA_ROUTE: Error serving ${req.path}:`, err);
+          res.status(404).send('Page not found');
+        }
+      });
+    });
   } else {
     await setupVite(app, httpServer);
   }
