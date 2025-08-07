@@ -91,23 +91,17 @@ export function PipelineKanban() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  // Force refresh on component mount to get latest data
-  React.useEffect(() => {
-    queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
-  }, [queryClient]);
+  // No forced refresh on mount - rely on 4-hour cache strategy
 
-  // Fetch pipeline data
+  // Fetch pipeline data - using global 4-hour cache
   const { data: pipelineData, isLoading } = useQuery({
     queryKey: ['/api/pipeline'],
-    refetchInterval: 30000, // Reduced from 5 seconds to 30 seconds  
-    staleTime: 15000, // Cache data for 15 seconds
+    // Use global cache settings - no custom polling needed
   });
 
   const { data: statsData } = useQuery({
-    queryKey: ['/api/pipeline/stats'],
-    refetchInterval: 60000, // Reduced from 3 seconds to 60 seconds
-    staleTime: 30000, // Cache data for 30 seconds
-    gcTime: 300000, // Keep in cache for 5 minutes
+    queryKey: ['/api/pipeline/stats'], 
+    // Use global cache settings - no custom polling needed
   });
 
   // Move application mutation

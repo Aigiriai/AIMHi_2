@@ -73,17 +73,41 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-export const queryClient = new QueryClient({
+export import { QueryClient } from '@tanstack/react-query';
+
+// Create query client with 4-hour authentication caching strategy
+const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
-      refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      // 4-hour authentication cache - reduces auth calls to ~6 per day
+      staleTime: 4 * 60 * 60 * 1000, // 4 hours in milliseconds
+      gcTime: 8 * 60 * 60 * 1000,    // Keep in cache for 8 hours
+      
+      // Disable aggressive auto-refresh behaviors
+      refetchOnWindowFocus: false,    // Don't refetch when user returns to tab
+      refetchOnMount: false,          // Don't refetch when component mounts
+      refetchOnReconnect: false,      // Don't refetch when network reconnects
+      refetchInterval: false,         // No automatic polling
+      
+      // Retry strategy for network resilience
+      retry: (failureCount, error: any) => {
+        // Don't retry on auth failures (401/403) - these are real auth issues
+        if (error?.status === 401 || error?.status === 403) {
+          return false;
+        }
+        // Retry network errors up to 2 times
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     },
     mutations: {
-      retry: false,
+      // Mutations should still retry network errors
+      retry: (failureCount, error: any) => {
+        if (error?.status === 401 || error?.status === 403) {
+          return false;
+        }
+        return failureCount < 1;
+      },
     },
   },
 });

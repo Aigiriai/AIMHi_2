@@ -80,8 +80,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error('Failed to fetch users');
       return res.json();
     },
-    staleTime: 60000, // Cache users data for 1 minute (reduced API calls)
-    gcTime: 300000    // Keep in cache for 5 minutes 
+    // Use global 4-hour cache settings (no need to override)
   });
 
   const users = usersData?.users || [];
@@ -91,8 +90,7 @@ export default function SettingsPage() {
   const { data: currentUser } = useQuery({
     queryKey: ['/api/auth/me'],
     queryFn: () => authService.getCurrentUser(),
-    staleTime: 300000, // Cache current user for 5 minutes (reduce auth API calls)
-    gcTime: 600000     // Keep in cache for 10 minutes
+    // Use global 4-hour cache settings (no need to override)
   });
 
   // Local settings state - use currentUser data for consistency

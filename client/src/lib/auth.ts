@@ -66,6 +66,12 @@ class AuthService {
       throw new Error('No authentication token');
     }
 
+    // Return cached user if available (4-hour strategy)
+    if (this.user) {
+      console.log('🎯 AUTH: Using cached user data (4-hour strategy)');
+      return this.user;
+    }
+
     try {
       const response = await fetch('/api/auth/me', {
         headers: {
@@ -79,6 +85,11 @@ class AuthService {
           this.clearAuth();
           throw new Error('Session expired');
         }
+        // For other errors (500, network), keep cached user if available
+        if (this.user) {
+          console.log('⚠️ AUTH: Network error, returning cached user data');
+          return this.user;
+        }
         throw new Error(`Failed to get user data: ${response.status}`);
       }
 
@@ -88,7 +99,14 @@ class AuthService {
       return user;
     } catch (error) {
       console.error('getCurrentUser error:', error);
-      // Don't redirect on network errors, just throw
+      
+      // If we have cached user data, use it instead of failing
+      if (this.user && error.message !== 'Session expired') {
+        console.log('🔄 AUTH: Using cached user data due to network error');
+        return this.user;
+      }
+      
+      // Only clear auth and throw on actual auth failures
       throw error;
     }
   }

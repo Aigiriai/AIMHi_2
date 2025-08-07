@@ -35,7 +35,7 @@ function Router() {
       setIsLoading(false);
     });
     
-    // Set up a periodic check for authentication (reduced frequency)
+    // Set up a periodic check for authentication (4-hour intervals)
     const interval = setInterval(() => {
       // Only check local state, don't make API calls
       const currentAuthState = authService.isAuthenticated();
@@ -65,7 +65,7 @@ function Router() {
           setUserRole(null);
         });
       }
-    }, 30000); // ✅ Check every 30 seconds instead of 1 second
+    }, 4 * 60 * 60 * 1000); // ✅ Check every 4 hours (14400000ms)
 
     return () => clearInterval(interval);
   }, [isAuthenticated, userRole]);
