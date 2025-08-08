@@ -25,6 +25,7 @@ import {
   Trash2
 } from "lucide-react";
 import { authService } from "@/lib/auth";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 
@@ -50,15 +51,8 @@ export default function SettingsPage() {
   const { data: userSettings, isLoading: userLoading } = useQuery<any>({
     queryKey: ['/api/settings/user'],
     queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      const res = await fetch('/api/settings/user', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch user settings');
-      return res.json();
+      const response = await apiRequest('GET', '/api/settings/user');
+      return response.json();
     }
   });
 
@@ -70,15 +64,8 @@ export default function SettingsPage() {
   const { data: usersData } = useQuery<{users: any[], pagination: any}>({
     queryKey: ['/api/users', currentPage, pageSize],
     queryFn: async () => {
-      const token = localStorage.getItem('authToken');
-      const res = await fetch(`/api/users?page=${currentPage}&limit=${pageSize}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch users');
-      return res.json();
+      const response = await apiRequest('GET', `/api/users?page=${currentPage}&limit=${pageSize}`);
+      return response.json();
     },
     // Use global 4-hour cache settings (no need to override)
   });
@@ -124,18 +111,8 @@ export default function SettingsPage() {
   // Update user profile
   const profileMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('authToken');
-      const res = await fetch('/api/auth/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Failed to update profile');
-      return res.json();
+      const response = await apiRequest('PUT', '/api/auth/profile', data);
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -157,18 +134,8 @@ export default function SettingsPage() {
   // User invite mutation
   const inviteUserMutation = useMutation({
     mutationFn: async (data: any) => {
-      const token = localStorage.getItem('authToken');
-      const res = await fetch('/api/auth/invite-user', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) throw new Error('Failed to invite user');
-      return res.json();
+      const response = await apiRequest('POST', '/api/auth/invite-user', data);
+      return response.json();
     },
     onSuccess: () => {
       toast({
@@ -197,16 +164,8 @@ export default function SettingsPage() {
   // Delete user mutation
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const token = localStorage.getItem('authToken');
-      const res = await fetch(`/api/auth/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to delete user');
-      return res.json();
+      const response = await apiRequest('DELETE', `/api/auth/users/${userId}`);
+      return response.json();
     },
     onSuccess: () => {
       toast({

@@ -1,9 +1,9 @@
 import { getSQLiteDB } from './sqlite-db';
-import { organizations, users, teams, userTeams, usageMetrics } from './sqlite-schema';
+import { organizations, users, teams, userTeams, usageMetrics } from '../unified-schema';
 import { eq, and, or, desc, sql } from 'drizzle-orm';
 import { hashPassword } from './auth';
 import { backupService } from './backup-integration';
-import type { InsertOrganization, InsertUser, InsertTeam, Organization, User, Team } from './sqlite-schema';
+import type { InsertOrganization, InsertUser, InsertTeam, Organization, User, Team } from '../unified-schema';
 
 // Get the database instance
 let dbInstance: any = null;

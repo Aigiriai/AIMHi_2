@@ -1,5 +1,5 @@
 import { organizationManager } from "./organization-manager";
-import { getDB } from "./db-connection";
+import { getDB } from "./db-helper";
 import { eq } from "drizzle-orm";
 import { hashPassword } from "./auth";
 

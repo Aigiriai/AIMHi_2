@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { eq, and, ne, inArray, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { getSQLiteDB } from './unified-db-manager';
-import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from './sqlite-schema';
+import { users, organizations, auditLogs, organizationCredentials, userTeams, teams, jobs, candidates, jobMatches, interviews, usageMetrics } from '../unified-schema';
 
 // Database connection helper - using unified database manager
 async function getDB() {

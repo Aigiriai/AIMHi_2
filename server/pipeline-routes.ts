@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
 import { z } from "zod";
 import { authenticateToken, type AuthRequest } from "./auth";
-import { getDB } from "./db-connection";
+import { getDB } from "./db-helper";
 import { 
   applications, jobs, candidates, users, statusHistory, jobAssignments,
   insertApplicationSchema, insertStatusHistorySchema, insertJobAssignmentSchema,
   type ApplicationWithDetails, type JobWithApplications, type PipelineStats, type UserPermissions
-} from "./sqlite-schema";
+} from "../unified-schema";
 import { eq, and, desc, sql, or, inArray } from "drizzle-orm";
 
 const router = Router();

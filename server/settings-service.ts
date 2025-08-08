@@ -1,5 +1,5 @@
 import { getSQLiteDB } from "./sqlite-db";
-import { organizations, users, teams } from "./sqlite-schema";
+import { organizations, users, teams } from "../unified-schema";
 import { eq } from "drizzle-orm";
 
 export interface OrganizationSettings {
