@@ -388,15 +388,16 @@ async function handleProductionStartup(dataDir: string): Promise<boolean> {
  * Works in both development and production environments
  */
 async function attemptBackupRestoration(dbPath: string): Promise<boolean> {
-  console.log("🔄 DB_MANAGER: attemptBackupRestoration() started");
+  console.log("🔄 DB_MANAGER: ========== BACKUP RESTORATION ATTEMPT ==========");
   console.log(`📁 DB_MANAGER: Target database path: ${dbPath}`);
+  console.log(`🌍 DB_MANAGER: Environment: ${process.env.NODE_ENV || 'unknown'}`);
   
   try {
-    console.log("📦 DB_MANAGER: Importing data-persistence...");
+    console.log("📦 DB_MANAGER: Loading backup restoration service...");
     const startImportTime = Date.now();
     const { dataPersistence } = await import("./data-persistence");
     const importTime = Date.now() - startImportTime;
-    console.log(`✅ DB_MANAGER: data-persistence imported in ${importTime}ms`);
+    console.log(`✅ DB_MANAGER: Backup service loaded in ${importTime}ms`);
     
     console.log("🔄 DB_MANAGER: Calling restoreFromLatestBackup...");
     const startRestoreTime = Date.now();
@@ -423,16 +424,20 @@ async function attemptBackupRestoration(dbPath: string): Promise<boolean> {
         console.log("✅ DB_MANAGER: Restored database passed integrity check");
       } catch (verificationError) {
         console.error("❌ DB_MANAGER: Error verifying restored database:", verificationError);
+        console.log("🔄 DB_MANAGER: ========== BACKUP RESTORATION FAILED ==========");
         return false;
       }
       
+      console.log("🎉 DB_MANAGER: ========== BACKUP RESTORATION SUCCESS! ==========");
       return true;
     }
     
     console.log("📊 DB_MANAGER: No backup available or restoration failed");
+    console.log("🔄 DB_MANAGER: ========== NO BACKUP AVAILABLE ==========");
     return false;
   } catch (error) {
-    console.error("❌ DB_MANAGER: Backup restoration failed:", error);
+    console.error("❌ DB_MANAGER: Backup restoration error:", error);
+    console.log("🔄 DB_MANAGER: ========== BACKUP RESTORATION ERROR ==========");
     return false;
   }
 }
