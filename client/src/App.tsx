@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { authService } from "@/lib/auth";
+import RouteGuard from "@/components/auth/route-guard";
 
 // Pages
 import WelcomePage from "@/pages/welcome";
@@ -26,6 +27,7 @@ function Router() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => authService.isAuthenticated());
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(() => authService.getUser()?.role || null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     checkAuthentication().catch(error => {
@@ -33,6 +35,7 @@ function Router() {
       setIsAuthenticated(false);
       setUserRole(null);
       setIsLoading(false);
+      setIsInitializing(false);
     });
     
     // Set up a periodic check for authentication (4-hour intervals)
@@ -109,13 +112,18 @@ function Router() {
       setUserRole(null);
     } finally {
       setIsLoading(false);
+      setIsInitializing(false);
     }
   };
 
-  if (isLoading) {
+  // Show loading screen during initial app load or authentication check
+  if (isLoading || isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -128,7 +136,7 @@ function Router() {
       
       {/* Protected Routes */}
       {isAuthenticated ? (
-        <>
+        <RouteGuard>
           {/* Super Admin Routes */}
           {userRole === 'super_admin' && (
             <>
@@ -192,7 +200,7 @@ function Router() {
           
           {/* Legacy Dashboard Route (for backward compatibility) */}
           <Route path="/legacy" component={Dashboard} />
-        </>
+        </RouteGuard>
       ) : (
         /* Show welcome page for unauthenticated users on protected routes */
         <Route path="/app/*" component={WelcomePage} />

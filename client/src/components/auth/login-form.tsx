@@ -54,10 +54,13 @@ export default function LoginForm() {
       const redirectPath = response.user.role === 'super_admin' ? '/management' : '/recruitment';
       console.log('Login successful, redirecting to:', redirectPath, 'for role:', response.user.role);
       
-      // Use wouter navigation instead of window.location.href to avoid page reload
+      // ✅ DEPLOYMENT FIX: Use window.location.href instead of wouter navigation
+      // This ensures the server properly serves index.html for SPA routes
+      // and prevents the 404 race condition in deployment environments
       setTimeout(() => {
-        setLocation(redirectPath);
-      }, 100);
+        console.log('🔄 LOGIN_REDIRECT: Navigating to:', redirectPath);
+        window.location.href = redirectPath;
+      }, 250); // Increased delay to ensure auth state is fully set
     } catch (error) {
       toast({
         title: "Login Failed",

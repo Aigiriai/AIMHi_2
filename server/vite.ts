@@ -78,7 +78,7 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
-  // ✅ FIX: Only serve index.html for non-API routes
+  // ✅ ENHANCED SPA ROUTING: Explicit handling for protected routes
   // This prevents API routes from being intercepted by the catch-all
   app.get("*", (req, res, next) => {
     // Skip API routes - let them be handled by the API handlers
@@ -87,8 +87,28 @@ export function serveStatic(app: Express) {
       return next();
     }
     
-    // Serve index.html for all other routes (SPA routing)
-    console.log(`📁 STATIC_SERVE: Serving index.html for route: ${req.path}`);
-    res.sendFile(path.resolve(distPath, "index.html"));
+    // Skip static assets
+    if (req.path.startsWith('/assets/') || 
+        req.path.match(/\.(js|css|ico|png|jpg|jpeg|svg|woff|woff2|ttf|eot|map)$/)) {
+      console.log(`🔄 STATIC_SERVE: Skipping static asset: ${req.path}`);
+      return next();
+    }
+    
+    // Serve index.html for all SPA routes with proper headers
+    console.log(`📁 STATIC_SERVE: Serving index.html for SPA route: ${req.path}`);
+    
+    const indexPath = path.resolve(distPath, "index.html");
+    
+    // Set cache control headers to prevent caching of index.html
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    res.sendFile(indexPath, (err) => {
+      if (err) {
+        console.error(`❌ STATIC_SERVE: Error serving index.html for ${req.path}:`, err);
+        res.status(500).send('Internal Server Error');
+      }
+    });
   });
 }

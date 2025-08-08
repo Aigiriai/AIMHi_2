@@ -57,7 +57,15 @@ class AuthService {
       throw new Error(data.message || 'Login failed');
     }
 
+    // Set auth immediately to prevent race conditions
     this.setAuth(data.token, data.user);
+    
+    // ✅ DEPLOYMENT FIX: Trigger custom event for immediate auth state update
+    // This helps components react to auth changes before redirect
+    window.dispatchEvent(new CustomEvent('auth-login-complete', { 
+      detail: { user: data.user, token: data.token } 
+    }));
+    
     return data;
   }
 
