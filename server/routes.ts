@@ -1232,7 +1232,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           skillAnalysis: match.skillAnalysis
         };
         
-        console.log('💾 Storing matchCriteria:', JSON.stringify(matchCriteriaToStore, null, 2));
+        // console.log('💾 Storing matchCriteria:', JSON.stringify(matchCriteriaToStore, null, 2));
+        console.log('💾 Storing match for job:', jobId, 'candidate:', match.candidateId, 'score:', match.score);
         
         await storage.createJobMatch({
           organizationId: req.user!.organizationId,
@@ -1392,7 +1393,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const jobIdNumber = parseInt(jobId);
           console.log('📋 Parsed jobId as number:', jobIdNumber);
           jobDetails = await storage.getJob(jobIdNumber);
-          console.log('💼 Retrieved job details:', jobDetails ? JSON.stringify(jobDetails, null, 2) : 'No job found');
+          // console.log('💼 Retrieved job details:', jobDetails ? JSON.stringify(jobDetails, null, 2) : 'No job found');
+          console.log('💼 Retrieved job details:', jobDetails ? `Job: ${jobDetails.title}` : 'No job found');
         } catch (error) {
           console.warn('⚠️ Could not retrieve job details:', error);
         }
@@ -1773,7 +1775,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (jobDetails) {
         console.log(`📋 Sarah will discuss: ${jobDetails.title}`);
-        console.log(`💼 Job details stored:`, JSON.stringify(jobDetails, null, 2));
+        // console.log(`💼 Job details stored:`, JSON.stringify(jobDetails, null, 2));
+        console.log(`💼 Job details stored for: ${jobDetails.title} (ID: ${jobDetails.id})`);
       } else {
         console.log('⚠️ No job details found to store');
       }

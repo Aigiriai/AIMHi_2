@@ -41,17 +41,17 @@ app.use((req, res, next) => {
   // Add request ID to request object for tracking
   (req as any).requestId = requestId;
   
-  console.log(`📥 REQUEST[${requestId}]: ============= INCOMING REQUEST =============`);
-  console.log(`📥 REQUEST[${requestId}]: ${req.method} ${req.originalUrl}`);
-  console.log(`📥 REQUEST[${requestId}]: Headers:`, {
-    'content-type': req.headers['content-type'],
-    'authorization': req.headers.authorization ? 'Bearer [TOKEN]' : 'None',
-    'user-agent': req.headers['user-agent']?.substring(0, 50) + '...',
-    'origin': req.headers.origin,
-    'referer': req.headers.referer
-  });
-  console.log(`📥 REQUEST[${requestId}]: Query:`, req.query);
-  console.log(`📥 REQUEST[${requestId}]: Body size:`, JSON.stringify(req.body || {}).length, 'bytes');
+  // console.log(`📥 REQUEST[${requestId}]: ============= INCOMING REQUEST =============`);
+  // console.log(`📥 REQUEST[${requestId}]: ${req.method} ${req.originalUrl}`);
+  // console.log(`📥 REQUEST[${requestId}]: Headers:`, {
+  //   'content-type': req.headers['content-type'],
+  //   'authorization': req.headers.authorization ? 'Bearer [TOKEN]' : 'None',
+  //   'user-agent': req.headers['user-agent']?.substring(0, 50) + '...',
+  //   'origin': req.headers.origin,
+  //   'referer': req.headers.referer
+  // });
+  // console.log(`📥 REQUEST[${requestId}]: Query:`, req.query);
+  // console.log(`📥 REQUEST[${requestId}]: Body size:`, JSON.stringify(req.body || {}).length, 'bytes');
   
   // Override res.json to log responses
   const originalJson = res.json.bind(res);
@@ -59,9 +59,9 @@ app.use((req, res, next) => {
     const endTime = Date.now();
     const duration = endTime - startTime;
     
-    console.log(`📤 RESPONSE[${requestId}]: ============= OUTGOING RESPONSE =============`);
-    console.log(`📤 RESPONSE[${requestId}]: Status: ${res.statusCode} | Duration: ${duration}ms`);
-    console.log(`📤 RESPONSE[${requestId}]: Response size:`, JSON.stringify(data || {}).length, 'bytes');
+    // console.log(`📤 RESPONSE[${requestId}]: ============= OUTGOING RESPONSE =============`);
+    // console.log(`📤 RESPONSE[${requestId}]: Status: ${res.statusCode} | Duration: ${duration}ms`);
+    // console.log(`📤 RESPONSE[${requestId}]: Response size:`, JSON.stringify(data || {}).length, 'bytes');
     console.log(`📤 RESPONSE[${requestId}]: ${req.method} ${req.originalUrl} -> ${res.statusCode} (${duration}ms)`);
     
     return originalJson(data);

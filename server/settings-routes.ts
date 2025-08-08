@@ -63,10 +63,11 @@ router.put('/organization', authenticateToken, async (req: AuthRequest, res) => 
   try {
     const organizationId = req.user!.organizationId;
     console.log('Updating organization settings for org ID:', organizationId);
-    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    // console.log('Request body:', JSON.stringify(req.body, null, 2));
     
     const validatedData = organizationSettingsSchema.parse(req.body);
-    console.log('Validated data:', JSON.stringify(validatedData, null, 2));
+    // console.log('Validated data:', JSON.stringify(validatedData, null, 2));
+    console.log('Organization settings validation successful');
     
     await settingsService.updateOrganizationSettings(organizationId, validatedData);
     console.log('Organization settings updated successfully');
