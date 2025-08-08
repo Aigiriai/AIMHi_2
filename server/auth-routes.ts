@@ -1189,10 +1189,10 @@ router.delete('/users/:id', authenticateToken, async (req: AuthRequest, res) => 
   }
 });
 
-// POST /auth/backup-database - Manual database backup (Authenticated users)
-router.post('/backup-database', authenticateToken, async (req: AuthRequest, res) => {
+// POST /auth/backup-database - Manual database backup (Super Admin only)
+router.post('/backup-database', authenticateToken, requireSuperAdmin, async (req: AuthRequest, res) => {
   try {
-    console.log(`🔄 MANUAL BACKUP: User ${req.user?.email} (${req.user?.role}) requested manual database backup`);
+    console.log(`🔄 MANUAL BACKUP: Super Admin ${req.user?.email} (${req.user?.role}) requested manual database backup`);
     console.log(`📊 MANUAL BACKUP: NODE_ENV = ${process.env.NODE_ENV || 'undefined'}`);
     console.log(`🏢 MANUAL BACKUP: Organization ID = ${req.user?.organizationId}`);
     

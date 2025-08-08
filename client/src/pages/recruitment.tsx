@@ -952,27 +952,28 @@ function RecruitmentDashboard() {
               </Card>
               */}
 
-              {/* System Management */}
-              <div className="space-y-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-center mb-6">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">System Management</h3>
-                        <p className="text-sm text-gray-600">
-                          Database backup and system maintenance tools
-                        </p>
+              {/* System Management - Only visible for Super Admin */}
+              {userRole === 'super_admin' && (
+                <div className="space-y-6">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-center mb-6">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">System Management</h3>
+                          <p className="text-sm text-gray-600">
+                            Database backup and system maintenance tools (Super Admin Only)
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
+                          onClick={handleBackupDatabase}
+                        >
+                          <CloudIcon className="mr-2 h-4 w-4" />
+                          Backup Database
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
-                        onClick={handleBackupDatabase}
-                      >
-                        <CloudIcon className="mr-2 h-4 w-4" />
-                        Backup Database
-                      </Button>
-                    </div>
                     
                     <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
                       <div className="flex">
@@ -989,8 +990,11 @@ function RecruitmentDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+              )}
 
-                {/* ATS DASHBOARD SPACE - Ready for high-level statistics, KPIs, charts, and graphs */}
+              {/* ATS DASHBOARD SPACE - Ready for high-level statistics, KPIs, charts, and graphs */}
+              <div className="space-y-6">
                 <Card>
                   <CardContent className="p-8 text-center">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">ATS Dashboard</h2>
