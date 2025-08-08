@@ -670,11 +670,7 @@ function RecruitmentDashboard() {
   // Data Management functions
   const handleClearMatches = async () => {
     try {
-      const response = await fetch("/api/matches", {
-        method: "DELETE"
-      });
-      
-      if (!response.ok) throw new Error("Failed to clear matches");
+      await apiRequest("DELETE", "/api/matches");
       
       await queryClient.invalidateQueries({ queryKey: ["/api/matches"] });
       await queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
