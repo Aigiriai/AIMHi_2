@@ -1286,6 +1286,15 @@ function RecruitmentDashboard() {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={handleClearMatches}
+                          disabled={matches.length === 0}
+                        >
+                          <Trash2Icon className="w-4 h-4 mr-2" />
+                          Clear Results
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={exportResults}
                         >
                           <DownloadIcon className="w-4 h-4 mr-2" />
