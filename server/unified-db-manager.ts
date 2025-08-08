@@ -262,29 +262,40 @@ async function performInitialization(): Promise<DatabaseInstance> {
     // ✅ ENHANCED LOGIC: Smart decision making for database initialization
     let result: DatabaseInstance;
     
-    // PRODUCTION: Ultra-simplified initialization to prevent timeouts
+    // PRODUCTION: Smart initialization with backup restoration priority
     if (process.env.NODE_ENV === "production") {
-      console.log("🏭 DB_MANAGER: Production mode - using simplified initialization");
+      console.log("🏭 DB_MANAGER: Production mode - attempting backup restoration first");
       
-      // Clean up any existing files
-      try {
-        if (existsSync(dbPath)) {
-          unlinkSync(dbPath);
-          console.log("🗑️ DB_MANAGER: Removed existing production database");
+      // First, try to restore from backup (highest priority)
+      console.log("🔄 DB_MANAGER: Checking for available backups before initialization...");
+      const backupRestored = await attemptBackupRestoration(dbPath);
+      
+      if (backupRestored) {
+        console.log("✅ DB_MANAGER: Successfully restored production database from backup!");
+        try {
+          result = await openAndValidateDatabase(dbPath);
+          console.log("✅ DB_MANAGER: Restored database validated successfully");
+        } catch (error) {
+          console.warn("⚠️ DB_MANAGER: Restored database validation failed:", (error as Error).message);
+          console.log("🔄 DB_MANAGER: Creating fresh database after backup validation failure");
+          result = await createFreshDatabase(dbPath, true); // Force recreate after validation failure
         }
-        const backupPath = join(dataDir, "backup.db");
-        if (existsSync(backupPath)) {
-          unlinkSync(backupPath);
-          console.log("🗑️ DB_MANAGER: Removed existing backup");
+      } else {
+        console.log("� DB_MANAGER: No backup available - creating fresh production database");
+        
+        // Clean up any corrupted files only if no backup was restored
+        try {
+          if (existsSync(dbPath)) {
+            unlinkSync(dbPath);
+            console.log("🗑️ DB_MANAGER: Removed existing corrupted database");
+          }
+        } catch (cleanupError) {
+          console.warn("⚠️ DB_MANAGER: Cleanup warning (continuing):", cleanupError);
         }
-      } catch (cleanupError) {
-        console.warn("⚠️ DB_MANAGER: Cleanup warning (continuing):", cleanupError);
+        
+        result = await createFreshDatabase(dbPath, false);
+        console.log("✅ DB_MANAGER: Fresh production database created successfully");
       }
-      
-      // Direct fresh database creation - no validation, no backup logic
-      console.log("📦 DB_MANAGER: Creating fresh production database (simplified)");
-      result = await createFreshDatabase(dbPath, false);
-      console.log("✅ DB_MANAGER: Production database created successfully");
     } else {
       // DEVELOPMENT: Full logic with validation and backup restoration
       if (existsSync(dbPath)) {
