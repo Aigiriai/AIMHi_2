@@ -446,9 +446,6 @@ export class DatabaseBackupService {
 
     await this.uploadDatabaseBackup(localDbPath, backupName);
 
-    // Also update the main backup
-    await this.uploadDatabaseBackup(localDbPath, "production-backup.db");
-
     // CRITICAL: Verify backup by downloading and reading it
     await this.verifyBackupContent(backupName);
 
@@ -460,9 +457,9 @@ export class DatabaseBackupService {
     console.log(`🛡️ Attempting to restore database from Object Storage...`);
 
     try {
-      // TEMPORARY: Delete all existing backups to force fresh seeding
-      //console.log(`🗑️ TEMP CODE: Deleting all existing backup files to force fresh database seeding...`);
-      await this.deleteAllBackups();
+      // TEMPORARY: Delete all existing backups to force fresh seeding - DISABLED
+      // console.log(`🗑️ TEMP CODE: Deleting all existing backup files to force fresh database seeding...`);
+      // await this.deleteAllBackups();
 
       // Get all backup files with their metadata
       const bucket = this.getBucket();
