@@ -292,6 +292,8 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
       error: "Failed to fetch pipeline statistics" 
     });
   }
+});
+
 // Change job status - Fixed to match frontend parameter name
 const changeJobStatusSchema = z.object({
   newStatus: z.enum(['draft', 'active', 'paused', 'filled', 'closed', 'archived']),
@@ -301,13 +303,14 @@ const changeJobStatusSchema = z.object({
 
 router.post("/jobs/:id/status", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    console.log(`🔄 JOB STATUS: Starting job status update - ID: ${req.params.id}`);
-    console.log(`🔄 JOB STATUS: Request body:`, req.body);
+    const expressReq = req as any; // Type assertion to access Express properties
+    console.log(`🔄 JOB STATUS: Starting job status update - ID: ${expressReq.params.id}`);
+    console.log(`🔄 JOB STATUS: Request body:`, expressReq.body);
     console.log(`🔄 JOB STATUS: User:`, { id: req.user?.id, role: req.user?.role, organizationId: req.user?.organizationId });
     
-    const jobId = parseInt(req.params.id);
+    const jobId = parseInt(expressReq.params.id);
     const user = req.user!;
-    const { newStatus: status, reason, notes } = changeJobStatusSchema.parse(req.body);
+    const { newStatus: status, reason, notes } = changeJobStatusSchema.parse(expressReq.body);
     
     console.log(`🔄 JOB STATUS: Parsed data - JobID: ${jobId}, Status: ${status}, User: ${user.id}`);
 
@@ -399,9 +402,10 @@ const moveApplicationSchema = z.object({
 
 router.post("/applications/:id/move", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const applicationId = parseInt(req.params.id);
+    const expressReq = req as any; // Type assertion to access Express properties
+    const applicationId = parseInt(expressReq.params.id);
     const user = req.user!;
-    const { newStage, reason, notes } = moveApplicationSchema.parse(req.body);
+    const { newStage, reason, notes } = moveApplicationSchema.parse(expressReq.body);
     
     console.log(`🔄 MOVE APPLICATION: ID ${applicationId} to stage '${newStage}' by user ${user.id}`);
 
@@ -473,8 +477,9 @@ const createApplicationSchema = z.object({
 
 router.post("/applications", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
+    const expressReq = req as any; // Type assertion to access Express properties
     const user = req.user!;
-    const { jobId, candidateId, source, notes } = createApplicationSchema.parse(req.body);
+    const { jobId, candidateId, source, notes } = createApplicationSchema.parse(expressReq.body);
 
     const { db } = await getDB();
 
