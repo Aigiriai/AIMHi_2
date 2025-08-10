@@ -205,6 +205,21 @@ export class StartupSchemaValidator {
           missingTableCount++;
         }
       }
+
+      // Check for EXTRA tables that don't belong in schema (new cleanup logic)
+      console.log('🗑️ STARTUP_VALIDATOR: Checking for extra tables that need cleanup...');
+      const expectedTableNames = new Set(expectedTables);
+      const extraTables = Array.from(existingTableNames).filter(name => !expectedTableNames.has(name));
+      
+      if (extraTables.length > 0) {
+        console.log(`⚠️  STARTUP_VALIDATOR: Found ${extraTables.length} extra tables not defined in schema:`);
+        extraTables.forEach(table => {
+          console.log(`     - ${table} (will be removed to align with schema)`);
+          issues.push(`Extra table found: ${table} - not defined in current schema, will be removed for alignment`);
+        });
+      } else {
+        console.log('✅ STARTUP_VALIDATOR: No extra tables found');
+      }
       
       if (missingTableCount > 0) {
         console.log(`⚠️  STARTUP_VALIDATOR: ${missingTableCount} critical tables missing from database`);

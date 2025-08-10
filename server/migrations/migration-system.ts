@@ -104,6 +104,7 @@ export class MigrationManager {
     missingColumns: string[];
     extraColumns: string[];
     missingTables: string[];
+    extraTables: string[];
     recommendations: string[];
   }> {
     console.log('🔍 MIGRATION_SYSTEM: Checking for schema drift...');
@@ -113,6 +114,7 @@ export class MigrationManager {
       missingColumns: [] as string[],
       extraColumns: [] as string[],
       missingTables: [] as string[],
+      extraTables: [] as string[],
       recommendations: [] as string[]
     };
 
@@ -125,7 +127,7 @@ export class MigrationManager {
 
       const currentTableNames = new Set(currentTables.map(t => t.name));
       
-      // Expected tables from our schema
+      // Expected tables from our schema (SINGLE SOURCE OF TRUTH)
       const expectedTables = [
         'organizations', 'teams', 'users', 'user_teams', 'jobs', 'candidates',
         'job_matches', 'interviews', 'applications', 'job_assignments',
@@ -135,11 +137,22 @@ export class MigrationManager {
         'report_field_metadata', 'report_templates', 'report_executions'
       ];
 
+      const expectedTableNames = new Set(expectedTables);
+
       // Check for missing tables
       for (const table of expectedTables) {
         if (!currentTableNames.has(table)) {
           analysis.missingTables.push(table);
           analysis.needsMigration = true;
+        }
+      }
+
+      // Check for EXTRA tables that should be removed
+      for (const table of currentTables) {
+        if (!expectedTableNames.has(table.name)) {
+          analysis.extraTables.push(table.name);
+          analysis.needsMigration = true;
+          analysis.recommendations.push(`🗑️ Remove extra table: ${table.name}`);
         }
       }
 
@@ -169,8 +182,13 @@ export class MigrationManager {
       console.log(`   - Current tables: ${currentTableNames.size}`);
       console.log(`   - Expected tables: ${expectedTables.length}`);
       console.log(`   - Missing tables: ${analysis.missingTables.length}`);
+      console.log(`   - Extra tables: ${analysis.extraTables.length}`);
       console.log(`   - Missing columns: ${analysis.missingColumns.length}`);
       console.log(`   - Needs migration: ${analysis.needsMigration}`);
+
+      if (analysis.extraTables.length > 0) {
+        console.log('🗑️  Extra tables to be removed:', analysis.extraTables);
+      }
 
       return analysis;
     } catch (error) {
@@ -180,10 +198,11 @@ export class MigrationManager {
   }
 
   /**
-   * Generate automatic migration for missing columns/tables
+   * Generate automatic migration for schema alignment (additions AND cleanup)
    */
   async generateAutoMigration(): Promise<Migration | null> {
     const drift = await this.checkSchemaDrift();
+    
     
     if (!drift.needsMigration) {
       console.log('✅ MIGRATION_SYSTEM: No migration needed - schema is up to date');
@@ -223,6 +242,16 @@ export class MigrationManager {
       }
     }
 
+    // SCHEMA CLEANUP: Handle extra tables that need to be removed
+    console.log('🗑️ MIGRATION_SYSTEM: Processing schema cleanup...');
+    for (const extraTable of drift.extraTables) {
+      console.log(`   - Scheduling removal of extra table: ${extraTable}`);
+      upStatements.push(`DROP TABLE IF EXISTS ${extraTable};`);
+      // Note: Down migration would need to recreate the table, but since it's not in our schema,
+      // we can't recreate it properly. Log this as a warning.
+      downStatements.push(`-- WARNING: Cannot recreate removed table '${extraTable}' - not in current schema`);
+    }
+
     // Handle ALL missing tables with complete CREATE TABLE statements
     for (const missingTable of drift.missingTables) {
       const createStatement = this.getTableCreationSQL(missingTable);
@@ -237,13 +266,16 @@ export class MigrationManager {
     const migration: Migration = {
       id: migrationId,
       version,
-      description: `Auto-generated migration - ${drift.missingColumns.length} columns, ${drift.missingTables.length} tables`,
+      description: `Auto-generated schema alignment - ${drift.missingColumns.length} columns, ${drift.missingTables.length} tables added, ${drift.extraTables.length} tables removed`,
       up: upStatements,
       down: downStatements,
       timestamp
     };
 
-    console.log('🔄 MIGRATION_SYSTEM: Generated comprehensive auto-migration:', migration.description);
+    console.log('🔄 MIGRATION_SYSTEM: Generated comprehensive schema alignment migration:');
+    console.log(`   - Description: ${migration.description}`);
+    console.log(`   - Up statements: ${upStatements.length}`);
+    console.log(`   - Schema cleanup: ${drift.extraTables.length > 0 ? 'YES' : 'NO'}`);
     return migration;
   }
 
