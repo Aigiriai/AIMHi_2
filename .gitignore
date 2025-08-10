@@ -21,6 +21,9 @@ ai_service_restart.log
 # Call transcripts and recordings (may contain sensitive data)
 call-transcripts/
 
+# Uploaded files (user data should not be committed)
+uploads/
+
 # Environment and configuration files
 .env
 .env.local
