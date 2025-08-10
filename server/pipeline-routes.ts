@@ -235,7 +235,12 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
     }
 
     // Get jobs statistics using Drizzle ORM
-    let totalJobsResult, activeJobsResult, totalApplicationsResult;
+    let totalJobsResult, activeJobsResult, totalApplicationsResult, hiredThisMonthResult;
+    
+    // Calculate start of current month for hired count
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
     
     if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'org_admin') {
       // Admin users see all jobs in their organization
@@ -259,6 +264,17 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
       })
       .from(applications)
       .where(eq(applications.organizationId, organizationId));
+
+      // Get applications hired this month
+      hiredThisMonthResult = await db.select({ 
+        count: sql<number>`count(*)`.as('count') 
+      })
+      .from(applications)
+      .where(and(
+        eq(applications.organizationId, organizationId),
+        eq(applications.currentStage, 'hired'),
+        sql`${applications.lastStageChangeAt} >= ${startOfMonth.toISOString()}`
+      ));
     } else {
       // Regular users see only their own jobs
       totalJobsResult = await db.select({ 
@@ -289,12 +305,26 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
         eq(applications.organizationId, organizationId),
         eq(jobs.createdBy, userId)
       ));
+
+      // Get applications hired this month for user's jobs
+      hiredThisMonthResult = await db.select({ 
+        count: sql<number>`count(*)`.as('count') 
+      })
+      .from(applications)
+      .leftJoin(jobs, eq(applications.jobId, jobs.id))
+      .where(and(
+        eq(applications.organizationId, organizationId),
+        eq(jobs.createdBy, userId),
+        eq(applications.currentStage, 'hired'),
+        sql`${applications.lastStageChangeAt} >= ${startOfMonth.toISOString()}`
+      ));
     }
 
     const stats: PipelineStats = {
       totalJobs: totalJobsResult?.[0]?.count || 0,
       activeJobs: activeJobsResult?.[0]?.count || 0,
       totalApplications: totalApplicationsResult?.[0]?.count || 0,
+      hiredThisMonth: hiredThisMonthResult?.[0]?.count || 0,
       jobsByStatus: {},
       applicationsByStatus: {},
     };

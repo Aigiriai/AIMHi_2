@@ -126,7 +126,9 @@ export function PipelineKanban() {
       // Force fresh data fetch by invalidating all pipeline queries
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline'] });
       queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
-      queryClient.refetchQueries({ queryKey: ['/api/pipeline/stats'] });
+      // Force immediate refetch with fresh data
+      queryClient.refetchQueries({ queryKey: ['/api/pipeline/stats'], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['/api/pipeline'], type: 'active' });
       toast({ title: "Application moved successfully" });
     },
     onError: (error, variables) => {
@@ -244,7 +246,7 @@ export function PipelineKanban() {
                 {statsLoading ? (
                   <Skeleton className="h-8 w-12" />
                 ) : (
-                  <p className="text-2xl font-bold">{stats.applicationsByStatus?.hired || 0}</p>
+                  <p className="text-2xl font-bold">{stats.hiredThisMonth || 0}</p>
                 )}
               </div>
               <UserCheck className="h-8 w-8 text-emerald-600" />

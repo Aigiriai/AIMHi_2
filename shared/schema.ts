@@ -570,6 +570,7 @@ export interface PipelineStats {
   totalJobs: number;
   activeJobs: number;
   totalApplications: number;
+  hiredThisMonth: number;
   applicationsByStatus: Record<string, number>;
   jobsByStatus: Record<string, number>;
 }
