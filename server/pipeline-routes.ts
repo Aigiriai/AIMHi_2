@@ -234,35 +234,67 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
       return res.status(400).json({ success: false, error: "Organization context required" });
     }
 
-    // Get jobs statistics
-    const totalJobsQuery = userRole === 'admin' 
-      ? `SELECT COUNT(*) as count FROM jobs WHERE organization_id = ?`
-      : `SELECT COUNT(*) as count FROM jobs WHERE organization_id = ? AND created_by = ?`;
+    // Get jobs statistics using Drizzle ORM
+    let totalJobsResult, activeJobsResult, totalApplicationsResult;
     
-    const totalJobsParams = userRole === 'admin' ? [organizationId] : [organizationId, userId];
-    const totalJobs = db.prepare(totalJobsQuery).get(...totalJobsParams) as { count: number };
+    if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'org_admin') {
+      // Admin users see all jobs in their organization
+      totalJobsResult = await db.select({ 
+        count: sql<number>`count(*)`.as('count') 
+      })
+      .from(jobs)
+      .where(eq(jobs.organizationId, organizationId));
 
-    const activeJobsQuery = userRole === 'admin'
-      ? `SELECT COUNT(*) as count FROM jobs WHERE organization_id = ? AND status = 'active'`
-      : `SELECT COUNT(*) as count FROM jobs WHERE organization_id = ? AND created_by = ? AND status = 'active'`;
-    
-    const activeJobsParams = userRole === 'admin' ? [organizationId] : [organizationId, userId];
-    const activeJobs = db.prepare(activeJobsQuery).get(...activeJobsParams) as { count: number };
+      activeJobsResult = await db.select({ 
+        count: sql<number>`count(*)`.as('count') 
+      })
+      .from(jobs)
+      .where(and(
+        eq(jobs.organizationId, organizationId),
+        eq(jobs.status, 'active')
+      ));
 
-    // Get applications statistics
-    const totalApplicationsQuery = userRole === 'admin'
-      ? `SELECT COUNT(*) as count FROM applications WHERE organization_id = ?`
-      : `SELECT COUNT(*) as count FROM applications a 
-         JOIN jobs j ON a.job_id = j.id 
-         WHERE a.organization_id = ? AND j.created_by = ?`;
-    
-    const totalApplicationsParams = userRole === 'admin' ? [organizationId] : [organizationId, userId];
-    const totalApplications = db.prepare(totalApplicationsQuery).get(...totalApplicationsParams) as { count: number };
+      totalApplicationsResult = await db.select({ 
+        count: sql<number>`count(*)`.as('count') 
+      })
+      .from(applications)
+      .where(eq(applications.organizationId, organizationId));
+    } else {
+      // Regular users see only their own jobs
+      totalJobsResult = await db.select({ 
+        count: sql<number>`count(*)`.as('count') 
+      })
+      .from(jobs)
+      .where(and(
+        eq(jobs.organizationId, organizationId),
+        eq(jobs.createdBy, userId)
+      ));
+
+      activeJobsResult = await db.select({ 
+        count: sql<number>`count(*)`.as('count') 
+      })
+      .from(jobs)
+      .where(and(
+        eq(jobs.organizationId, organizationId),
+        eq(jobs.createdBy, userId),
+        eq(jobs.status, 'active')
+      ));
+
+      totalApplicationsResult = await db.select({ 
+        count: sql<number>`count(*)`.as('count') 
+      })
+      .from(applications)
+      .leftJoin(jobs, eq(applications.jobId, jobs.id))
+      .where(and(
+        eq(applications.organizationId, organizationId),
+        eq(jobs.createdBy, userId)
+      ));
+    }
 
     const stats: PipelineStats = {
-      totalJobs: totalJobs?.count || 0,
-      activeJobs: activeJobs?.count || 0,
-      totalApplications: totalApplications?.count || 0,
+      totalJobs: totalJobsResult?.[0]?.count || 0,
+      activeJobs: activeJobsResult?.[0]?.count || 0,
+      totalApplications: totalApplicationsResult?.[0]?.count || 0,
       jobsByStatus: {},
       applicationsByStatus: {},
     };
