@@ -143,15 +143,24 @@ export class MigrationManager {
         }
       }
 
-      // Check users table specifically for report_permissions column
-      if (currentTableNames.has('users')) {
-        const userColumns = this.db.prepare(`PRAGMA table_info(users)`).all() as any[];
-        const columnNames = userColumns.map(col => col.name);
-        
-        if (!columnNames.includes('report_permissions')) {
-          analysis.missingColumns.push('users.report_permissions');
-          analysis.needsMigration = true;
-          analysis.recommendations.push('Add report_permissions column to users table');
+      // Check for missing columns in all existing tables
+      const columnChecks = [
+        { table: 'users', column: 'report_permissions' },
+        { table: 'organizations', column: 'report_settings' },
+        { table: 'organizations', column: 'max_report_rows' },
+        { table: 'organizations', column: 'max_saved_templates' },
+        { table: 'candidates', column: 'settings' }
+      ];
+
+      for (const check of columnChecks) {
+        if (currentTableNames.has(check.table)) {
+          const columns = this.db.prepare(`PRAGMA table_info(${check.table})`).all() as any[];
+          const columnNames = columns.map(col => col.name);
+          
+          if (!columnNames.includes(check.column)) {
+            analysis.missingColumns.push(`${check.table}.${check.column}`);
+            analysis.needsMigration = true;
+          }
         }
       }
 
@@ -188,28 +197,149 @@ export class MigrationManager {
     const upStatements: string[] = [];
     const downStatements: string[] = [];
 
-    // Handle missing report_permissions column
-    if (drift.missingColumns.includes('users.report_permissions')) {
-      upStatements.push(`ALTER TABLE users ADD COLUMN report_permissions TEXT DEFAULT '{}';`);
-      downStatements.push(`-- Note: SQLite doesn't support DROP COLUMN, manual intervention required`);
+    // Handle ALL missing columns with schema-aware defaults
+    for (const columnRef of drift.missingColumns) {
+      const [tableName, columnName] = columnRef.split('.');
+      let alterStatement = '';
+      
+      // Schema-aware column definitions with proper datatypes
+      if (tableName === 'users' && columnName === 'report_permissions') {
+        alterStatement = `ALTER TABLE users ADD COLUMN report_permissions TEXT DEFAULT '{}';`;
+      } else if (tableName === 'organizations') {
+        if (columnName === 'report_settings') {
+          alterStatement = `ALTER TABLE organizations ADD COLUMN report_settings TEXT DEFAULT '{}';`;
+        } else if (columnName === 'max_report_rows') {
+          alterStatement = `ALTER TABLE organizations ADD COLUMN max_report_rows INTEGER NOT NULL DEFAULT 10000;`;
+        } else if (columnName === 'max_saved_templates') {
+          alterStatement = `ALTER TABLE organizations ADD COLUMN max_saved_templates INTEGER NOT NULL DEFAULT 50;`;
+        }
+      } else if (tableName === 'candidates' && columnName === 'settings') {
+        alterStatement = `ALTER TABLE candidates ADD COLUMN settings TEXT DEFAULT '{}';`;
+      }
+      
+      if (alterStatement) {
+        upStatements.push(alterStatement);
+        downStatements.push(`-- Note: SQLite doesn't support DROP COLUMN for ${columnRef}`);
+      }
     }
 
-    // Handle missing tables (this would be a more complex operation)
+    // Handle ALL missing tables with complete CREATE TABLE statements
     for (const missingTable of drift.missingTables) {
-      upStatements.push(`-- Missing table: ${missingTable} - requires full schema creation`);
+      const createStatement = this.getTableCreationSQL(missingTable);
+      if (createStatement) {
+        upStatements.push(createStatement);
+        downStatements.push(`DROP TABLE IF EXISTS ${missingTable};`);
+      } else {
+        upStatements.push(`-- WARNING: No schema definition found for table: ${missingTable}`);
+      }
     }
 
     const migration: Migration = {
       id: migrationId,
       version,
-      description: `Auto-generated migration for schema drift: ${drift.missingColumns.join(', ')}`,
+      description: `Auto-generated migration - ${drift.missingColumns.length} columns, ${drift.missingTables.length} tables`,
       up: upStatements,
       down: downStatements,
       timestamp
     };
 
-    console.log('🔄 MIGRATION_SYSTEM: Generated auto-migration:', migration.description);
+    console.log('🔄 MIGRATION_SYSTEM: Generated comprehensive auto-migration:', migration.description);
     return migration;
+  }
+
+  /**
+   * Get CREATE TABLE SQL for missing tables
+   */
+  private getTableCreationSQL(tableName: string): string | null {
+    const schemas: Record<string, string> = {
+      'report_table_metadata': `
+        CREATE TABLE IF NOT EXISTS report_table_metadata (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          table_name TEXT NOT NULL UNIQUE,
+          display_name TEXT NOT NULL,
+          description TEXT,
+          category TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          sort_order INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
+        );`,
+      
+      'report_field_metadata': `
+        CREATE TABLE IF NOT EXISTS report_field_metadata (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          table_id INTEGER NOT NULL,
+          field_name TEXT NOT NULL,
+          display_name TEXT NOT NULL,
+          description TEXT,
+          field_type TEXT NOT NULL,
+          data_type TEXT NOT NULL,
+          is_filterable INTEGER DEFAULT 1,
+          is_groupable INTEGER DEFAULT 1,
+          is_aggregatable INTEGER DEFAULT 0,
+          default_aggregation TEXT,
+          format_hint TEXT,
+          is_active INTEGER DEFAULT 1,
+          sort_order INTEGER DEFAULT 0,
+          validation_rules TEXT DEFAULT '{}',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          FOREIGN KEY (table_id) REFERENCES report_table_metadata(id) ON DELETE CASCADE
+        );`,
+      
+      'report_templates': `
+        CREATE TABLE IF NOT EXISTS report_templates (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          organization_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          template_name TEXT NOT NULL,
+          description TEXT,
+          is_public INTEGER DEFAULT 0,
+          category TEXT DEFAULT 'custom',
+          selected_tables TEXT DEFAULT '[]',
+          selected_rows TEXT DEFAULT '[]',
+          selected_columns TEXT DEFAULT '[]',
+          selected_measures TEXT DEFAULT '[]',
+          filters TEXT DEFAULT '[]',
+          chart_type TEXT DEFAULT 'table',
+          chart_config TEXT DEFAULT '{}',
+          generated_sql TEXT,
+          last_executed_at TEXT,
+          execution_count INTEGER DEFAULT 0,
+          avg_execution_time INTEGER DEFAULT 0,
+          created_by INTEGER NOT NULL,
+          shared_with TEXT DEFAULT '[]',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (created_by) REFERENCES users(id)
+        );`,
+      
+      'report_executions': `
+        CREATE TABLE IF NOT EXISTS report_executions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          organization_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          template_id INTEGER,
+          report_type TEXT NOT NULL,
+          generated_sql TEXT NOT NULL,
+          parameters TEXT DEFAULT '{}',
+          result_count INTEGER,
+          execution_time INTEGER,
+          status TEXT NOT NULL DEFAULT 'running',
+          error_message TEXT,
+          memory_usage INTEGER,
+          rows_processed INTEGER,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          completed_at TEXT,
+          FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (template_id) REFERENCES report_templates(id) ON DELETE SET NULL
+        );`
+    };
+
+    return schemas[tableName] || null;
   }
 
   /**
