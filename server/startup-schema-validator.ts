@@ -177,7 +177,8 @@ export class StartupSchemaValidator {
         'candidate_assignments', 'candidate_submissions', 'status_history',
         'job_templates', 'organization_credentials', 'user_credentials',
         'usage_metrics', 'audit_logs', 'report_table_metadata', 
-        'report_field_metadata', 'report_templates', 'report_executions'
+        'report_field_metadata', 'report_templates', 'report_executions',
+        'schema_migrations'  // Essential system table for tracking migrations
       ];
 
       // Critical columns that must exist for application functionality

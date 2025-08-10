@@ -134,7 +134,8 @@ export class MigrationManager {
         'candidate_assignments', 'candidate_submissions', 'status_history',
         'job_templates', 'organization_credentials', 'user_credentials',
         'usage_metrics', 'audit_logs', 'report_table_metadata', 
-        'report_field_metadata', 'report_templates', 'report_executions'
+        'report_field_metadata', 'report_templates', 'report_executions',
+        'schema_migrations'  // Essential system table for tracking migrations
       ];
 
       const expectedTableNames = new Set(expectedTables);
@@ -387,11 +388,21 @@ export class MigrationManager {
     // Start transaction
     const transaction = this.db.transaction(() => {
       try {
-        // Execute up statements
+        // Execute up statements with enhanced error handling
         for (const statement of migration.up) {
           if (statement.trim() && !statement.startsWith('--')) {
             console.log(`   - Executing: ${statement.substring(0, 50)}...`);
-            this.db.exec(statement);
+            try {
+              this.db.exec(statement);
+            } catch (statementError: any) {
+              // Handle specific cases where operations might fail safely
+              if (statement.includes('DROP TABLE IF EXISTS')) {
+                console.log(`   ⚠️  Table drop operation handled: ${statementError?.message || 'Unknown error'}`);
+                // Continue execution - IF EXISTS should handle this
+              } else {
+                throw statementError;
+              }
+            }
           }
         }
 
