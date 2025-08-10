@@ -142,8 +142,20 @@ LINKEDIN_CLIENT_SECRET=your_linkedin_client_secret
 INDEED_PUBLISHER_ID=your_indeed_publisher_id
 ```
 
-### 4. Database Setup
+### 4. Database Setup & Schema Validation
+
+**✨ NEW: Automatic Startup Schema Validation**
+
+AIM Hi System now includes **startup-only schema validation** that ensures perfect database compatibility before serving any requests:
+
+- **🎯 Zero Runtime Overhead**: Schema validation happens only during startup
+- **🔧 Automatic Migration**: Missing tables/columns are added automatically  
+- **💾 Safety Backups**: Database backups before any schema changes
+- **📊 Detailed Logging**: Step-by-step validation progress with timing
+- **⚡ Maximum Performance**: No query wrapping or runtime monitoring
+
 ```bash
+# The database will be automatically validated and migrated on startup
 npm run db:push
 ```
 
@@ -154,7 +166,34 @@ npm run dev
 
 Visit `http://localhost:5000` to access the application.
 
-## 📖 Usage Guide
+## � Available Scripts
+
+```bash
+# Development
+npm run dev                    # Start development server with automatic schema validation
+npm run build                  # Build for production
+npm run preview                # Preview production build
+
+# Database Management (with Startup Validation)
+npm run migrate                # Run database migrations manually
+npm run db:health              # Database health check
+npm run db:stats               # Show database statistics and schema status
+npm run db:studio              # Open Drizzle Studio
+npm run fix-login              # Quick fix for login issues (restarts with validation)
+npm run test-startup           # Test the startup validation system
+
+# Deployment
+npm run deploy                 # Full production deployment with automatic migration
+```
+
+**🛡️ About Startup Schema Validation:**
+- Every `npm run dev` automatically validates and fixes database schema
+- Missing tables/columns are detected and added during startup
+- Safety backups are created before any schema modifications
+- Zero runtime overhead - validation happens only once at startup
+- Detailed logging shows exactly what's being validated and fixed
+
+## �📖 Usage Guide
 
 ### Setting Up Voice Calling
 1. Configure Twilio credentials in environment variables

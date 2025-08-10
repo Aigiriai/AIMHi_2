@@ -99,18 +99,47 @@ export function MatrixReportBuilder() {
 
   const { toast } = useToast();
 
+  // Add debug logging for component initialization
+  useEffect(() => {
+    console.log('🎯 MATRIX_REPORT: Component initialized');
+    console.log('🎯 MATRIX_REPORT: Initial state:', {
+      selectedTables: selectedTables.length,
+      selectedRows: selectedRows.length,
+      selectedColumns: selectedColumns.length,
+      selectedMeasures: selectedMeasures.length,
+      chartType
+    });
+  }, []);
+
+  // Add debug logging for state changes
+  useEffect(() => {
+    console.log('🎯 MATRIX_REPORT: Selection state changed:', {
+      tables: selectedTables,
+      rows: selectedRows,
+      columns: selectedColumns,
+      measures: selectedMeasures,
+      totalFields: selectedRows.length + selectedColumns.length + selectedMeasures.length
+    });
+  }, [selectedTables, selectedRows, selectedColumns, selectedMeasures]);
+
   // Fetch available tables and their fields
   const { data: tables = [], isLoading: tablesLoading, error: tablesError } = useQuery<TableMetadata[]>({
     queryKey: ['/api/report/tables'],
     queryFn: async () => {
+      console.log('🎯 MATRIX_REPORT: Fetching table metadata...');
       const response = await fetch('/api/report/tables', {
         headers: {
           ...getAuthHeaders(),
           'Content-Type': 'application/json',
         },
       });
-      if (!response.ok) throw new Error('Failed to fetch tables');
-      return response.json();
+      if (!response.ok) {
+        console.error('🎯 MATRIX_REPORT: Failed to fetch tables:', response.status, response.statusText);
+        throw new Error('Failed to fetch tables');
+      }
+      const data = await response.json();
+      console.log('🎯 MATRIX_REPORT: Successfully fetched tables:', data.length, 'tables');
+      return data;
     },
   });
 
@@ -132,6 +161,7 @@ export function MatrixReportBuilder() {
   // Execute report mutation
   const executeReportMutation = useMutation({
     mutationFn: async (reportRequest: any) => {
+      console.log('🎯 MATRIX_REPORT: Executing report with request:', reportRequest);
       const response = await fetch('/api/report/execute', {
         method: 'POST',
         headers: {
@@ -140,10 +170,20 @@ export function MatrixReportBuilder() {
         },
         body: JSON.stringify(reportRequest),
       });
-      if (!response.ok) throw new Error('Failed to execute report');
-      return response.json();
+      if (!response.ok) {
+        console.error('🎯 MATRIX_REPORT: Report execution failed:', response.status, response.statusText);
+        throw new Error('Failed to execute report');
+      }
+      const data = await response.json();
+      console.log('🎯 MATRIX_REPORT: Report executed successfully:', {
+        executionId: data.execution_id,
+        rowCount: data.row_count,
+        executionTime: data.execution_time
+      });
+      return data;
     },
     onSuccess: (data) => {
+      console.log('🎯 MATRIX_REPORT: Report results received:', data);
       setReportResults(data);
       setShowResults(true);
       toast({
@@ -152,6 +192,7 @@ export function MatrixReportBuilder() {
       });
     },
     onError: (error: Error) => {
+      console.error('🎯 MATRIX_REPORT: Report execution error:', error);
       toast({
         title: 'Execution Failed',
         description: error.message,
@@ -190,20 +231,31 @@ export function MatrixReportBuilder() {
   const handleFieldSelection = (field: FieldMetadata, checked: boolean) => {
     const fieldId = field.field_name;
     
+    console.log('🎯 MATRIX_REPORT: Field selection changed:', {
+      field: fieldId,
+      fieldType: field.field_type,
+      checked,
+      displayName: field.display_name
+    });
+    
     if (field.field_type === 'dimension') {
       // For dimensions, user chooses whether it goes to rows or columns
       // For now, default to rows - can be enhanced with drag & drop
       if (checked) {
+        console.log('🎯 MATRIX_REPORT: Adding dimension to rows:', fieldId);
         setSelectedRows(prev => [...prev, fieldId]);
       } else {
+        console.log('🎯 MATRIX_REPORT: Removing dimension from all sections:', fieldId);
         setSelectedRows(prev => prev.filter(id => id !== fieldId));
         setSelectedColumns(prev => prev.filter(id => id !== fieldId));
       }
     } else {
       // Measures
       if (checked) {
+        console.log('🎯 MATRIX_REPORT: Adding measure:', fieldId);
         setSelectedMeasures(prev => [...prev, fieldId]);
       } else {
+        console.log('🎯 MATRIX_REPORT: Removing measure:', fieldId);
         setSelectedMeasures(prev => prev.filter(id => id !== fieldId));
       }
     }
@@ -211,11 +263,13 @@ export function MatrixReportBuilder() {
 
   // Move field between rows and columns
   const moveFieldToColumns = (fieldId: string) => {
+    console.log('🎯 MATRIX_REPORT: Moving field to columns:', fieldId);
     setSelectedRows(prev => prev.filter(id => id !== fieldId));
     setSelectedColumns(prev => [...prev, fieldId]);
   };
 
   const moveFieldToRows = (fieldId: string) => {
+    console.log('🎯 MATRIX_REPORT: Moving field to rows:', fieldId);
     setSelectedColumns(prev => prev.filter(id => id !== fieldId));
     setSelectedRows(prev => [...prev, fieldId]);
   };

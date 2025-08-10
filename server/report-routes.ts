@@ -36,6 +36,14 @@ interface ReportTemplate {
 
 // SQL query generation utility
 function generateReportSQL(request: ReportRequest): string {
+  console.log('🔧 REPORT_SQL: Generating query with request:', {
+    tables: request.selected_tables,
+    rows: request.selected_rows?.length || 0,
+    columns: request.selected_columns?.length || 0,
+    measures: request.selected_measures?.length || 0,
+    filters: request.filters?.length || 0
+  });
+
   const { selected_tables, selected_rows, selected_columns, selected_measures, filters } = request;
   
   // Basic query structure
@@ -45,8 +53,10 @@ function generateReportSQL(request: ReportRequest): string {
   const allFields = [...selected_rows, ...selected_columns, ...selected_measures];
   if (allFields.length === 0) {
     query += 'COUNT(*) as total_count';
+    console.log('🔧 REPORT_SQL: Using default COUNT query - no fields selected');
   } else {
     query += allFields.join(', ');
+    console.log('🔧 REPORT_SQL: Selected fields:', allFields);
   }
   
   // Add FROM clause with appropriate tables
@@ -57,15 +67,19 @@ function generateReportSQL(request: ReportRequest): string {
     for (let i = 1; i < selected_tables.length; i++) {
       const table = selected_tables[i];
       query += ` LEFT JOIN ${table}`;
+      console.log('🔧 REPORT_SQL: Added JOIN for table:', table);
     }
   } else {
     query += ' FROM jobs'; // Default table
+    console.log('🔧 REPORT_SQL: Using default table: jobs');
   }
   
   // Add WHERE clause for filters
   if (filters && filters.length > 0) {
     const filterClauses = filters.map(filter => {
       const { field, operator, value } = filter;
+      console.log('🔧 REPORT_SQL: Processing filter:', { field, operator, value });
+      
       switch (operator) {
         case 'equals': return `${field} = '${value}'`;
         case 'not_equals': return `${field} != '${value}'`;
@@ -76,33 +90,44 @@ function generateReportSQL(request: ReportRequest): string {
         case 'less_than': return `${field} < ${value}`;
         case 'is_null': return `${field} IS NULL`;
         case 'is_not_null': return `${field} IS NOT NULL`;
-        default: return `${field} = '${value}'`;
+        default: 
+          console.warn('🔧 REPORT_SQL: Unknown operator, defaulting to equals:', operator);
+          return `${field} = '${value}'`;
       }
     });
     query += ' WHERE ' + filterClauses.join(' AND ');
+    console.log('🔧 REPORT_SQL: Applied filters:', filterClauses);
   }
   
   // Add GROUP BY for measures
   if (selected_measures.length > 0 && (selected_rows.length > 0 || selected_columns.length > 0)) {
     const groupByFields = [...selected_rows, ...selected_columns];
     query += ' GROUP BY ' + groupByFields.join(', ');
+    console.log('🔧 REPORT_SQL: Added GROUP BY:', groupByFields);
   }
   
   // Add ORDER BY
   if (selected_rows.length > 0) {
     query += ' ORDER BY ' + selected_rows[0];
+    console.log('🔧 REPORT_SQL: Added ORDER BY:', selected_rows[0]);
   }
   
   // Add LIMIT for safety
   query += ' LIMIT 1000';
   
+  console.log('🔧 REPORT_SQL: Generated query:', query);
   return query;
 }
 
 export default function reportRoutes(app: Express) {
   // Get all available table metadata - simplified mock version
   app.get("/api/report/tables", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
+    const requestId = Date.now();
+    console.log(`📊 REPORT_API[${requestId}]: GET /api/report/tables requested by user:${req.user?.id} org:${req.organizationId}`);
+    
     try {
+      console.log(`📊 REPORT_API[${requestId}]: Returning mock table metadata for development`);
+      
       // Return mock table metadata for the matrix-style report builder
       const mockTables = [
         {
@@ -339,9 +364,10 @@ export default function reportRoutes(app: Express) {
         }
       ];
       
+      console.log(`📊 REPORT_API[${requestId}]: Successfully returning ${mockTables.length} tables with ${mockTables.reduce((sum, t) => sum + t.fields.length, 0)} total fields`);
       res.json(mockTables);
     } catch (error) {
-      console.error('Error fetching table metadata:', error);
+      console.error(`📊 REPORT_API[${requestId}]: Error fetching table metadata:`, error);
       res.status(500).json({ 
         error: 'Failed to fetch table metadata',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -351,11 +377,32 @@ export default function reportRoutes(app: Express) {
 
   // Execute a report query - returns mock data for the matrix interface
   app.post("/api/report/execute", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
+    const requestId = Date.now();
+    const startTime = performance.now();
+    
+    console.log(`📊 REPORT_API[${requestId}]: POST /api/report/execute requested by user:${req.user?.id} org:${req.organizationId}`);
+    console.log(`📊 REPORT_API[${requestId}]: Request body:`, {
+      selected_tables: req.body?.selected_tables?.length || 0,
+      selected_rows: req.body?.selected_rows?.length || 0,
+      selected_columns: req.body?.selected_columns?.length || 0,
+      selected_measures: req.body?.selected_measures?.length || 0,
+      filters: req.body?.filters?.length || 0,
+      chart_type: req.body?.chart_type
+    });
+    
     try {
       const reportRequest: ReportRequest = req.body;
       
+      // Validate request
+      if (!reportRequest.selected_tables || reportRequest.selected_tables.length === 0) {
+        console.warn(`📊 REPORT_API[${requestId}]: Warning - No tables selected, using default`);
+      }
+      
       // Generate SQL query
+      console.log(`📊 REPORT_API[${requestId}]: Generating SQL query...`);
       const generatedSQL = generateReportSQL(reportRequest);
+      
+      console.log(`📊 REPORT_API[${requestId}]: Using mock data for development - SQL would be:`, generatedSQL);
       
       // Return realistic mock data based on selected fields
       const mockResults = [
@@ -381,9 +428,14 @@ export default function reportRoutes(app: Express) {
       }
       
       const executionTime = 150 + Math.random() * 200; // Mock execution time
+      const endTime = performance.now();
+      const actualProcessingTime = endTime - startTime;
       
-      res.json({
-        execution_id: Date.now(),
+      console.log(`📊 REPORT_API[${requestId}]: Query executed successfully`);
+      console.log(`📊 REPORT_API[${requestId}]: Results: ${filteredResults.length} rows, Mock time: ${Math.round(executionTime)}ms, Actual processing: ${Math.round(actualProcessingTime)}ms`);
+      
+      const response = {
+        execution_id: requestId,
         generated_sql: generatedSQL,
         results: filteredResults,
         row_count: filteredResults.length,
@@ -393,27 +445,58 @@ export default function reportRoutes(app: Express) {
           selected_tables: reportRequest.selected_tables,
           selected_rows: reportRequest.selected_rows,
           selected_columns: reportRequest.selected_columns,
-          selected_measures: reportRequest.selected_measures
+          selected_measures: reportRequest.selected_measures,
+          actual_processing_time: Math.round(actualProcessingTime)
         }
-      });
+      };
+      
+      console.log(`📊 REPORT_API[${requestId}]: Sending response with ${response.row_count} rows`);
+      res.json(response);
       
     } catch (error) {
-      console.error('Error executing report:', error);
+      const endTime = performance.now();
+      const processingTime = endTime - startTime;
+      console.error(`📊 REPORT_API[${requestId}]: Error executing report after ${Math.round(processingTime)}ms:`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        requestBody: req.body
+      });
       res.status(500).json({ 
         error: 'Failed to execute report',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
+        execution_id: requestId
       });
     }
   });
 
   // Save a report template
   app.post("/api/report/templates", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
+    const requestId = Date.now();
+    console.log(`📊 REPORT_API[${requestId}]: POST /api/report/templates - Save template requested by user:${req.user?.id} org:${req.organizationId}`);
+    console.log(`📊 REPORT_API[${requestId}]: Template data:`, {
+      name: req.body?.template_name,
+      description: req.body?.description,
+      is_public: req.body?.is_public,
+      category: req.body?.category,
+      tables: req.body?.selected_tables?.length || 0,
+      total_fields: (req.body?.selected_rows?.length || 0) + (req.body?.selected_columns?.length || 0) + (req.body?.selected_measures?.length || 0)
+    });
+    
     try {
       const template: ReportTemplate = req.body;
       
+      // Validate template data
+      if (!template.template_name || template.template_name.trim().length === 0) {
+        console.warn(`📊 REPORT_API[${requestId}]: Template validation failed - missing name`);
+        return res.status(400).json({
+          error: 'Template name is required',
+          details: 'template_name field cannot be empty'
+        });
+      }
+      
       // Mock saving template
       const savedTemplate = {
-        id: Date.now(),
+        id: requestId,
         ...template,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -423,9 +506,14 @@ export default function reportRoutes(app: Express) {
         last_executed_at: null
       };
       
+      console.log(`📊 REPORT_API[${requestId}]: Template saved successfully with ID: ${savedTemplate.id}`);
       res.json(savedTemplate);
     } catch (error) {
-      console.error('Error saving report template:', error);
+      console.error(`📊 REPORT_API[${requestId}]: Error saving report template:`, {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        templateName: req.body?.template_name
+      });
       res.status(500).json({ 
         error: 'Failed to save report template',
         details: error instanceof Error ? error.message : 'Unknown error'

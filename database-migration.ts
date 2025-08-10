@@ -246,7 +246,7 @@ function getTableCreationSQL(tableName: string): string | null {
 async function addMissingColumns(db: Database.Database): Promise<Array<{ table: string; column: string }>> {
   const missingColumns: Array<{ table: string; column: string }> = [];
   
-  // Define required columns for each table
+  // Schema-aware column definitions - using actual schema datatypes and defaults
   const requiredColumns = {
     'jobs': [
       { name: 'requirements', sql: 'ADD COLUMN requirements TEXT NOT NULL DEFAULT "Requirements not specified"' },
@@ -262,6 +262,13 @@ async function addMissingColumns(db: Database.Database): Promise<Array<{ table: 
       { name: 'auto_publish_at', sql: 'ADD COLUMN auto_publish_at TEXT' },
       { name: 'application_deadline', sql: 'ADD COLUMN application_deadline TEXT' }
     ],
+    'users': [
+      { name: 'report_permissions', sql: 'ADD COLUMN report_permissions TEXT DEFAULT "{}"' },
+      { name: 'phone', sql: 'ADD COLUMN phone TEXT' },
+      { name: 'manager_id', sql: 'ADD COLUMN manager_id INTEGER' },
+      { name: 'has_temporary_password', sql: 'ADD COLUMN has_temporary_password INTEGER NOT NULL DEFAULT 0' },
+      { name: 'temporary_password', sql: 'ADD COLUMN temporary_password TEXT' }
+    ],
     'interviews': [
       { name: 'interviewer_name', sql: 'ADD COLUMN interviewer_name TEXT' },
       { name: 'interviewer_email', sql: 'ADD COLUMN interviewer_email TEXT' },
@@ -275,7 +282,10 @@ async function addMissingColumns(db: Database.Database): Promise<Array<{ table: 
       { name: 'currency', sql: 'ADD COLUMN currency TEXT DEFAULT "USD"' },
       { name: 'billing_settings', sql: 'ADD COLUMN billing_settings TEXT DEFAULT "{}"' },
       { name: 'compliance_settings', sql: 'ADD COLUMN compliance_settings TEXT DEFAULT "{}"' },
-      { name: 'integration_settings', sql: 'ADD COLUMN integration_settings TEXT DEFAULT "{}"' }
+      { name: 'integration_settings', sql: 'ADD COLUMN integration_settings TEXT DEFAULT "{}"' },
+      { name: 'report_settings', sql: 'ADD COLUMN report_settings TEXT DEFAULT "{}"' },
+      { name: 'max_report_rows', sql: 'ADD COLUMN max_report_rows INTEGER NOT NULL DEFAULT 10000' },
+      { name: 'max_saved_templates', sql: 'ADD COLUMN max_saved_templates INTEGER NOT NULL DEFAULT 50' }
     ]
   };
   

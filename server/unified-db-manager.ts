@@ -7,10 +7,12 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import * as schema from "../unified-schema";  // ✅ FIXED: Correct schema import
 import { readFileSync, existsSync, mkdirSync, unlinkSync, statSync } from "fs";
 import { join, resolve } from "path";
+import { validateSchemaAtStartup } from "./startup-schema-validator";
 
 interface DatabaseInstance {
   db: any;
   sqlite: Database.Database;
+  schemaValidated: boolean;  // ✅ NEW: Indicates schema was validated at startup
   initialized: boolean;
   initializationPromise?: Promise<DatabaseInstance>;
 }
@@ -517,6 +519,41 @@ async function createFreshDatabase(dbPath: string, forceRecreate: boolean = fals
     const tableTime = Date.now() - tableStart;
     console.log(`✅ DB_MANAGER: Tables created in ${tableTime}ms`);
     
+    // ✅ STARTUP SCHEMA VALIDATION: Comprehensive schema check and migration
+    console.log(`🔄 DB_MANAGER: Running startup schema validation...`);
+    const migrationStart = Date.now();
+    const environment = (process.env.NODE_ENV as 'development' | 'production') || 'development';
+    
+    try {
+      const validationResult = await validateSchemaAtStartup(sqlite, environment);
+      const migrationTime = Date.now() - migrationStart;
+      
+      if (validationResult.isValid) {
+        console.log(`✅ DB_MANAGER: Schema validation completed successfully in ${migrationTime}ms`);
+        if (validationResult.migrationsApplied > 0) {
+          console.log(`📋 DB_MANAGER: Applied ${validationResult.migrationsApplied} schema fixes during startup`);
+        }
+      } else {
+        console.warn(`⚠️ DB_MANAGER: Schema validation completed with ${validationResult.issues.length} remaining issues`);
+        validationResult.issues.forEach(issue => console.warn(`   - ${issue}`));
+        
+        // In production, consider this a critical issue
+        if (environment === 'production') {
+          throw new Error(`Production database schema validation failed: ${validationResult.issues.join(', ')}`);
+        }
+      }
+    } catch (validationError) {
+      const migrationTime = Date.now() - migrationStart;
+      console.error(`❌ DB_MANAGER: Schema validation failed after ${migrationTime}ms:`, validationError);
+      
+      // In production, this is fatal
+      if (environment === 'production') {
+        throw new Error(`Production database schema validation failed: ${(validationError as Error).message}`);
+      } else {
+        console.warn(`⚠️ DB_MANAGER: Continuing with development database despite validation issues`);
+      }
+    }
+    
     // Create indexes with logging
     const indexStart = Date.now();
     await createPerformanceIndexes(sqlite);
@@ -550,6 +587,7 @@ async function createFreshDatabase(dbPath: string, forceRecreate: boolean = fals
     return {
       db,
       sqlite,
+      schemaValidated: true,  // ✅ Schema validated during startup
       initialized: true
     };
 
@@ -636,12 +674,46 @@ async function openAndValidateDatabase(dbPath: string): Promise<DatabaseInstance
     // Step 5: Create Drizzle instance
     const db = drizzle(sqlite, { schema });
     
+    // ✅ STARTUP SCHEMA VALIDATION: Check existing database for schema issues
+    console.log(`🔄 DB_MANAGER: Running schema validation on existing database...`);
+    const validationStart = Date.now();
+    const environment = (process.env.NODE_ENV as 'development' | 'production') || 'development';
+    
+    try {
+      const validationResult = await validateSchemaAtStartup(sqlite, environment);
+      const migrationTime = Date.now() - validationStart;
+      
+      if (validationResult.isValid) {
+        console.log(`✅ DB_MANAGER: Existing database schema validation completed in ${migrationTime}ms`);
+        if (validationResult.migrationsApplied > 0) {
+          console.log(`📋 DB_MANAGER: Applied ${validationResult.migrationsApplied} schema fixes to existing database`);
+        }
+      } else {
+        console.warn(`⚠️ DB_MANAGER: Schema validation found ${validationResult.issues.length} issues in existing database`);
+        validationResult.issues.forEach(issue => console.warn(`   - ${issue}`));
+        
+        if (environment === 'production') {
+          throw new Error(`Production database schema validation failed: ${validationResult.issues.join(', ')}`);
+        }
+      }
+    } catch (validationError) {
+      const migrationTime = Date.now() - validationStart;
+      console.error(`❌ DB_MANAGER: Existing database schema validation failed after ${migrationTime}ms:`, validationError);
+      
+      if (environment === 'production') {
+        throw new Error(`Production database schema validation failed: ${(validationError as Error).message}`);
+      } else {
+        console.warn(`⚠️ DB_MANAGER: Continuing with existing development database despite validation issues`);
+      }
+    }
+    
     const validationTime = Date.now() - validationStart;
     console.log(`✅ DB_MANAGER: Existing database validated successfully in ${validationTime}ms`);
 
     return {
       db,
       sqlite,
+      schemaValidated: true,  // ✅ Schema validated during startup
       initialized: true
     };
 
