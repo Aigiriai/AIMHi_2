@@ -21,6 +21,9 @@ export const organizations = sqliteTable("organizations", {
   billingSettings: text("billing_settings").default("{}"), // JSON string - Pricing model preferences
   complianceSettings: text("compliance_settings").default("{}"), // JSON string - GDPR, CCPA settings
   integrationSettings: text("integration_settings").default("{}"), // JSON string - HR system configs
+  reportSettings: text("report_settings").default("{}"), // JSON string - Report-specific configurations
+  maxReportRows: integer("max_report_rows").notNull().default(10000), // Limit report result size
+  maxSavedTemplates: integer("max_saved_templates").notNull().default(50), // Limit saved templates per org
   createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
   updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
 });
@@ -50,6 +53,7 @@ export const users = sqliteTable("users", {
   managerId: integer("manager_id"), // Hierarchical reporting structure
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   permissions: text("permissions").default("{}"), // JSON string - Custom permissions
+  reportPermissions: text("report_permissions").default("{}"), // JSON string - Report-specific permissions
   hasTemporaryPassword: integer("has_temporary_password", { mode: "boolean" }).notNull().default(false),
   temporaryPassword: text("temporary_password"), // Store temporary password for retrieval
   settings: text("settings").default("{}"), // JSON string - User-level preferences
@@ -343,6 +347,102 @@ export const auditLogs = sqliteTable("audit_logs", {
   createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
 });
 
+// REPORT BUILDER TABLES - Advanced reporting system
+// Report table metadata - defines which tables are available for reporting
+export const reportTableMetadata = sqliteTable("report_table_metadata", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tableName: text("table_name").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // 'core', 'pipeline', 'tracking', 'metrics'
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// Report field metadata - defines which fields are available for reporting
+export const reportFieldMetadata = sqliteTable("report_field_metadata", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  tableId: integer("table_id").references(() => reportTableMetadata.id).notNull(),
+  fieldName: text("field_name").notNull(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  fieldType: text("field_type").notNull(), // 'dimension', 'measure', 'date', 'text', 'number'
+  dataType: text("data_type").notNull(), // 'string', 'integer', 'decimal', 'date', 'boolean', 'json'
+  isFilterable: integer("is_filterable", { mode: "boolean" }).notNull().default(true),
+  isGroupable: integer("is_groupable", { mode: "boolean" }).notNull().default(true),
+  isAggregatable: integer("is_aggregatable", { mode: "boolean" }).notNull().default(false),
+  defaultAggregation: text("default_aggregation"), // 'sum', 'count', 'avg', 'min', 'max'
+  formatHint: text("format_hint"), // 'currency', 'percentage', 'date', 'phone', 'email'
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  sortOrder: integer("sort_order").notNull().default(0),
+  validationRules: text("validation_rules").default("{}"), // JSON for field-specific validation
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// Report templates - stores saved report configurations
+export const reportTemplates = sqliteTable("report_templates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  templateName: text("template_name").notNull(),
+  description: text("description"),
+  isPublic: integer("is_public", { mode: "boolean" }).notNull().default(false),
+  category: text("category").notNull().default("custom"), // 'sample', 'custom', 'system'
+  
+  // Report Configuration (JSON)
+  selectedTables: text("selected_tables").default("[]"), // JSON array of table names
+  selectedRows: text("selected_rows").default("[]"), // JSON array of field IDs for row grouping
+  selectedColumns: text("selected_columns").default("[]"), // JSON array of field IDs for column grouping
+  selectedMeasures: text("selected_measures").default("[]"), // JSON array of field IDs for metrics
+  filters: text("filters").default("[]"), // JSON array of filter configurations
+  
+  // Visualization Configuration
+  chartType: text("chart_type").notNull().default("table"), // 'table', 'bar', 'line', 'pie', 'scatter'
+  chartConfig: text("chart_config").default("{}"), // JSON for chart-specific settings
+  
+  // Query and Performance
+  generatedSql: text("generated_sql"), // Store the generated SQL query
+  lastExecutedAt: text("last_executed_at"),
+  executionCount: integer("execution_count").notNull().default(0),
+  avgExecutionTime: integer("avg_execution_time").notNull().default(0), // in milliseconds
+  
+  // Access Control
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  sharedWith: text("shared_with").default("[]"), // JSON array of user IDs with access
+  
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  updatedAt: text("updated_at").default("CURRENT_TIMESTAMP").notNull(),
+});
+
+// Report executions - track report execution history for performance monitoring
+export const reportExecutions = sqliteTable("report_executions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  organizationId: integer("organization_id").references(() => organizations.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  templateId: integer("template_id").references(() => reportTemplates.id), // NULL for ad-hoc reports
+  reportType: text("report_type").notNull(), // 'saved_template', 'ad_hoc'
+  
+  // Query Details
+  generatedSql: text("generated_sql").notNull(),
+  parameters: text("parameters").default("{}"), // JSON for dynamic parameters
+  resultCount: integer("result_count"),
+  executionTime: integer("execution_time"), // in milliseconds
+  
+  // Status Tracking
+  status: text("status").notNull().default("running"), // 'running', 'completed', 'failed', 'cancelled'
+  errorMessage: text("error_message"),
+  
+  // Resource Usage (for billing/monitoring)
+  memoryUsage: integer("memory_usage"), // Peak memory in MB
+  rowsProcessed: integer("rows_processed"),
+  
+  createdAt: text("created_at").default("CURRENT_TIMESTAMP").notNull(),
+  completedAt: text("completed_at"),
+});
+
 // Create insert schemas for validation - compatible with both old schemas
 export const insertOrganizationSchema = createInsertSchema(organizations);
 export const insertOrganizationCredentialsSchema = createInsertSchema(organizationCredentials);
@@ -357,13 +457,19 @@ export const insertJobTemplateSchema = createInsertSchema(jobTemplates);
 export const insertCandidateSchema = createInsertSchema(candidates);
 export const insertJobMatchSchema = createInsertSchema(jobMatches);
 export const insertInterviewSchema = createInsertSchema(interviews).extend({
-  scheduledDateTime: z.string().or(z.date()).transform((val) => new Date(val).toISOString()),
+  scheduledDateTime: z.string().or(z.date()).transform((val: string | Date) => new Date(val).toISOString()),
 });
 export const insertApplicationSchema = createInsertSchema(applications);
 export const insertJobAssignmentSchema = createInsertSchema(jobAssignments);
 export const insertCandidateAssignmentSchema = createInsertSchema(candidateAssignments);
 export const insertCandidateSubmissionSchema = createInsertSchema(candidateSubmissions);
 export const insertStatusHistorySchema = createInsertSchema(statusHistory);
+
+// Report builder insert schemas
+export const insertReportTableMetadataSchema = createInsertSchema(reportTableMetadata);
+export const insertReportFieldMetadataSchema = createInsertSchema(reportFieldMetadata);
+export const insertReportTemplateSchema = createInsertSchema(reportTemplates);
+export const insertReportExecutionSchema = createInsertSchema(reportExecutions);
 
 // Type exports - BACKWARD COMPATIBLE with existing frontend
 export type Organization = typeof organizations.$inferSelect;
@@ -402,6 +508,16 @@ export type CandidateSubmission = typeof candidateSubmissions.$inferSelect;
 export type InsertCandidateSubmission = typeof candidateSubmissions.$inferInsert;
 export type StatusHistory = typeof statusHistory.$inferSelect;
 export type InsertStatusHistory = typeof statusHistory.$inferInsert;
+
+// Report builder types
+export type ReportTableMetadata = typeof reportTableMetadata.$inferSelect;
+export type InsertReportTableMetadata = typeof reportTableMetadata.$inferInsert;
+export type ReportFieldMetadata = typeof reportFieldMetadata.$inferSelect;
+export type InsertReportFieldMetadata = typeof reportFieldMetadata.$inferInsert;
+export type ReportTemplate = typeof reportTemplates.$inferSelect;
+export type InsertReportTemplate = typeof reportTemplates.$inferInsert;
+export type ReportExecution = typeof reportExecutions.$inferSelect;
+export type InsertReportExecution = typeof reportExecutions.$inferInsert;
 
 // Enhanced result types with joins - MAINTAIN EXISTING FRONTEND COMPATIBILITY
 export interface JobMatchResult extends JobMatch {
@@ -466,4 +582,67 @@ export interface UserPermissions {
   canScheduleInterviews: boolean;
   canMakeDecisions: boolean;
   canViewAnalytics: boolean;
+}
+
+// Report Builder Enhanced Types
+export interface ReportTableWithFields extends ReportTableMetadata {
+  fields: ReportFieldMetadata[];
+}
+
+export interface ReportTemplateWithDetails extends ReportTemplate {
+  createdByUser: User;
+  recentExecutions: ReportExecution[];
+  avgExecutionTime?: number;
+  lastExecutedAt?: string;
+}
+
+export interface ReportField {
+  id: string;
+  name: string;
+  type: 'dimension' | 'measure' | 'date' | 'text' | 'number';
+  description?: string;
+  category: string;
+  tableName: string;
+  fieldName: string;
+  dataType: 'string' | 'integer' | 'decimal' | 'date' | 'boolean' | 'json';
+  isFilterable: boolean;
+  isGroupable: boolean;
+  isAggregatable: boolean;
+  defaultAggregation?: 'sum' | 'count' | 'avg' | 'min' | 'max';
+  formatHint?: 'currency' | 'percentage' | 'date' | 'phone' | 'email';
+}
+
+export interface ReportConfiguration {
+  selectedTables: string[];
+  selectedRows: ReportField[];
+  selectedColumns: ReportField[];
+  selectedMeasures: ReportField[];
+  filters: ReportFilter[];
+  chartType: 'table' | 'bar' | 'line' | 'pie' | 'scatter';
+  chartConfig: Record<string, any>;
+}
+
+export interface ReportFilter {
+  fieldId: string;
+  operator: 'equals' | 'not_equals' | 'contains' | 'not_contains' | 'greater_than' | 'less_than' | 'between' | 'in' | 'not_in';
+  value: any;
+  values?: any[]; // For 'in', 'not_in', 'between' operators
+}
+
+export interface ReportExecutionResult {
+  data: Record<string, any>[];
+  totalRows: number;
+  executionTime: number;
+  generatedSql: string;
+  error?: string;
+}
+
+export interface ReportBuilderPermissions {
+  canCreateReports: boolean;
+  canSaveTemplates: boolean;
+  canShareTemplates: boolean;
+  canAccessSystemTemplates: boolean;
+  canViewExecutionHistory: boolean;
+  maxSavedTemplates: number;
+  maxReportRows: number;
 }

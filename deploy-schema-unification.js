@@ -253,6 +253,90 @@ class SchemaUnificationDeployer {
           changed_at TEXT DEFAULT CURRENT_TIMESTAMP,
           reason TEXT,
           metadata TEXT
+        )`,
+        
+        // Report Builder Tables
+        `CREATE TABLE IF NOT EXISTS report_table_metadata (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          table_name TEXT NOT NULL UNIQUE,
+          display_name TEXT NOT NULL,
+          description TEXT,
+          category TEXT NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          sort_order INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
+        )`,
+        
+        `CREATE TABLE IF NOT EXISTS report_field_metadata (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          table_id INTEGER NOT NULL,
+          field_name TEXT NOT NULL,
+          display_name TEXT NOT NULL,
+          description TEXT,
+          field_type TEXT NOT NULL,
+          data_type TEXT NOT NULL,
+          is_filterable INTEGER DEFAULT 1,
+          is_groupable INTEGER DEFAULT 1,
+          is_aggregatable INTEGER DEFAULT 0,
+          default_aggregation TEXT,
+          format_hint TEXT,
+          is_active INTEGER DEFAULT 1,
+          sort_order INTEGER DEFAULT 0,
+          validation_rules TEXT DEFAULT '{}',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          FOREIGN KEY (table_id) REFERENCES report_table_metadata(id) ON DELETE CASCADE,
+          UNIQUE(table_id, field_name)
+        )`,
+        
+        `CREATE TABLE IF NOT EXISTS report_templates (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          organization_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          template_name TEXT NOT NULL,
+          description TEXT,
+          is_public INTEGER DEFAULT 0,
+          category TEXT DEFAULT 'custom',
+          selected_tables TEXT DEFAULT '[]',
+          selected_rows TEXT DEFAULT '[]',
+          selected_columns TEXT DEFAULT '[]',
+          selected_measures TEXT DEFAULT '[]',
+          filters TEXT DEFAULT '[]',
+          chart_type TEXT DEFAULT 'table',
+          chart_config TEXT DEFAULT '{}',
+          generated_sql TEXT,
+          last_executed_at TEXT,
+          execution_count INTEGER DEFAULT 0,
+          avg_execution_time INTEGER DEFAULT 0,
+          created_by INTEGER NOT NULL,
+          shared_with TEXT DEFAULT '[]',
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (created_by) REFERENCES users(id)
+        )`,
+        
+        `CREATE TABLE IF NOT EXISTS report_executions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          organization_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          template_id INTEGER,
+          report_type TEXT NOT NULL,
+          generated_sql TEXT NOT NULL,
+          parameters TEXT DEFAULT '{}',
+          result_count INTEGER,
+          execution_time INTEGER,
+          status TEXT NOT NULL DEFAULT 'running',
+          error_message TEXT,
+          memory_usage INTEGER,
+          rows_processed INTEGER,
+          created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+          completed_at TEXT,
+          FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (template_id) REFERENCES report_templates(id) ON DELETE SET NULL
         )`
       ];
       
@@ -396,7 +480,11 @@ export * from '../shared/schema';
       const expectedTables = [
         'organizations', 'users', 'jobs', 'candidates', 'interviews',
         'applications', 'job_assignments', 'candidate_assignments',
-        'candidate_submissions', 'status_history'
+        'candidate_submissions', 'status_history', 'teams', 'user_teams',
+        'job_matches', 'job_templates', 'organization_credentials',
+        'user_credentials', 'usage_metrics', 'audit_logs',
+        'report_table_metadata', 'report_field_metadata', 
+        'report_templates', 'report_executions'
       ];
       
       const missingTables = expectedTables.filter(table => !tableNames.includes(table));

@@ -10,6 +10,7 @@ import { createJobTemplate } from "./jd-template-analyzer";
 import authRoutes from "./auth-routes";
 import settingsRoutes from "./settings-routes";
 import pipelineRoutes from "./pipeline-routes";
+import reportRoutes from "./report-routes";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
 import { getDB } from "./db-helper";
 import { eq, and, or, desc, inArray, sql, gte } from "drizzle-orm";
@@ -2742,6 +2743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/auth', authRoutes);
   app.use('/api/settings', settingsRoutes);
   app.use('/api', pipelineRoutes);
+  reportRoutes(app); // Add report routes
 
   // Return a placeholder server object since the actual server is created in index.ts
   return createServer();

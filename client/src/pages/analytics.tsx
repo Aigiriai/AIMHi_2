@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SimpleReportBuilder } from "@/components/reporting/SimpleReportBuilder";
 import { 
   TrendingUp, 
   Users, 
@@ -17,7 +19,8 @@ import {
   Award,
   BarChart3,
   PieChart,
-  Download
+  Download,
+  Grid
 } from "lucide-react";
 import { authService } from "@/lib/auth";
 
@@ -104,8 +107,16 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Main Tabs */}
+          <Tabs defaultValue="dashboard" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="reports">Report Builder</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="dashboard" className="space-y-6">
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Hires</CardTitle>
@@ -310,6 +321,25 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Grid className="h-5 w-5" />
+                Advanced Report Builder
+              </CardTitle>
+              <CardDescription>
+                Create custom reports by selecting tables and organizing fields into rows, columns, and measures
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SimpleReportBuilder />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
         </div>
       </div>
     </ProtectedRoute>

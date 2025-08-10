@@ -41,8 +41,8 @@ interface TableSchema {
 
 // MASTER SCHEMA DEFINITION - Single Source of Truth
 const MASTER_SCHEMA_DEFINITION = {
-  version: "1.0.0",
-  description: "Unified SQLite Schema - Single Source of Truth",
+  version: "2.0.0-report-builder",
+  description: "Unified SQLite Schema with Report Builder - Single Source of Truth",
   lastUpdated: new Date().toISOString(),
   
   tables: {
@@ -51,13 +51,16 @@ const MASTER_SCHEMA_DEFINITION = {
         "id", "name", "domain", "subdomain", "plan", "status", 
         "timezone", "date_format", "currency", "settings", 
         "billing_settings", "compliance_settings", "integration_settings",
+        "report_settings", "max_report_rows", "max_saved_templates",
         "created_at", "updated_at"
       ],
       requiredTypes: {
         id: "INTEGER",
         name: "TEXT",
         timezone: "TEXT",
-        settings: "TEXT"
+        settings: "TEXT",
+        max_report_rows: "INTEGER",
+        max_saved_templates: "INTEGER"
       }
     },
     
@@ -65,14 +68,15 @@ const MASTER_SCHEMA_DEFINITION = {
       requiredColumns: [
         "id", "organization_id", "email", "first_name", "last_name",
         "password_hash", "phone", "role", "manager_id", "is_active",
-        "permissions", "has_temporary_password", "temporary_password",
+        "permissions", "report_permissions", "has_temporary_password", "temporary_password",
         "settings", "last_login_at", "created_at", "updated_at"
       ],
       requiredTypes: {
         id: "INTEGER",
         organization_id: "INTEGER",
         email: "TEXT",
-        is_active: "INTEGER"
+        is_active: "INTEGER",
+        report_permissions: "TEXT"
       }
     },
     
@@ -146,7 +150,13 @@ const MASTER_SCHEMA_DEFINITION = {
     candidate_assignments: { requiredColumns: ["id", "candidate_id", "user_id", "role", "assigned_by", "created_at"] },
     candidate_submissions: { requiredColumns: ["id", "organization_id", "submitted_by", "name", "email", "phone", "experience", "resume_content", "resume_file_name", "source", "tags", "status", "submission_notes", "reviewed_by", "reviewed_at", "review_notes", "created_at", "updated_at"] },
     status_history: { requiredColumns: ["id", "organization_id", "entity_type", "entity_id", "old_status", "new_status", "changed_by", "reason", "notes", "changed_at"] },
-    job_templates: { requiredColumns: ["id", "job_id", "organization_id", "position_title", "seniority_level", "department", "mandatory_skills", "preferred_skills", "skill_proficiency_levels", "primary_technologies", "secondary_technologies", "technology_categories", "minimum_years_required", "specific_domain_experience", "industry_background", "technical_tasks_percentage", "leadership_tasks_percentage", "domain_tasks_percentage", "skills_match_weight", "experience_weight", "keyword_weight", "technical_depth_weight", "domain_knowledge_weight", "raw_job_description", "ai_generated_data", "template_version", "status", "reviewed_by", "created_at", "updated_at"] }
+    job_templates: { requiredColumns: ["id", "job_id", "organization_id", "position_title", "seniority_level", "department", "mandatory_skills", "preferred_skills", "skill_proficiency_levels", "primary_technologies", "secondary_technologies", "technology_categories", "minimum_years_required", "specific_domain_experience", "industry_background", "technical_tasks_percentage", "leadership_tasks_percentage", "domain_tasks_percentage", "skills_match_weight", "experience_weight", "keyword_weight", "technical_depth_weight", "domain_knowledge_weight", "raw_job_description", "ai_generated_data", "template_version", "status", "reviewed_by", "created_at", "updated_at"] },
+    
+    // Report Builder Tables
+    report_table_metadata: { requiredColumns: ["id", "table_name", "display_name", "description", "category", "is_active", "sort_order", "created_at", "updated_at"] },
+    report_field_metadata: { requiredColumns: ["id", "table_id", "field_name", "display_name", "description", "field_type", "data_type", "is_filterable", "is_groupable", "is_aggregatable", "default_aggregation", "format_hint", "is_active", "sort_order", "validation_rules", "created_at", "updated_at"] },
+    report_templates: { requiredColumns: ["id", "organization_id", "user_id", "template_name", "description", "is_public", "category", "selected_tables", "selected_rows", "selected_columns", "selected_measures", "filters", "chart_type", "chart_config", "generated_sql", "last_executed_at", "execution_count", "avg_execution_time", "created_by", "shared_with", "created_at", "updated_at"] },
+    report_executions: { requiredColumns: ["id", "organization_id", "user_id", "template_id", "report_type", "generated_sql", "parameters", "result_count", "execution_time", "status", "error_message", "memory_usage", "rows_processed", "created_at", "completed_at"] }
   }
 };
 

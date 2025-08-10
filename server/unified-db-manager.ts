@@ -688,7 +688,11 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
     { name: 'organization_credentials', description: 'Organization login credentials' },
     { name: 'user_credentials', description: 'User temporary credentials' },
     { name: 'usage_metrics', description: 'Billing and usage tracking' },
-    { name: 'audit_logs', description: 'System audit and security logs' }
+    { name: 'audit_logs', description: 'System audit and security logs' },
+    { name: 'report_table_metadata', description: 'Report builder table metadata' },
+    { name: 'report_field_metadata', description: 'Report builder field metadata' },
+    { name: 'report_templates', description: 'Saved report configurations' },
+    { name: 'report_executions', description: 'Report execution history' }
   ];
   
   console.log(`📊 DB_MANAGER: Will create ${tableDefinitions.length} tables`);
@@ -709,6 +713,9 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
       billing_settings TEXT DEFAULT '{}',
       compliance_settings TEXT DEFAULT '{}',
       integration_settings TEXT DEFAULT '{}',
+      report_settings TEXT DEFAULT '{}',
+      max_report_rows INTEGER DEFAULT 10000,
+      max_saved_templates INTEGER DEFAULT 50,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
     );
@@ -740,6 +747,7 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
       manager_id INTEGER,
       is_active INTEGER NOT NULL DEFAULT 1,
       permissions TEXT DEFAULT '{}',
+      report_permissions TEXT DEFAULT '{}',
       has_temporary_password INTEGER NOT NULL DEFAULT 0,
       temporary_password TEXT,
       settings TEXT DEFAULT '{}',
@@ -1045,6 +1053,94 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
       FOREIGN KEY (organization_id) REFERENCES organizations(id),
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
+    -- REPORT BUILDER TABLES
+    -- Report table metadata - defines which tables are available for reporting
+    CREATE TABLE IF NOT EXISTS report_table_metadata (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_name TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      description TEXT,
+      category TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL
+    );
+
+    -- Report field metadata - defines which fields are available for reporting
+    CREATE TABLE IF NOT EXISTS report_field_metadata (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      table_id INTEGER NOT NULL,
+      field_name TEXT NOT NULL,
+      display_name TEXT NOT NULL,
+      description TEXT,
+      field_type TEXT NOT NULL,
+      data_type TEXT NOT NULL,
+      is_filterable INTEGER DEFAULT 1,
+      is_groupable INTEGER DEFAULT 1,
+      is_aggregatable INTEGER DEFAULT 0,
+      default_aggregation TEXT,
+      format_hint TEXT,
+      is_active INTEGER DEFAULT 1,
+      sort_order INTEGER DEFAULT 0,
+      validation_rules TEXT DEFAULT '{}',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      FOREIGN KEY (table_id) REFERENCES report_table_metadata(id) ON DELETE CASCADE,
+      UNIQUE(table_id, field_name)
+    );
+
+    -- Report templates - stores saved report configurations
+    CREATE TABLE IF NOT EXISTS report_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      template_name TEXT NOT NULL,
+      description TEXT,
+      is_public INTEGER DEFAULT 0,
+      category TEXT DEFAULT 'custom',
+      selected_tables TEXT DEFAULT '[]',
+      selected_rows TEXT DEFAULT '[]',
+      selected_columns TEXT DEFAULT '[]',
+      selected_measures TEXT DEFAULT '[]',
+      filters TEXT DEFAULT '[]',
+      chart_type TEXT DEFAULT 'table',
+      chart_config TEXT DEFAULT '{}',
+      generated_sql TEXT,
+      last_executed_at TEXT,
+      execution_count INTEGER DEFAULT 0,
+      avg_execution_time INTEGER DEFAULT 0,
+      created_by INTEGER NOT NULL,
+      shared_with TEXT DEFAULT '[]',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id)
+    );
+
+    -- Report executions - track report execution history for performance monitoring
+    CREATE TABLE IF NOT EXISTS report_executions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      organization_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      template_id INTEGER,
+      report_type TEXT NOT NULL,
+      generated_sql TEXT NOT NULL,
+      parameters TEXT DEFAULT '{}',
+      result_count INTEGER,
+      execution_time INTEGER,
+      status TEXT NOT NULL DEFAULT 'running',
+      error_message TEXT,
+      memory_usage INTEGER,
+      rows_processed INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      completed_at TEXT,
+      FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (template_id) REFERENCES report_templates(id) ON DELETE SET NULL
+    );
   `;
 
   try {
@@ -1126,6 +1222,34 @@ async function createPerformanceIndexes(sqlite: Database.Database): Promise<void
     CREATE INDEX IF NOT EXISTS idx_applications_candidate ON applications(candidate_id);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_org ON audit_logs(organization_id);
     CREATE INDEX IF NOT EXISTS idx_status_history_entity ON status_history(entity_type, entity_id);
+    
+    -- Report builder performance indexes
+    CREATE INDEX IF NOT EXISTS idx_report_table_metadata_category ON report_table_metadata(category);
+    CREATE INDEX IF NOT EXISTS idx_report_table_metadata_active ON report_table_metadata(is_active);
+    CREATE INDEX IF NOT EXISTS idx_report_field_metadata_table ON report_field_metadata(table_id);
+    CREATE INDEX IF NOT EXISTS idx_report_field_metadata_type ON report_field_metadata(field_type);
+    CREATE INDEX IF NOT EXISTS idx_report_field_metadata_active ON report_field_metadata(is_active);
+    CREATE INDEX IF NOT EXISTS idx_report_templates_org ON report_templates(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_report_templates_user ON report_templates(user_id);
+    CREATE INDEX IF NOT EXISTS idx_report_templates_public ON report_templates(is_public);
+    CREATE INDEX IF NOT EXISTS idx_report_templates_category ON report_templates(category);
+    CREATE INDEX IF NOT EXISTS idx_report_templates_name ON report_templates(template_name);
+    CREATE INDEX IF NOT EXISTS idx_report_executions_org ON report_executions(organization_id);
+    CREATE INDEX IF NOT EXISTS idx_report_executions_user ON report_executions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_report_executions_template ON report_executions(template_id);
+    CREATE INDEX IF NOT EXISTS idx_report_executions_status ON report_executions(status);
+    CREATE INDEX IF NOT EXISTS idx_report_executions_created ON report_executions(created_at);
+    
+    -- Performance indexes on main tables for reporting queries
+    CREATE INDEX IF NOT EXISTS idx_jobs_org_status ON jobs(organization_id, status);
+    CREATE INDEX IF NOT EXISTS idx_jobs_org_created ON jobs(organization_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_candidates_org_status ON candidates(organization_id, status);
+    CREATE INDEX IF NOT EXISTS idx_candidates_org_created ON candidates(organization_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_applications_org_status ON applications(organization_id, status);
+    CREATE INDEX IF NOT EXISTS idx_applications_org_applied ON applications(organization_id, applied_at);
+    CREATE INDEX IF NOT EXISTS idx_interviews_org_status ON interviews(organization_id, status);
+    CREATE INDEX IF NOT EXISTS idx_interviews_org_scheduled ON interviews(organization_id, scheduled_date_time);
+    CREATE INDEX IF NOT EXISTS idx_job_matches_org_created ON job_matches(organization_id, created_at);
   `;
 
   sqlite.exec(indexSQL);
@@ -1195,6 +1319,74 @@ async function seedInitialData(sqlite: Database.Database): Promise<void> {
     `).run(orgId, 'superadmin@aimhi.app', 'Super', 'Admin', hashedPassword, 'super_admin', 0);
 
     console.log("✅ DB_MANAGER: Created super admin user");
+    
+    // Seed report builder metadata
+    console.log("🌱 DB_MANAGER: Seeding report builder metadata...");
+    
+    const reportTableMetadataSQL = `
+      INSERT OR IGNORE INTO report_table_metadata (table_name, display_name, description, category, sort_order) VALUES
+      ('organizations', 'Organizations', 'Company/organization data', 'core', 1),
+      ('teams', 'Teams/Departments', 'Organizational teams and departments', 'core', 2),
+      ('users', 'Users', 'System users and staff', 'core', 3),
+      ('jobs', 'Jobs', 'Job postings and requirements', 'core', 4),
+      ('candidates', 'Candidates', 'Candidate profiles and resumes', 'core', 5),
+      ('applications', 'Applications', 'Job applications and pipeline status', 'pipeline', 6),
+      ('interviews', 'Interviews', 'Interview scheduling and outcomes', 'pipeline', 7),
+      ('job_matches', 'AI Matches', 'AI-generated job-candidate matches', 'pipeline', 8),
+      ('job_assignments', 'Job Assignments', 'Job assignment to team members', 'tracking', 9),
+      ('candidate_assignments', 'Candidate Assignments', 'Candidate assignment to team members', 'tracking', 10),
+      ('status_history', 'Status History', 'Status change tracking', 'tracking', 11),
+      ('usage_metrics', 'Usage Metrics', 'System usage and billing metrics', 'metrics', 12),
+      ('audit_logs', 'Audit Logs', 'System audit trail', 'metrics', 13);
+    `;
+    
+    sqlite.exec(reportTableMetadataSQL);
+    console.log("✅ DB_MANAGER: Report table metadata seeded");
+    
+    // Seed report field metadata for core tables
+    console.log("🌱 DB_MANAGER: Seeding report field metadata...");
+    
+    const reportFieldMetadataSQL = `
+      INSERT OR IGNORE INTO report_field_metadata (table_id, field_name, display_name, description, field_type, data_type, is_filterable, is_groupable, is_aggregatable, default_aggregation, format_hint, sort_order) VALUES
+      -- Jobs table fields (table_id = 4)
+      (4, 'id', 'Job ID', 'Unique job identifier', 'dimension', 'integer', 1, 0, 0, NULL, NULL, 1),
+      (4, 'title', 'Job Title', 'Title of the job posting', 'dimension', 'string', 1, 1, 0, NULL, NULL, 2),
+      (4, 'department', 'Department', 'Department the job belongs to', 'dimension', 'string', 1, 1, 0, NULL, NULL, 3),
+      (4, 'location', 'Job Location', 'Geographic location of the job', 'dimension', 'string', 1, 1, 0, NULL, NULL, 4),
+      (4, 'status', 'Job Status', 'Current status of the job', 'dimension', 'string', 1, 1, 0, NULL, NULL, 5),
+      (4, 'job_type', 'Job Type', 'Type of employment', 'dimension', 'string', 1, 1, 0, NULL, NULL, 6),
+      (4, 'salary_min', 'Minimum Salary', 'Minimum salary range', 'measure', 'decimal', 1, 0, 1, 'MIN', 'currency', 7),
+      (4, 'salary_max', 'Maximum Salary', 'Maximum salary range', 'measure', 'decimal', 1, 0, 1, 'MAX', 'currency', 8),
+      (4, 'created_at', 'Created Date', 'When the job was created', 'dimension', 'date', 1, 1, 0, NULL, 'date', 9),
+      (4, 'job_count', 'Job Count', 'Count of job postings', 'measure', 'integer', 0, 0, 1, 'COUNT', NULL, 10),
+      
+      -- Candidates table fields (table_id = 5)
+      (5, 'id', 'Candidate ID', 'Unique candidate identifier', 'dimension', 'integer', 1, 0, 0, NULL, NULL, 1),
+      (5, 'first_name', 'First Name', 'Candidate first name', 'dimension', 'string', 1, 1, 0, NULL, NULL, 2),
+      (5, 'last_name', 'Last Name', 'Candidate last name', 'dimension', 'string', 1, 1, 0, NULL, NULL, 3),
+      (5, 'email', 'Email', 'Candidate email address', 'dimension', 'string', 1, 1, 0, NULL, 'email', 4),
+      (5, 'phone', 'Phone', 'Candidate phone number', 'dimension', 'string', 1, 1, 0, NULL, 'phone', 5),
+      (5, 'location', 'Location', 'Candidate location', 'dimension', 'string', 1, 1, 0, NULL, NULL, 6),
+      (5, 'experience_level', 'Experience Level', 'Years of experience category', 'dimension', 'string', 1, 1, 0, NULL, NULL, 7),
+      (5, 'status', 'Candidate Status', 'Current candidate status', 'dimension', 'string', 1, 1, 0, NULL, NULL, 8),
+      (5, 'created_at', 'Created Date', 'When candidate was added', 'dimension', 'date', 1, 1, 0, NULL, 'date', 9),
+      (5, 'candidate_count', 'Candidate Count', 'Count of candidates', 'measure', 'integer', 0, 0, 1, 'COUNT', NULL, 10),
+      
+      -- Interviews table fields (table_id = 7)
+      (7, 'id', 'Interview ID', 'Unique interview identifier', 'dimension', 'integer', 1, 0, 0, NULL, NULL, 1),
+      (7, 'job_id', 'Job ID', 'Related job identifier', 'dimension', 'integer', 1, 1, 0, NULL, NULL, 2),
+      (7, 'candidate_id', 'Candidate ID', 'Related candidate identifier', 'dimension', 'integer', 1, 1, 0, NULL, NULL, 3),
+      (7, 'interview_type', 'Interview Type', 'Type of interview', 'dimension', 'string', 1, 1, 0, NULL, NULL, 4),
+      (7, 'status', 'Interview Status', 'Current interview status', 'dimension', 'string', 1, 1, 0, NULL, NULL, 5),
+      (7, 'scheduled_date', 'Scheduled Date', 'Interview scheduled date', 'dimension', 'date', 1, 1, 0, NULL, 'date', 6),
+      (7, 'duration_minutes', 'Duration (Minutes)', 'Interview duration in minutes', 'measure', 'integer', 1, 0, 1, 'AVG', NULL, 7),
+      (7, 'rating', 'Interview Rating', 'Interview rating score', 'measure', 'decimal', 1, 0, 1, 'AVG', NULL, 8),
+      (7, 'created_at', 'Created Date', 'When interview was scheduled', 'dimension', 'date', 1, 1, 0, NULL, 'date', 9),
+      (7, 'interview_count', 'Interview Count', 'Count of interviews', 'measure', 'integer', 0, 0, 1, 'COUNT', NULL, 10);
+    `;
+    
+    sqlite.exec(reportFieldMetadataSQL);
+    console.log("✅ DB_MANAGER: Report field metadata seeded");
     
     if (process.env.NODE_ENV === "production") {
       console.log("🏭 DB_MANAGER: [PROD] User created successfully, seeding complete!");
