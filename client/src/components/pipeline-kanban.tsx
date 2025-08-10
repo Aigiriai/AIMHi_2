@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Users, 
   Plus, 
@@ -93,15 +94,17 @@ export function PipelineKanban() {
 
   // No forced refresh on mount - rely on 4-hour cache strategy
 
-  // Fetch pipeline data - using global 4-hour cache
-  const { data: pipelineData, isLoading } = useQuery({
+  // Fetch pipeline data - override cache for critical data 
+  const { data: pipelineData, isLoading: pipelineLoading } = useQuery({
     queryKey: ['/api/pipeline'],
-    // Use global cache settings - no custom polling needed
+    staleTime: 0, // Always fetch fresh data for pipeline
+    refetchOnMount: true, // Refetch when component mounts
   });
 
-  const { data: statsData } = useQuery({
+  const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ['/api/pipeline/stats'], 
-    // Use global cache settings - no custom polling needed
+    staleTime: 0, // Always fetch fresh stats
+    refetchOnMount: true, // Refetch when component mounts
   });
 
   // Move application mutation
@@ -160,7 +163,8 @@ export function PipelineKanban() {
     }
   });
 
-  if (isLoading) {
+  // Only show loading spinner for pipeline data, but allow partial rendering for stats
+  if (pipelineLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
@@ -189,7 +193,11 @@ export function PipelineKanban() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Jobs</p>
-                <p className="text-2xl font-bold">{stats.totalJobs}</p>
+                {statsLoading ? (
+                  <Skeleton className="h-8 w-12" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats.totalJobs}</p>
+                )}
               </div>
               <Building className="h-8 w-8 text-blue-600" />
             </div>
@@ -201,7 +209,11 @@ export function PipelineKanban() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Jobs</p>
-                <p className="text-2xl font-bold">{stats.activeJobs}</p>
+                {statsLoading ? (
+                  <Skeleton className="h-8 w-12" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats.activeJobs}</p>
+                )}
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />
             </div>
@@ -213,7 +225,11 @@ export function PipelineKanban() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Applications</p>
-                <p className="text-2xl font-bold">{stats.totalApplications}</p>
+                {statsLoading ? (
+                  <Skeleton className="h-8 w-12" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats.totalApplications}</p>
+                )}
               </div>
               <Users className="h-8 w-8 text-purple-600" />
             </div>
@@ -225,7 +241,11 @@ export function PipelineKanban() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Hired This Month</p>
-                <p className="text-2xl font-bold">{stats.applicationsByStatus?.hired || 0}</p>
+                {statsLoading ? (
+                  <Skeleton className="h-8 w-12" />
+                ) : (
+                  <p className="text-2xl font-bold">{stats.applicationsByStatus?.hired || 0}</p>
+                )}
               </div>
               <UserCheck className="h-8 w-8 text-emerald-600" />
             </div>

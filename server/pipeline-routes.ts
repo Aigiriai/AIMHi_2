@@ -223,108 +223,51 @@ router.get("/pipeline", authenticateToken, async (req: AuthRequest, res: Respons
 // Get pipeline statistics with permission-based filtering
 router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    console.log(`📊 PIPELINE STATS: THEORY TEST - Always returning empty stats for user ${req.user?.id} (${req.user?.role}) in organization ${req.user?.organizationId}`);
+    console.log(`📊 PIPELINE STATS: Getting real stats for user ${req.user?.id} (${req.user?.role}) in organization ${req.user?.organizationId}`);
     
-    // THEORY TEST: Always return empty stats to test if database corruption prevents UI loading
-    const emptyStats: PipelineStats = {
-      totalJobs: 0,
-      activeJobs: 0,
-      totalApplications: 0,
-      jobsByStatus: {},
-      applicationsByStatus: {},
-    };
-    
-    console.log(`📊 PIPELINE STATS: THEORY TEST - Returning hardcoded empty stats (bypassing all database queries)`);
-    
-    res.set({
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      'Last-Modified': new Date().toUTCString()
-    });
-    
-    return res.json({ 
-      success: true, 
-      stats: {
-        ...emptyStats,
-        timestamp: Date.now()
-      }
-    });
+    const { db } = await getDB();
+    const organizationId = req.user?.organizationId;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
 
-    /* COMMENTED OUT FOR THEORY TEST - Original database query logic that causes I/O errors
-    // Get job statistics for accessible jobs only
-    const jobStats = await db.select({
-      status: jobs.status,
-      count: sql<number>`count(*)`.as('count')
-    })
-    .from(jobs)
-    .where(and(
-      eq(jobs.organizationId, user.organizationId),
-      inArray(jobs.id, accessibleJobIds)
-    ))
-    .groupBy(jobs.status)
-    .all();
+    if (!organizationId) {
+      return res.status(400).json({ success: false, error: "Organization context required" });
+    }
+
+    // Get jobs statistics
+    const totalJobsQuery = userRole === 'admin' 
+      ? `SELECT COUNT(*) as count FROM jobs WHERE organization_id = ?`
+      : `SELECT COUNT(*) as count FROM jobs WHERE organization_id = ? AND created_by = ?`;
     
-    console.log(`📊 PIPELINE STATS: Job statistics for accessible jobs:`, jobStats);
+    const totalJobsParams = userRole === 'admin' ? [organizationId] : [organizationId, userId];
+    const totalJobs = db.prepare(totalJobsQuery).get(...totalJobsParams) as { count: number };
 
-    // Get application statistics for accessible jobs only
-    const appStats = await db.select({
-      status: applications.status,
-      count: sql<number>`count(*)`.as('count')
-    })
-    .from(applications)
-    .leftJoin(jobs, eq(applications.jobId, jobs.id))
-    .where(and(
-      eq(jobs.organizationId, user.organizationId),
-      inArray(jobs.id, accessibleJobIds)
-    ))
-    .groupBy(applications.status)
-    .all();
+    const activeJobsQuery = userRole === 'admin'
+      ? `SELECT COUNT(*) as count FROM jobs WHERE organization_id = ? AND status = 'active'`
+      : `SELECT COUNT(*) as count FROM jobs WHERE organization_id = ? AND created_by = ? AND status = 'active'`;
     
-    console.log(`📊 PIPELINE STATS: Application statistics for accessible jobs:`, appStats);
+    const activeJobsParams = userRole === 'admin' ? [organizationId] : [organizationId, userId];
+    const activeJobs = db.prepare(activeJobsQuery).get(...activeJobsParams) as { count: number };
 
-    // Get total counts for accessible jobs only
-    const totalJobs = await db.select({ count: sql<number>`count(*)`.as('count') })
-      .from(jobs)
-      .where(and(
-        eq(jobs.organizationId, user.organizationId),
-        inArray(jobs.id, accessibleJobIds)
-      ))
-      .get();
-
-    const totalApplications = await db.select({ count: sql<number>`count(*)`.as('count') })
-      .from(applications)
-      .leftJoin(jobs, eq(applications.jobId, jobs.id))
-      .where(and(
-        eq(jobs.organizationId, user.organizationId),
-        inArray(jobs.id, accessibleJobIds)
-      ))
-      .get();
-
-    const activeJobs = await db.select({ count: sql<number>`count(*)`.as('count') })
-      .from(jobs)
-      .where(and(
-        eq(jobs.organizationId, user.organizationId),
-        eq(jobs.status, 'active'),
-        inArray(jobs.id, accessibleJobIds)
-      ))
-      .get();
+    // Get applications statistics
+    const totalApplicationsQuery = userRole === 'admin'
+      ? `SELECT COUNT(*) as count FROM applications WHERE organization_id = ?`
+      : `SELECT COUNT(*) as count FROM applications a 
+         JOIN jobs j ON a.job_id = j.id 
+         WHERE a.organization_id = ? AND j.created_by = ?`;
+    
+    const totalApplicationsParams = userRole === 'admin' ? [organizationId] : [organizationId, userId];
+    const totalApplications = db.prepare(totalApplicationsQuery).get(...totalApplicationsParams) as { count: number };
 
     const stats: PipelineStats = {
       totalJobs: totalJobs?.count || 0,
       activeJobs: activeJobs?.count || 0,
       totalApplications: totalApplications?.count || 0,
-      jobsByStatus: Object.fromEntries(
-        jobStats.map((stat: any) => [stat.status, stat.count])
-      ),
-      applicationsByStatus: Object.fromEntries(
-        appStats.map((stat: any) => [stat.status, stat.count])
-      ),
+      jobsByStatus: {},
+      applicationsByStatus: {},
     };
-
-    console.log(`📊 PIPELINE STATS: Final user-specific statistics for ${user.role}:`, stats);
     
-    // Ensure fresh data by setting cache headers and adding timestamp
+    
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
@@ -332,20 +275,23 @@ router.get("/pipeline/stats", authenticateToken, async (req: AuthRequest, res: R
       'Last-Modified': new Date().toUTCString()
     });
     
-    res.json({ 
+    console.log(`✅ PIPELINE STATS: Returning stats:`, stats);
+    
+    return res.json({ 
       success: true, 
       stats: {
         ...stats,
-        timestamp: Date.now() // Add timestamp to force fresh data
+        timestamp: Date.now()
       }
     });
-    END OF COMMENTED OUT CODE FOR THEORY TEST */
-  } catch (error) {
-    console.error("Failed to fetch pipeline stats:", error);
-    res.status(500).json({ success: false, error: "Failed to fetch pipeline statistics" });
-  }
-});
 
+  } catch (error) {
+    console.error("❌ PIPELINE STATS: Error:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to fetch pipeline statistics" 
+    });
+  }
 // Change job status - Fixed to match frontend parameter name
 const changeJobStatusSchema = z.object({
   newStatus: z.enum(['draft', 'active', 'paused', 'filled', 'closed', 'archived']),
