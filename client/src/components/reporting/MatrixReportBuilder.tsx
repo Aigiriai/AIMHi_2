@@ -27,6 +27,7 @@ import {
   Grid,
   ArrowRight
 } from 'lucide-react';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface TableMetadata {
   id: number;
@@ -124,36 +125,136 @@ function renderChart(data: any[], chartType: string, selectedMeasures: string[])
     );
   }
 
-  // For now, show a placeholder with chart type until recharts is properly set up
-  return (
-    <div className="h-96 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
-      <div className="text-center p-6">
-        {chartType === 'bar' && <BarChart3 className="w-16 h-16 mx-auto mb-4 text-blue-500" />}
-        {chartType === 'line' && <LineChartIcon className="w-16 h-16 mx-auto mb-4 text-green-500" />}
-        {chartType === 'pie' && <PieChartIcon className="w-16 h-16 mx-auto mb-4 text-orange-500" />}
-        {(chartType === 'table' || !chartType) && <Table2 className="w-16 h-16 mx-auto mb-4 text-gray-500" />}
+  // Get data keys (excluding 'name')
+  const dataKeys = Object.keys(data[0]).filter(key => key !== 'name' && key !== 'category');
+  const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
+
+  try {
+    switch (chartType) {
+      case 'bar':
+        return (
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="title" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                {dataKeys.map((key, index) => (
+                  <Bar 
+                    key={key} 
+                    dataKey={key} 
+                    fill={CHART_COLORS[index % CHART_COLORS.length]}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        );
+
+      case 'line':
+        return (
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="title" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                {dataKeys.map((key, index) => (
+                  <Line 
+                    key={key} 
+                    type="monotone" 
+                    dataKey={key} 
+                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
+                    strokeWidth={2}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        );
+
+      case 'pie':
+        const pieData = data.map((item, index) => ({
+          name: item.title || item.name || item.category || 'Item',
+          value: dataKeys.reduce((sum, key) => sum + (typeof item[key] === 'number' ? item[key] : 0), 0)
+        }));
+
+        return (
+          <div className="h-96">
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={120}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        );
+
+      case 'table':
+      default:
+        return null; // Table will be rendered separately
+    }
+  } catch (error) {
+    console.error('Chart rendering error:', error);
+    // Fallback to a simple table-like visualization
+    return (
+      <div className="h-96 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="text-center mb-4">
+          {chartType === 'bar' && <BarChart3 className="w-16 h-16 mx-auto mb-4 text-blue-500" />}
+          {chartType === 'line' && <LineChartIcon className="w-16 h-16 mx-auto mb-4 text-green-500" />}
+          {chartType === 'pie' && <PieChartIcon className="w-16 h-16 mx-auto mb-4 text-orange-500" />}
+          
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+            {chartType === 'table' ? 'Table View' : `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`}
+          </h3>
+          
+          <p className="text-sm text-red-600 dark:text-red-400 mb-3">
+            Chart library not available - showing data summary
+          </p>
+        </div>
         
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-          {chartType === 'table' ? 'Table View' : `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`}
-        </h3>
-        
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-          Ready to render with {data.length} data points
-        </p>
-        
-        <div className="text-xs text-gray-500 dark:text-gray-500 space-y-1">
-          <div>Data fields: {Object.keys(data[0] || {}).join(', ')}</div>
-          {selectedMeasures.length > 0 && (
-            <div>Selected measures: {selectedMeasures.join(', ')}</div>
+        <div className="max-h-64 overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                {Object.keys(data[0]).map(key => (
+                  <th key={key} className="text-left p-2 font-medium">{key}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.slice(0, 10).map((row, idx) => (
+                <tr key={idx} className="border-b border-gray-200 dark:border-gray-700">
+                  {Object.values(row).map((value, vidx) => (
+                    <td key={vidx} className="p-2">{String(value)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {data.length > 10 && (
+            <p className="text-xs text-gray-500 mt-2">Showing 10 of {data.length} rows</p>
           )}
         </div>
-        
-        <div className="mt-4 text-xs text-blue-600 dark:text-blue-400">
-          Chart rendering will be enabled once recharts is properly configured
-        </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
 
 export function MatrixReportBuilder() {

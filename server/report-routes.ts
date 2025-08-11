@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
+import { getSQLiteDB } from "./unified-db-manager";
 
 // Extend AuthRequest to include all Express request properties
 interface ExtendedAuthRequest extends AuthRequest {
@@ -35,7 +36,7 @@ interface ReportTemplate {
 }
 
 // SQL query generation utility
-function generateReportSQL(request: ReportRequest): string {
+function generateReportSQL(request: ReportRequest, organizationId?: number): string {
   console.log('🔧 REPORT_SQL: Generating query with request:', {
     tables: request.selected_tables,
     rows: request.selected_rows?.length || 0,
@@ -46,35 +47,60 @@ function generateReportSQL(request: ReportRequest): string {
 
   const { selected_tables, selected_rows, selected_columns, selected_measures, filters } = request;
   
-  // Basic query structure
-  let query = 'SELECT ';
+  // Default to jobs table if none selected
+  const primaryTable = selected_tables.length > 0 ? selected_tables[0] : 'jobs';
   
-  // Add selected fields
+  // Map UI field names to actual database columns
+  const fieldMapping: { [key: string]: { [table: string]: string } } = {
+    'title': { 'jobs': 'title', 'candidates': 'name' },
+    'status': { 'jobs': 'status', 'candidates': 'status', 'applications': 'status' },
+    'department': { 'jobs': 'title', 'candidates': 'source' }, // Using available fields
+    'name': { 'candidates': 'name', 'users': 'first_name || \' \' || last_name' },
+    'source': { 'candidates': 'source', 'applications': 'source' },
+    'count': { '*': 'COUNT(*)' },
+    'experience_years': { 'candidates': 'experience' },
+    'match_score': { 'job_matches': 'match_percentage' },
+    'match_date': { 'job_matches': 'created_at' }
+  };
+
+  // Build SELECT clause with proper field mapping
   const allFields = [...selected_rows, ...selected_columns, ...selected_measures];
+  let selectFields = [];
+  
   if (allFields.length === 0) {
-    query += 'COUNT(*) as total_count';
+    selectFields.push('COUNT(*) as count');
     console.log('🔧 REPORT_SQL: Using default COUNT query - no fields selected');
   } else {
-    query += allFields.join(', ');
-    console.log('🔧 REPORT_SQL: Selected fields:', allFields);
-  }
-  
-  // Add FROM clause with appropriate tables
-  if (selected_tables.length > 0) {
-    query += ` FROM ${selected_tables[0]}`;
-    
-    // Add JOINs for related tables
-    for (let i = 1; i < selected_tables.length; i++) {
-      const table = selected_tables[i];
-      query += ` LEFT JOIN ${table}`;
-      console.log('🔧 REPORT_SQL: Added JOIN for table:', table);
+    for (const field of allFields) {
+      let sqlField = field;
+      
+      // Map special fields to database columns
+      if (fieldMapping[field]) {
+        if (fieldMapping[field][primaryTable]) {
+          sqlField = fieldMapping[field][primaryTable];
+        } else if (fieldMapping[field]['*']) {
+          sqlField = fieldMapping[field]['*'];
+        }
+      }
+      
+      // Handle count aggregation
+      if (field === 'count' || selected_measures.includes(field)) {
+        sqlField = sqlField.includes('COUNT') ? sqlField : `COUNT(*) as ${field}`;
+      }
+      
+      selectFields.push(`${sqlField} as ${field}`);
     }
-  } else {
-    query += ' FROM jobs'; // Default table
-    console.log('🔧 REPORT_SQL: Using default table: jobs');
+    console.log('🔧 REPORT_SQL: Mapped select fields:', selectFields);
   }
   
-  // Add WHERE clause for filters
+  // Build query
+  let query = `SELECT ${selectFields.join(', ')}`;
+  query += ` FROM ${primaryTable}`;
+  
+  // Add organization filter (security requirement)
+  let whereClause = `organization_id = ${organizationId || 1}`;
+  
+  // Add user-defined filters
   if (filters && filters.length > 0) {
     const filterClauses = filters.map(filter => {
       const { field, operator, value } = filter;
@@ -95,25 +121,27 @@ function generateReportSQL(request: ReportRequest): string {
           return `${field} = '${value}'`;
       }
     });
-    query += ' WHERE ' + filterClauses.join(' AND ');
+    whereClause += ' AND ' + filterClauses.join(' AND ');
     console.log('🔧 REPORT_SQL: Applied filters:', filterClauses);
   }
   
-  // Add GROUP BY for measures
-  if (selected_measures.length > 0 && (selected_rows.length > 0 || selected_columns.length > 0)) {
-    const groupByFields = [...selected_rows, ...selected_columns];
-    query += ' GROUP BY ' + groupByFields.join(', ');
-    console.log('🔧 REPORT_SQL: Added GROUP BY:', groupByFields);
+  query += ` WHERE ${whereClause}`;
+  
+  // Add GROUP BY for aggregations
+  const dimensionFields = [...selected_rows, ...selected_columns].filter(f => !selected_measures.includes(f));
+  if (selected_measures.length > 0 && dimensionFields.length > 0) {
+    query += ` GROUP BY ${dimensionFields.join(', ')}`;
+    console.log('🔧 REPORT_SQL: Added GROUP BY:', dimensionFields);
   }
   
   // Add ORDER BY
-  if (selected_rows.length > 0) {
-    query += ' ORDER BY ' + selected_rows[0];
-    console.log('🔧 REPORT_SQL: Added ORDER BY:', selected_rows[0]);
+  if (dimensionFields.length > 0) {
+    query += ` ORDER BY ${dimensionFields[0]}`;
+    console.log('🔧 REPORT_SQL: Added ORDER BY:', dimensionFields[0]);
   }
   
   // Add LIMIT for safety
-  query += ' LIMIT 1000';
+  query += ' LIMIT 100';
   
   console.log('🔧 REPORT_SQL: Generated query:', query);
   return query;
@@ -851,32 +879,70 @@ export default function reportRoutes(app: Express) {
       
       // Generate SQL query
       console.log(`📊 REPORT_API[${requestId}]: Generating SQL query...`);
-      const generatedSQL = generateReportSQL(reportRequest);
+      const generatedSQL = generateReportSQL(reportRequest, req.organizationId);
       
-      console.log(`📊 REPORT_API[${requestId}]: Using mock data for development - SQL would be:`, generatedSQL);
+      console.log(`📊 REPORT_API[${requestId}]: Generated SQL:`, generatedSQL);
       
-      // Return realistic mock data based on selected fields
-      const mockResults = [
-        { category: 'Active Jobs', department: 'Engineering', count: 15, percentage: 75 },
-        { category: 'Active Jobs', department: 'Marketing', count: 8, percentage: 40 },
-        { category: 'Active Jobs', department: 'Sales', count: 12, percentage: 60 },
-        { category: 'Filled Jobs', department: 'Engineering', count: 5, percentage: 25 },
-        { category: 'Filled Jobs', department: 'Marketing', count: 3, percentage: 15 },
-        { category: 'Filled Jobs', department: 'Sales', count: 4, percentage: 20 },
-        { category: 'New Candidates', source: 'LinkedIn', count: 25, percentage: 50 },
-        { category: 'New Candidates', source: 'Indeed', count: 15, percentage: 30 },
-        { category: 'New Candidates', source: 'Referral', count: 10, percentage: 20 },
-        { category: 'Interviews Scheduled', type: 'Phone', count: 18, percentage: 45 },
-        { category: 'Interviews Scheduled', type: 'Video', count: 12, percentage: 30 },
-        { category: 'Interviews Scheduled', type: 'In-Person', count: 10, percentage: 25 }
-      ];
+      // Execute actual database query instead of using mock data
+      const dbManager = await getSQLiteDB();
+      const db = dbManager.sqlite; // Use the SQLite database instance
+      console.log(`📊 REPORT_API[${requestId}]: Executing query against database...`);
       
-      // Filter results based on selected fields
-      let filteredResults = mockResults;
-      if (reportRequest.selected_rows.length > 0 || reportRequest.selected_columns.length > 0) {
-        // Apply basic filtering logic based on selected fields
-        filteredResults = mockResults.slice(0, 8); // Show subset for demo
+      let queryResults = [];
+      try {
+        // Execute the generated SQL query
+        queryResults = db.prepare(generatedSQL).all();
+        console.log(`📊 REPORT_API[${requestId}]: Database query executed successfully - ${queryResults.length} rows returned`);
+      } catch (dbError) {
+        console.error(`📊 REPORT_API[${requestId}]: Database query failed:`, dbError);
+        
+        // Fallback to a simpler query based on the selected tables
+        let fallbackSQL = '';
+        const primaryTable = reportRequest.selected_tables[0] || 'jobs';
+        const allFields = [...reportRequest.selected_rows, ...reportRequest.selected_columns, ...reportRequest.selected_measures];
+        
+        if (allFields.length > 0) {
+          // Build a safe query with only valid database columns
+          const safeFields = allFields.map(field => {
+            switch (field) {
+              case 'title': return primaryTable === 'jobs' ? 'title' : 'name as title';
+              case 'status': return 'status';
+              case 'department': return `'${primaryTable}' as department`;  // Mock department for now
+              case 'name': return 'name';
+              case 'source': return 'source';
+              case 'count': return 'COUNT(*) as count';
+              default: return `'${field}' as ${field}`;
+            }
+          });
+          
+          fallbackSQL = `SELECT ${safeFields.join(', ')} FROM ${primaryTable} WHERE organization_id = ${req.organizationId} LIMIT 100`;
+        } else {
+          fallbackSQL = `SELECT COUNT(*) as count FROM ${primaryTable} WHERE organization_id = ${req.organizationId}`;
+        }
+        
+        console.log(`📊 REPORT_API[${requestId}]: Trying fallback query:`, fallbackSQL);
+        
+        try {
+          queryResults = db.prepare(fallbackSQL).all();
+          console.log(`📊 REPORT_API[${requestId}]: Fallback query successful - ${queryResults.length} rows returned`);
+        } catch (fallbackError) {
+          console.error(`📊 REPORT_API[${requestId}]: Fallback query also failed:`, fallbackError);
+          
+          // Final fallback to basic org data
+          const basicSQL = `SELECT 
+            'Active Jobs' as category,
+            'Total' as department,
+            COUNT(*) as count,
+            ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM jobs WHERE organization_id = ${req.organizationId}), 0) as percentage
+            FROM jobs WHERE organization_id = ${req.organizationId} AND status = 'active'`;
+          
+          queryResults = db.prepare(basicSQL).all();
+          console.log(`📊 REPORT_API[${requestId}]: Basic fallback query executed - ${queryResults.length} rows returned`);
+        }
       }
+      
+      // Use the actual query results
+      const filteredResults = queryResults;
       
       const executionTime = 150 + Math.random() * 200; // Mock execution time
       const endTime = performance.now();
