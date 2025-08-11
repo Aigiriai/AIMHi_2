@@ -4,12 +4,24 @@ import { extractResumeDataFromImage } from './image-processing';
 import { fileStorage } from './file-storage';
 import { preprocessResumeContent, formatPreprocessedForAI } from './resume-preprocessor';
 
-// Import pdf-parse with proper error handling for environments where it might not be available
-let pdfParse: any = null;
-try {
-  pdfParse = require('pdf-parse');
-} catch (error) {
-  console.warn('PDF parsing library not available. PDF files will use fallback processing.');
+// Import pdfjs-dist with proper error handling for environments where it might not be available
+let pdfjsLib: any = null;
+let pdfjsInitialized = false;
+
+async function initializePdfJs() {
+  if (!pdfjsInitialized) {
+    try {
+      pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
+      // Disable worker to avoid issues in server environments
+      pdfjsLib.GlobalWorkerOptions.workerSrc = null;
+      pdfjsInitialized = true;
+      console.log('✅ OPTIMIZED: PDF.js library initialized successfully');
+    } catch (error) {
+      console.warn('❌ OPTIMIZED: PDF.js library not available. PDF files will use fallback processing.');
+      pdfjsInitialized = true; // Mark as initialized even if failed to avoid repeated attempts
+    }
+  }
+  return pdfjsLib;
 }
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -29,18 +41,34 @@ export async function extractTextFromDocument(buffer: Buffer, filename: string, 
   try {
     switch (mimetype) {
       case 'application/pdf':
-        // Enhanced PDF processing with proper text extraction
+        // Enhanced PDF processing with pdfjs-dist (optimized version)
         console.log(`🔍 OPTIMIZED: Processing PDF: ${filename} with advanced text extraction`);
         
-        if (pdfParse) {
+        const pdfLib = await initializePdfJs();
+        if (pdfLib) {
           try {
-            const pdfData = await pdfParse(buffer);
-            const extractedText = pdfData.text;
+            const typedArray = new Uint8Array(buffer);
+            const loadingTask = pdfLib.getDocument({ data: typedArray });
+            const pdfDocument = await loadingTask.promise;
+            
+            let extractedText = '';
+            const numPages = pdfDocument.numPages;
+            console.log(`📄 OPTIMIZED: PDF has ${numPages} pages`);
+            
+            // Extract text from all pages
+            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+              const page = await pdfDocument.getPage(pageNum);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items
+                .map((item: any) => item.str)
+                .join(' ');
+              extractedText += pageText + '\n';
+            }
             
             // Validate extracted text quality
             if (extractedText && extractedText.trim().length > 100) {
               console.log(`✅ OPTIMIZED: PDF text extraction successful for ${filename} (${extractedText.length} characters)`);
-              return extractedText;
+              return extractedText.trim();
             } else {
               console.log(`⚠️ OPTIMIZED: PDF text extraction yielded minimal content for ${filename}`);
               // Fall through to fallback processing
@@ -193,20 +221,37 @@ export async function extractResumeDetails(content: string, filename: string, bu
     const isLegacyDocWithIssues = content.includes('Legacy Word Document:');
     
     if ((isPDFWithIssues || isLegacyDocWithIssues) && buffer) {
-      // For PDF files, try to re-extract using pdf-parse
-      if (isPDFWithIssues && pdfParse) {
-        try {
-          console.log(`🔄 OPTIMIZED: Attempting direct PDF re-extraction for resume processing: ${filename}`);
-          const pdfData = await pdfParse(buffer);
-          const extractedText = pdfData.text;
-          
-          if (extractedText && extractedText.trim().length > 100) {
-            console.log(`✅ OPTIMIZED: Direct PDF extraction successful for resume: ${filename}`);
-            // Use the extracted text for preprocessing
-            content = extractedText;
+      // For PDF files, try to re-extract using pdfjs-dist
+      if (isPDFWithIssues) {
+        const pdfLib = await initializePdfJs();
+        if (pdfLib) {
+          try {
+            console.log(`🔄 OPTIMIZED: Attempting direct PDF re-extraction for resume processing: ${filename}`);
+            const typedArray = new Uint8Array(buffer);
+            const loadingTask = pdfLib.getDocument({ data: typedArray });
+            const pdfDocument = await loadingTask.promise;
+            
+            let extractedText = '';
+            const numPages = pdfDocument.numPages;
+            
+            // Extract text from all pages
+            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+              const page = await pdfDocument.getPage(pageNum);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items
+                .map((item: any) => item.str)
+                .join(' ');
+              extractedText += pageText + '\n';
+            }
+            
+            if (extractedText && extractedText.trim().length > 100) {
+              console.log(`✅ OPTIMIZED: Direct PDF extraction successful for resume: ${filename}`);
+              // Use the extracted text for preprocessing
+              content = extractedText.trim();
+            }
+          } catch (pdfError) {
+            console.error(`❌ OPTIMIZED: Direct PDF extraction failed for resume: ${filename}`, pdfError);
           }
-        } catch (pdfError) {
-          console.error(`❌ OPTIMIZED: Direct PDF extraction failed for resume: ${filename}`, pdfError);
         }
       }
       
