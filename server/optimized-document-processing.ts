@@ -4,26 +4,6 @@ import { extractResumeDataFromImage } from './image-processing';
 import { fileStorage } from './file-storage';
 import { preprocessResumeContent, formatPreprocessedForAI } from './resume-preprocessor';
 
-// Import pdfjs-dist with proper error handling for environments where it might not be available
-let pdfjsLib: any = null;
-let pdfjsInitialized = false;
-
-async function initializePdfJs() {
-  if (!pdfjsInitialized) {
-    try {
-      pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
-      // Disable worker to avoid issues in server environments
-      pdfjsLib.GlobalWorkerOptions.workerSrc = null;
-      pdfjsInitialized = true;
-      console.log('✅ OPTIMIZED: PDF.js library initialized successfully');
-    } catch (error) {
-      console.warn('❌ OPTIMIZED: PDF.js library not available. PDF files will use fallback processing.');
-      pdfjsInitialized = true; // Mark as initialized even if failed to avoid repeated attempts
-    }
-  }
-  return pdfjsLib;
-}
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface ProcessedDocument {
@@ -41,62 +21,28 @@ export async function extractTextFromDocument(buffer: Buffer, filename: string, 
   try {
     switch (mimetype) {
       case 'application/pdf':
-        // Enhanced PDF processing with pdfjs-dist (optimized version)
-        console.log(`🔍 OPTIMIZED: Processing PDF: ${filename} with advanced text extraction`);
+        // PDF processing not supported in this environment (optimized version)
+        console.log(`❌ OPTIMIZED: PDF processing not supported: ${filename}`);
+        console.log(`� OPTIMIZED: SKIPPING PDF FILE: PDF files are not supported in this environment`);
         
-        const pdfLib = await initializePdfJs();
-        if (pdfLib) {
-          try {
-            const typedArray = new Uint8Array(buffer);
-            const loadingTask = pdfLib.getDocument({ data: typedArray });
-            const pdfDocument = await loadingTask.promise;
-            
-            let extractedText = '';
-            const numPages = pdfDocument.numPages;
-            console.log(`📄 OPTIMIZED: PDF has ${numPages} pages`);
-            
-            // Extract text from all pages
-            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-              const page = await pdfDocument.getPage(pageNum);
-              const textContent = await page.getTextContent();
-              const pageText = textContent.items
-                .map((item: any) => item.str)
-                .join(' ');
-              extractedText += pageText + '\n';
-            }
-            
-            // Validate extracted text quality
-            if (extractedText && extractedText.trim().length > 100) {
-              console.log(`✅ OPTIMIZED: PDF text extraction successful for ${filename} (${extractedText.length} characters)`);
-              return extractedText.trim();
-            } else {
-              console.log(`⚠️ OPTIMIZED: PDF text extraction yielded minimal content for ${filename}`);
-              // Fall through to fallback processing
-            }
-          } catch (pdfError) {
-            console.error(`❌ OPTIMIZED: PDF parsing error for ${filename}:`, pdfError);
-            // Fall through to fallback processing
-          }
-        }
-        
-        // Fallback for PDFs that couldn't be parsed or when pdf-parse is unavailable
-        console.log(`📄 OPTIMIZED: Using structured fallback for PDF: ${filename}`);
-        return `PDF Document: ${filename}. 
+        return `UNSUPPORTED_FILE_FORMAT: PDF files are not supported in this environment.
 
-IMPORTANT: This PDF requires manual text extraction for optimal results. 
-The document appears to be a professional document that may contain:
-- Professional experience and work history
-- Technical skills and competencies  
-- Educational background and certifications
-- Contact information and personal details
-- Project experience and achievements
+File: ${filename}
+Reason: PDF processing libraries are not available in this deployment environment.
 
-For accurate AI matching and cost optimization, please either:
-1. Convert this PDF to text format and re-upload
-2. Use the manual entry form to input key information
-3. Upload as an image file for OCR processing
+SUPPORTED FORMATS:
+✅ Microsoft Word (.docx)
+✅ Plain Text (.txt)
+✅ Image files (.jpg, .jpeg, .png, .gif, .bmp, .webp) - with OCR
+✅ Legacy Word documents (.doc) - limited support
 
-File has been stored for reference and can be downloaded later.`;
+RECOMMENDATIONS:
+1. Convert your PDF to a .docx (Word) format
+2. Convert to plain text (.txt) format
+3. Save as an image and upload for OCR processing
+4. Use manual entry for the content
+
+Please re-upload your document in a supported format for optimal AI matching results.`;
 
       case 'application/msword':
         // Enhanced legacy .doc handling
@@ -197,6 +143,20 @@ export async function extractJobDetails(content: string): Promise<any> {
  */
 export async function extractResumeDetails(content: string, filename: string, buffer?: Buffer): Promise<any> {
   try {
+    // Check if this is an unsupported file format
+    if (content.includes('UNSUPPORTED_FILE_FORMAT')) {
+      console.log(`🚫 OPTIMIZED: Cannot extract resume details from unsupported file format: ${filename}`);
+      const nameFromFile = filename.replace(/[-_]/g, ' ').replace(/\.(pdf|doc|docx)$/i, '').trim();
+      return {
+        name: nameFromFile || "Unsupported Format Candidate",
+        email: "",
+        phone: "",
+        experience: 0,
+        resumeContent: content,
+        resumeFileName: filename
+      };
+    }
+    
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key required for resume detail extraction');
     }
@@ -221,38 +181,9 @@ export async function extractResumeDetails(content: string, filename: string, bu
     const isLegacyDocWithIssues = content.includes('Legacy Word Document:');
     
     if ((isPDFWithIssues || isLegacyDocWithIssues) && buffer) {
-      // For PDF files, try to re-extract using pdfjs-dist
+      // For PDF files, PDF processing is not available
       if (isPDFWithIssues) {
-        const pdfLib = await initializePdfJs();
-        if (pdfLib) {
-          try {
-            console.log(`🔄 OPTIMIZED: Attempting direct PDF re-extraction for resume processing: ${filename}`);
-            const typedArray = new Uint8Array(buffer);
-            const loadingTask = pdfLib.getDocument({ data: typedArray });
-            const pdfDocument = await loadingTask.promise;
-            
-            let extractedText = '';
-            const numPages = pdfDocument.numPages;
-            
-            // Extract text from all pages
-            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-              const page = await pdfDocument.getPage(pageNum);
-              const textContent = await page.getTextContent();
-              const pageText = textContent.items
-                .map((item: any) => item.str)
-                .join(' ');
-              extractedText += pageText + '\n';
-            }
-            
-            if (extractedText && extractedText.trim().length > 100) {
-              console.log(`✅ OPTIMIZED: Direct PDF extraction successful for resume: ${filename}`);
-              // Use the extracted text for preprocessing
-              content = extractedText.trim();
-            }
-          } catch (pdfError) {
-            console.error(`❌ OPTIMIZED: Direct PDF extraction failed for resume: ${filename}`, pdfError);
-          }
-        }
+        console.log(`🚫 OPTIMIZED: PDF processing not available for: ${filename}`);
       }
       
       // If still no good content, use filename-based extraction

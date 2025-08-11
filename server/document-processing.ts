@@ -2,26 +2,6 @@ import mammoth from 'mammoth';
 import OpenAI from 'openai';
 import { extractResumeDataFromImage } from './image-processing';
 
-// Import pdfjs-dist with proper error handling for environments where it might not be available
-let pdfjsLib: any = null;
-let pdfjsInitialized = false;
-
-async function initializePdfJs() {
-  if (!pdfjsInitialized) {
-    try {
-      pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.js');
-      // Disable worker to avoid issues in server environments
-      pdfjsLib.GlobalWorkerOptions.workerSrc = null;
-      pdfjsInitialized = true;
-      console.log('✅ PDF.js library initialized successfully');
-    } catch (error) {
-      console.warn('❌ PDF.js library not available. PDF files will use fallback processing.');
-      pdfjsInitialized = true; // Mark as initialized even if failed to avoid repeated attempts
-    }
-  }
-  return pdfjsLib;
-}
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface ProcessedDocument {
@@ -39,62 +19,28 @@ export async function extractTextFromDocument(buffer: Buffer, filename: string, 
   try {
     switch (mimetype) {
       case 'application/pdf':
-        // Enhanced PDF processing with pdfjs-dist
-        console.log(`🔍 Processing PDF: ${filename} with advanced text extraction`);
+        // PDF processing not supported in this environment
+        console.log(`❌ PDF processing not supported: ${filename}`);
+        console.log(`� SKIPPING PDF FILE: PDF files are not supported in this environment`);
         
-        const pdfLib = await initializePdfJs();
-        if (pdfLib) {
-          try {
-            const typedArray = new Uint8Array(buffer);
-            const loadingTask = pdfLib.getDocument({ data: typedArray });
-            const pdfDocument = await loadingTask.promise;
-            
-            let extractedText = '';
-            const numPages = pdfDocument.numPages;
-            console.log(`📄 PDF has ${numPages} pages`);
-            
-            // Extract text from all pages
-            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-              const page = await pdfDocument.getPage(pageNum);
-              const textContent = await page.getTextContent();
-              const pageText = textContent.items
-                .map((item: any) => item.str)
-                .join(' ');
-              extractedText += pageText + '\n';
-            }
-            
-            // Validate extracted text quality
-            if (extractedText && extractedText.trim().length > 100) {
-              console.log(`✅ PDF text extraction successful for ${filename} (${extractedText.length} characters)`);
-              return extractedText.trim();
-            } else {
-              console.log(`⚠️ PDF text extraction yielded minimal content for ${filename}`);
-              // Fall through to fallback processing
-            }
-          } catch (pdfError) {
-            console.error(`❌ PDF parsing error for ${filename}:`, pdfError);
-            // Fall through to fallback processing
-          }
-        }
-        
-        // Fallback for PDFs that couldn't be parsed or when pdf-parse is unavailable
-        console.log(`📄 Using structured fallback for PDF: ${filename}`);
-        return `PDF Document: ${filename}. 
-        
-IMPORTANT: This PDF requires manual text extraction for optimal results. 
-The document appears to be a professional document that may contain:
-- Professional experience and work history
-- Technical skills and competencies  
-- Educational background and certifications
-- Contact information and personal details
-- Project experience and achievements
+        return `UNSUPPORTED_FILE_FORMAT: PDF files are not supported in this environment.
 
-For accurate AI matching, please either:
-1. Convert this PDF to text format and re-upload
-2. Use the manual entry form to input key information
-3. Upload as an image file for OCR processing
+File: ${filename}
+Reason: PDF processing libraries are not available in this deployment environment.
 
-File has been stored for reference and can be downloaded later.`;
+SUPPORTED FORMATS:
+✅ Microsoft Word (.docx)
+✅ Plain Text (.txt)
+✅ Image files (.jpg, .jpeg, .png, .gif, .bmp, .webp) - with OCR
+✅ Legacy Word documents (.doc) - limited support
+
+RECOMMENDATIONS:
+1. Convert your PDF to a .docx (Word) format
+2. Convert to plain text (.txt) format
+3. Save as an image and upload for OCR processing
+4. Use manual entry for the content
+
+Please re-upload your document in a supported format for optimal AI matching results.`;
         
       case 'application/msword':
         // Enhanced legacy .doc file processing
@@ -225,6 +171,20 @@ export async function extractJobDetails(content: string): Promise<any> {
  */
 export async function extractResumeDetails(content: string, filename: string, buffer?: Buffer): Promise<any> {
   try {
+    // Check if this is an unsupported file format
+    if (content.includes('UNSUPPORTED_FILE_FORMAT')) {
+      console.log(`🚫 Cannot extract resume details from unsupported file format: ${filename}`);
+      const nameFromFile = filename.replace(/[-_]/g, ' ').replace(/\.(pdf|doc|docx)$/i, '').trim();
+      return {
+        name: nameFromFile || "Unsupported Format Candidate",
+        email: "",
+        phone: "",
+        experience: 0,
+        resumeContent: content,
+        resumeFileName: filename
+      };
+    }
+    
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OpenAI API key required for resume detail extraction');
     }
@@ -249,37 +209,8 @@ export async function extractResumeDetails(content: string, filename: string, bu
     const isPDFWithIssues = content.includes('PDF Document:') && content.includes('manual text extraction');
     
     if (isPDFWithIssues && buffer) {
-      // For PDF files with extraction issues, try to re-extract using pdfjs-dist
-      const pdfLib = await initializePdfJs();
-      if (pdfLib) {
-        try {
-          console.log(`🔄 Attempting direct PDF re-extraction for resume processing: ${filename}`);
-          const typedArray = new Uint8Array(buffer);
-          const loadingTask = pdfLib.getDocument({ data: typedArray });
-          const pdfDocument = await loadingTask.promise;
-          
-          let extractedText = '';
-          const numPages = pdfDocument.numPages;
-          
-          // Extract text from all pages
-          for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-            const page = await pdfDocument.getPage(pageNum);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items
-              .map((item: any) => item.str)
-              .join(' ');
-            extractedText += pageText + '\n';
-          }
-          
-          if (extractedText && extractedText.trim().length > 100) {
-            console.log(`✅ Direct PDF extraction successful for resume: ${filename}`);
-            // Use the extracted text instead of the fallback content
-            content = extractedText.trim();
-          }
-        } catch (pdfError) {
-          console.error(`❌ Direct PDF extraction failed for resume: ${filename}`, pdfError);
-        }
-      }
+      // PDF processing is not available in this environment
+      console.log(`🚫 PDF processing not available for: ${filename}`);
       
       // If still no good content, extract name from filename and use structured fallback
       if (content.includes('manual text extraction')) {
@@ -421,7 +352,21 @@ export async function processDocuments(files: Express.Multer.File[]): Promise<{
 
   for (const file of files) {
     try {
+      // Skip PDF files completely - they are not supported
+      if (file.mimetype === 'application/pdf') {
+        console.log(`🚫 SKIPPING PDF FILE: ${file.originalname} - PDF files are not supported in this environment`);
+        ignored.push(`${file.originalname} (PDF not supported - please convert to .docx or .txt)`);
+        continue;
+      }
+      
       const content = await extractTextFromDocument(file.buffer, file.originalname, file.mimetype);
+      
+      // Skip files that return unsupported file format messages
+      if (content.includes('UNSUPPORTED_FILE_FORMAT')) {
+        console.log(`🚫 SKIPPING UNSUPPORTED FILE: ${file.originalname}`);
+        ignored.push(`${file.originalname} (unsupported format)`);
+        continue;
+      }
       
       if (content.trim().length < 50) {
         ignored.push(file.originalname);
