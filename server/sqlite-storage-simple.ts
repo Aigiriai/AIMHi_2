@@ -517,17 +517,35 @@ export class SQLiteStorage implements IStorage {
     await this.ensureConnection();
     
     try {
-      // Delete related matches and interviews first
-      this.sqlite.prepare('DELETE FROM job_matches WHERE candidate_id = ?').run(id);
-      this.sqlite.prepare('DELETE FROM interviews WHERE candidate_id = ?').run(id);
+      console.log(`🗑️ CANDIDATE DELETE: Starting deletion for candidate ${id}`);
       
-      // Delete the candidate
+      // Delete related records in the correct order to avoid foreign key constraints
+      
+      // 1. Delete applications first
+      const applicationsResult = this.sqlite.prepare('DELETE FROM applications WHERE candidate_id = ?').run(id);
+      console.log(`🗑️ CANDIDATE DELETE: Deleted ${applicationsResult.changes} applications`);
+      
+      // 2. Delete interview schedules
+      const interviewSchedulesResult = this.sqlite.prepare('DELETE FROM interview_schedules WHERE candidate_id = ?').run(id);
+      console.log(`🗑️ CANDIDATE DELETE: Deleted ${interviewSchedulesResult.changes} interview schedules`);
+      
+      // 3. Delete interviews
+      const interviewsResult = this.sqlite.prepare('DELETE FROM interviews WHERE candidate_id = ?').run(id);
+      console.log(`🗑️ CANDIDATE DELETE: Deleted ${interviewsResult.changes} interviews`);
+      
+      // 4. Delete job matches
+      const matchesResult = this.sqlite.prepare('DELETE FROM job_matches WHERE candidate_id = ?').run(id);
+      console.log(`🗑️ CANDIDATE DELETE: Deleted ${matchesResult.changes} job matches`);
+      
+      // 5. Finally, delete the candidate
       const stmt = this.sqlite.prepare('DELETE FROM candidates WHERE id = ?');
       const result = stmt.run(id);
       
       if (result.changes === 0) {
         throw new Error('Candidate not found or already deleted');
       }
+      
+      console.log(`✅ CANDIDATE DELETE: Successfully deleted candidate ${id}`);
     } catch (error) {
       console.error('Error deleting candidate:', error);
       throw error;
