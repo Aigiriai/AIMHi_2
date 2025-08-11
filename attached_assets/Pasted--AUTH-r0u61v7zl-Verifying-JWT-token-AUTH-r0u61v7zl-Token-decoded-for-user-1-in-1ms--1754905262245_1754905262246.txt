@@ -1,0 +1,355 @@
+🔐 AUTH[r0u61v7zl]: Verifying JWT token...
+🔐 AUTH[r0u61v7zl]: Token decoded for user 1 in 1ms
+🔐 AUTH[r0u61v7zl]: Token payload: {
+  userId: 1,
+  iat: 1754905075,
+  exp: 1754991475,
+  expiresIn: '2025-08-12T09:37:55.000Z'
+}
+🔐 AUTH[r0u61v7zl]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[dty6eix9i]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[dty6eix9i]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[dty6eix9i]: Returning existing database instance (0ms)
+🔐 AUTH[rao781iqr]: Database connection obtained in 2ms (attempt 1)
+🔐 AUTH[rao781iqr]: Querying user data for user 1...
+🔐 AUTH[rao781iqr]: User query returned 1 results for user 1 in 2ms
+✅ AUTH[rao781iqr]: Authentication successful for user 1 (super_admin) in 5ms
+🔐 AUTH[rao781iqr]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[rao781iqr]: ============= AUTHENTICATION SUCCESS =============
+🔍 ROUTE: Getting matches with user-level filtering for user 1 (super_admin)
+🔄 SQLiteStorage: Initializing database connection...
+🔍 DB_MANAGER[kg8z1b4l2]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[kg8z1b4l2]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[kg8z1b4l2]: Returning existing database instance (1ms)
+✅ SQLiteStorage: Database connection initialized successfully
+🔍 ROUTE: Got 4 matches for user 1 with role super_admin
+🔍 ROUTE: Sample match created by user: 1
+📤 RESPONSE[ad1jjpvyl]: GET /api/matches -> 200 (6ms)
+9:38:02 AM [express] GET /api/matches 304 in 7ms :: [{"id":2,"organizationId":1,"jobId":5,"candidate…
+🔐 AUTH[r0u61v7zl]: Database connection obtained in 4ms (attempt 1)
+🔐 AUTH[r0u61v7zl]: Querying user data for user 1...
+🔐 AUTH[r0u61v7zl]: User query returned 1 results for user 1 in 0ms
+✅ AUTH[r0u61v7zl]: Authentication successful for user 1 (super_admin) in 6ms
+🔐 AUTH[r0u61v7zl]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[r0u61v7zl]: ============= AUTHENTICATION SUCCESS =============
+📊 STATS: Calculating user-specific stats for user 1 (super_admin) in organization 1
+🔍 DB_MANAGER[m77tbp4np]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[m77tbp4np]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[m77tbp4np]: Returning existing database instance (0ms)
+🔐 AUTH[0yls53d60]: ============= AUTHENTICATION START =============
+🔐 AUTH[0yls53d60]: Request details: {
+  method: 'GET',
+  path: '/api/jobs',
+  originalUrl: '/api/jobs',
+  ip: '172.31.93.194',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[0yls53d60]: Authorization header present: true
+🔐 AUTH[0yls53d60]: Token extracted: true
+🔐 AUTH[0yls53d60]: Verifying JWT token...
+🔐 AUTH[0yls53d60]: Token decoded for user 1 in 1ms
+🔐 AUTH[0yls53d60]: Token payload: {
+  userId: 1,
+  iat: 1754905075,
+  exp: 1754991475,
+  expiresIn: '2025-08-12T09:37:55.000Z'
+}
+🔐 AUTH[0yls53d60]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[lhnhmr5u9]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[lhnhmr5u9]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[lhnhmr5u9]: Returning existing database instance (0ms)
+📤 RESPONSE[3n4tl6ixy]: GET /api/interviews -> 200 (1ms)
+9:38:02 AM [express] GET /api/interviews 304 in 1ms :: []
+🔐 AUTH[0yls53d60]: Database connection obtained in 2ms (attempt 1)
+🔐 AUTH[0yls53d60]: Querying user data for user 1...
+📊 STATS: User has access to 8 jobs: [
+  2, 3, 4, 5,
+  6, 7, 8, 9
+]
+🔐 AUTH[0yls53d60]: User query returned 1 results for user 1 in 3ms
+✅ AUTH[0yls53d60]: Authentication successful for user 1 (super_admin) in 6ms
+🔐 AUTH[0yls53d60]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[0yls53d60]: ============= AUTHENTICATION SUCCESS =============
+Fetching jobs for organization: 1
+🔍 DB_MANAGER[31p025bdj]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[31p025bdj]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[31p025bdj]: Returning existing database instance (0ms)
+📊 STATS: Final user-specific stats for super_admin: {
+  activeJobs: 8,
+  totalCandidates: 4,
+  aiMatches: 4,
+  totalInterviews: 0,
+  avgMatchRate: 14
+}
+📤 RESPONSE[1w34y7eh7]: GET /api/stats -> 200 (15ms)
+9:38:02 AM [express] GET /api/stats 304 in 16ms :: {"activeJobs":8,"totalCandidates":4,"aiMatches":4…
+🔐 AUTH[u9nuq4181]: ============= AUTHENTICATION START =============
+🔐 AUTH[u9nuq4181]: Request details: {
+  method: 'GET',
+  path: '/api/candidates',
+  originalUrl: '/api/candidates',
+  ip: '172.31.93.194',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[u9nuq4181]: Authorization header present: true
+🔐 AUTH[u9nuq4181]: Token extracted: true
+🔐 AUTH[u9nuq4181]: Verifying JWT token...
+🔐 AUTH[u9nuq4181]: Token decoded for user 1 in 0ms
+🔐 AUTH[u9nuq4181]: Token payload: {
+  userId: 1,
+  iat: 1754905075,
+  exp: 1754991475,
+  expiresIn: '2025-08-12T09:37:55.000Z'
+}
+🔐 AUTH[u9nuq4181]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[fg8d85kk7]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[fg8d85kk7]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[fg8d85kk7]: Returning existing database instance (0ms)
+Retrieved organization jobs: 8
+📤 RESPONSE[bhfst3b6i]: GET /api/jobs -> 200 (10ms)
+9:38:02 AM [express] GET /api/jobs 304 in 11ms :: [{"id":2,"organizationId":1,"teamId":null,"created…
+🔐 AUTH[kdj7v7uh3]: ============= AUTHENTICATION START =============
+🔐 AUTH[kdj7v7uh3]: Request details: {
+  method: 'GET',
+  path: '/me',
+  originalUrl: '/api/auth/me',
+  ip: '172.31.93.194',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[kdj7v7uh3]: Authorization header present: true
+🔐 AUTH[kdj7v7uh3]: Token extracted: true
+🔐 AUTH[kdj7v7uh3]: Verifying JWT token...
+🔐 AUTH[kdj7v7uh3]: Token decoded for user 1 in 0ms
+🔐 AUTH[kdj7v7uh3]: Token payload: {
+  userId: 1,
+  iat: 1754905075,
+  exp: 1754991475,
+  expiresIn: '2025-08-12T09:37:55.000Z'
+}
+🔐 AUTH[kdj7v7uh3]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[v8f53j7tw]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[v8f53j7tw]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[v8f53j7tw]: Returning existing database instance (0ms)
+🔐 AUTH[u9nuq4181]: Database connection obtained in 3ms (attempt 1)
+🔐 AUTH[u9nuq4181]: Querying user data for user 1...
+🔐 AUTH[u9nuq4181]: User query returned 1 results for user 1 in 1ms
+✅ AUTH[u9nuq4181]: Authentication successful for user 1 (super_admin) in 5ms
+🔐 AUTH[u9nuq4181]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[u9nuq4181]: ============= AUTHENTICATION SUCCESS =============
+🔍 CANDIDATES: Fetching candidates for user 1 (super_admin) in org 1
+👑 CANDIDATES: User has super_admin role - showing all candidates
+📤 RESPONSE[fl4nw998l]: GET /api/candidates -> 200 (5ms)
+9:38:02 AM [express] GET /api/candidates 304 in 6ms :: [{"id":8,"organization_id":1,"name":"Sudhir",…
+🔐 AUTH[kdj7v7uh3]: Database connection obtained in 3ms (attempt 1)
+🔐 AUTH[kdj7v7uh3]: Querying user data for user 1...
+🔐 AUTH[kdj7v7uh3]: User query returned 1 results for user 1 in 0ms
+✅ AUTH[kdj7v7uh3]: Authentication successful for user 1 (super_admin) in 4ms
+🔐 AUTH[kdj7v7uh3]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[kdj7v7uh3]: ============= AUTHENTICATION SUCCESS =============
+🔍 DB_MANAGER[u4ugo41pl]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[u4ugo41pl]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[u4ugo41pl]: Returning existing database instance (0ms)
+📤 RESPONSE[szr9dpkvd]: GET /api/auth/me -> 200 (6ms)
+9:38:02 AM [express] GET /api/auth/me 200 in 6ms :: {"id":1,"email":"superadmin@aimhi.app","firstNam…
+📤 RESPONSE[2gjrurmin]: GET /api/job-boards/credentials -> 200 (0ms)
+9:38:02 AM [express] GET /api/job-boards/credentials 304 in 1ms :: {"linkedIn":false,"indeed":false}
+🔐 AUTH[bvifa2by5]: ============= AUTHENTICATION START =============
+🔐 AUTH[bvifa2by5]: Request details: {
+  method: 'GET',
+  path: '/api/report/templates',
+  originalUrl: '/api/report/templates',
+  ip: '172.31.93.194',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[bvifa2by5]: Authorization header present: true
+🔐 AUTH[bvifa2by5]: Token extracted: true
+🔐 AUTH[bvifa2by5]: Verifying JWT token...
+🔐 AUTH[bvifa2by5]: Token decoded for user 1 in 1ms
+🔐 AUTH[bvifa2by5]: Token payload: {
+  userId: 1,
+  iat: 1754905075,
+  exp: 1754991475,
+  expiresIn: '2025-08-12T09:37:55.000Z'
+}
+🔐 AUTH[bvifa2by5]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[sp2wop9x0]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[sp2wop9x0]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[sp2wop9x0]: Returning existing database instance (0ms)
+🔐 AUTH[1cwsdku7z]: ============= AUTHENTICATION START =============
+🔐 AUTH[1cwsdku7z]: Request details: {
+  method: 'GET',
+  path: '/api/report/tables',
+  originalUrl: '/api/report/tables',
+  ip: '172.31.93.194',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[1cwsdku7z]: Authorization header present: true
+🔐 AUTH[1cwsdku7z]: Token extracted: true
+🔐 AUTH[1cwsdku7z]: Verifying JWT token...
+🔐 AUTH[1cwsdku7z]: Token decoded for user 1 in 1ms
+🔐 AUTH[1cwsdku7z]: Token payload: {
+  userId: 1,
+  iat: 1754905075,
+  exp: 1754991475,
+  expiresIn: '2025-08-12T09:37:55.000Z'
+}
+🔐 AUTH[1cwsdku7z]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[wq2p5umtt]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[wq2p5umtt]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[wq2p5umtt]: Returning existing database instance (0ms)
+🔐 AUTH[bvifa2by5]: Database connection obtained in 4ms (attempt 1)
+🔐 AUTH[bvifa2by5]: Querying user data for user 1...
+🔐 AUTH[bvifa2by5]: User query returned 1 results for user 1 in 1ms
+✅ AUTH[bvifa2by5]: Authentication successful for user 1 (super_admin) in 6ms
+🔐 AUTH[bvifa2by5]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[bvifa2by5]: ============= AUTHENTICATION SUCCESS =============
+📤 RESPONSE[lsw7z45vf]: GET /api/report/templates -> 200 (7ms)
+9:38:05 AM [express] GET /api/report/templates 200 in 8ms :: [{"id":1,"template_name":"Job Status by…
+🔐 AUTH[1cwsdku7z]: Database connection obtained in 4ms (attempt 1)
+🔐 AUTH[1cwsdku7z]: Querying user data for user 1...
+🔐 AUTH[1cwsdku7z]: User query returned 1 results for user 1 in 0ms
+✅ AUTH[1cwsdku7z]: Authentication successful for user 1 (super_admin) in 6ms
+🔐 AUTH[1cwsdku7z]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[1cwsdku7z]: ============= AUTHENTICATION SUCCESS =============
+📊 REPORT_API[1754905085766]: GET /api/report/tables requested by user:1 org:1
+📊 REPORT_API[1754905085766]: Returning mock table metadata for development
+📊 REPORT_API[1754905085766]: Successfully returning 10 tables with 40 total fields
+📤 RESPONSE[phpa9lvd7]: GET /api/report/tables -> 200 (7ms)
+9:38:05 AM [express] GET /api/report/tables 304 in 15ms :: [{"id":1,"table_name":"jobs","display_nam…
+🔐 AUTH[b3rl8v57v]: ============= AUTHENTICATION START =============
+🔐 AUTH[b3rl8v57v]: Request details: {
+  method: 'POST',
+  path: '/api/report/ai-generate',
+  originalUrl: '/api/report/ai-generate',
+  ip: '172.31.93.194',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[b3rl8v57v]: Authorization header present: true
+🔐 AUTH[b3rl8v57v]: Token extracted: true
+🔐 AUTH[b3rl8v57v]: Verifying JWT token...
+🔐 AUTH[b3rl8v57v]: Token decoded for user 1 in 0ms
+🔐 AUTH[b3rl8v57v]: Token payload: {
+  userId: 1,
+  iat: 1754905075,
+  exp: 1754991475,
+  expiresIn: '2025-08-12T09:37:55.000Z'
+}
+🔐 AUTH[b3rl8v57v]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[yugnk87ck]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[yugnk87ck]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[yugnk87ck]: Returning existing database instance (0ms)
+🔐 AUTH[b3rl8v57v]: Database connection obtained in 1ms (attempt 1)
+🔐 AUTH[b3rl8v57v]: Querying user data for user 1...
+🔐 AUTH[b3rl8v57v]: User query returned 1 results for user 1 in 1ms
+✅ AUTH[b3rl8v57v]: Authentication successful for user 1 (super_admin) in 3ms
+🔐 AUTH[b3rl8v57v]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[b3rl8v57v]: ============= AUTHENTICATION SUCCESS =============
+🤖 AI_REPORT: Starting secure AI report generation
+🤖 AI_REPORT: Processing request for organization: 1
+🤖 AI_REPORT: Preferred chart type: undefined
+🤖 AI_REPORT: Generating SQL for prompt (sanitized)
+🔒 PROMPT_SANITIZER: Sanitizing user prompt
+🤖 AI_REPORT: Sending request to OpenAI...
+🤖 AI_REPORT: OpenAI response received (length: 557)
+🤖 AI_REPORT: AI SQL generated, validating...
+🔒 SQL_VALIDATOR: Starting validation for organization: 1
+🔒 SQL_VALIDATOR: Checking for dangerous patterns...
+🔒 SQL_VALIDATOR: Validating table access...
+🤖 AI_REPORT: SQL validation failed: [
+  'Unauthorized table access: organizations',
+  'Unauthorized table access: organizations',
+  'Unauthorized table access: organizations'
+]
+📤 RESPONSE[v3co8h9oh]: POST /api/report/ai-generate -> 400 (5397ms)
+9:39:22 AM [express] POST /api/report/ai-generate 400 in 5397ms :: {"error":"Generated SQL query is …
+🔐 AUTH[064gt8a9q]: ============= AUTHENTICATION START =============
+🔐 AUTH[064gt8a9q]: Request details: {
+  method: 'POST',
+  path: '/api/report/ai-generate',
+  originalUrl: '/api/report/ai-generate',
+  ip: '172.31.93.194',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[064gt8a9q]: Authorization header present: true
+🔐 AUTH[064gt8a9q]: Token extracted: true
+🔐 AUTH[064gt8a9q]: Verifying JWT token...
+🔐 AUTH[064gt8a9q]: Token decoded for user 1 in 0ms
+🔐 AUTH[064gt8a9q]: Token payload: {
+  userId: 1,
+  iat: 1754905075,
+  exp: 1754991475,
+  expiresIn: '2025-08-12T09:37:55.000Z'
+}
+🔐 AUTH[064gt8a9q]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[eavpsgtjd]: Getting database instance (PID: 4974)
+🔍 DB_MANAGER[eavpsgtjd]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[eavpsgtjd]: Returning existing database instance (1ms)
+🔐 AUTH[064gt8a9q]: Database connection obtained in 1ms (attempt 1)
+🔐 AUTH[064gt8a9q]: Querying user data for user 1...
+🔐 AUTH[064gt8a9q]: User query returned 1 results for user 1 in 1ms
+✅ AUTH[064gt8a9q]: Authentication successful for user 1 (super_admin) in 3ms
+🔐 AUTH[064gt8a9q]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[064gt8a9q]: ============= AUTHENTICATION SUCCESS =============
+🤖 AI_REPORT: Starting secure AI report generation
+🤖 AI_REPORT: Processing request for organization: 1
+🤖 AI_REPORT: Preferred chart type: undefined
+🤖 AI_REPORT: Generating SQL for prompt (sanitized)
+🔒 PROMPT_SANITIZER: Sanitizing user prompt
+🤖 AI_REPORT: Sending request to OpenAI...
+🤖 AI_REPORT: OpenAI response received (length: 557)
+🤖 AI_REPORT: AI SQL generated, validating...
+🔒 SQL_VALIDATOR: Starting validation for organization: 1
+🔒 SQL_VALIDATOR: Checking for dangerous patterns...
+🔒 SQL_VALIDATOR: Validating table access...
+🤖 AI_REPORT: SQL validation failed: [
+  'Unauthorized table access: organizations',
+  'Unauthorized table access: organizations',
+  'Unauthorized table access: organizations'
+]
+📤 RESPONSE[qfgc63dql]: POST /api/report/ai-generate -> 400 (4219ms)
+9:39:28 AM [express] POST /api/report/ai-generate 400 in 4220ms :: {"error":"Generated SQL query is …

@@ -15,7 +15,7 @@ interface DatabaseSchema {
   requiredFilters: { [table: string]: string[] }; // Required WHERE conditions
 }
 
-// Define allowed database schema for security - Allow all tables for now
+// Define allowed database schema for security
 const SECURE_SCHEMA: DatabaseSchema = {
   allowedTables: [
     // Core application tables
@@ -27,36 +27,36 @@ const SECURE_SCHEMA: DatabaseSchema = {
     'report_templates', 'report_executions', 'table_metadata', 'field_metadata'
   ],
   allowedColumns: {
-    'jobs': ['id', 'organization_id', 'title', 'status', 'department', 'location', 'source', 'created_at', 'team_id', 'created_by'],
-    'candidates': ['id', 'organization_id', 'name', 'status', 'source', 'experience', 'created_at'],
-    'applications': ['id', 'organization_id', 'job_id', 'candidate_id', 'status', 'source', 'applied_month', 'match_percentage', 'created_at'],
-    'interviews': ['id', 'organization_id', 'application_id', 'month', 'score', 'feedback', 'created_at'],
-    'job_matches': ['id', 'organization_id', 'job_id', 'candidate_id', 'match_percentage', 'created_at'],
-    'organizations': ['id', 'name', 'subscription_tier', 'created_at'],
-    'users': ['id', 'organization_id', 'email', 'role', 'first_name', 'last_name', 'created_at'],
-    'teams': ['id', 'organization_id', 'name', 'description', 'created_at'],
+    'jobs': ['id', 'organizationId', 'title', 'status', 'department', 'location', 'source', 'created_at', 'teamId', 'createdBy'],
+    'candidates': ['id', 'organizationId', 'name', 'status', 'source', 'experience', 'created_at'],
+    'applications': ['id', 'organizationId', 'job_id', 'candidate_id', 'status', 'source', 'applied_month', 'match_percentage', 'created_at'],
+    'interviews': ['id', 'organizationId', 'application_id', 'month', 'score', 'feedback', 'created_at'],
+    'job_matches': ['id', 'organizationId', 'job_id', 'candidate_id', 'match_percentage', 'created_at'],
+    'organizations': ['id', 'name', 'plan', 'created_at'],
+    'users': ['id', 'organizationId', 'email', 'role', 'firstName', 'lastName', 'created_at'],
+    'teams': ['id', 'organizationId', 'name', 'description', 'created_at'],
     'team_members': ['id', 'team_id', 'user_id', 'role', 'created_at'],
-    'api_keys': ['id', 'organization_id', 'name', 'status', 'created_at'],
-    'organization_settings': ['id', 'organization_id', 'ai_enabled', 'updated_at'],
-    'job_board_credentials': ['id', 'organization_id', 'platform', 'status', 'created_at'],
-    'report_templates': ['id', 'organization_id', 'template_name', 'created_at'],
+    'api_keys': ['id', 'organizationId', 'name', 'status', 'created_at'],
+    'organization_settings': ['id', 'organizationId', 'ai_enabled', 'updated_at'],
+    'job_board_credentials': ['id', 'organizationId', 'platform', 'status', 'created_at'],
+    'report_templates': ['id', 'organizationId', 'template_name', 'created_at'],
     'report_executions': ['id', 'template_id', 'status', 'created_at'],
     'table_metadata': ['id', 'table_name', 'display_name', 'description'],
     'field_metadata': ['id', 'table_id', 'field_name', 'display_name', 'field_type']
   },
   requiredFilters: {
-    'jobs': ['organization_id'],
-    'candidates': ['organization_id'],
-    'applications': ['organization_id'],
-    'interviews': ['organization_id'],
-    'job_matches': ['organization_id'],
-    'users': ['organization_id'],
-    'teams': ['organization_id'],
-    'api_keys': ['organization_id'],
-    'organization_settings': ['organization_id'],
-    'job_board_credentials': ['organization_id'],
-    'report_templates': ['organization_id'],
-    // These tables don't need organization_id filter
+    'jobs': ['organizationId'],
+    'candidates': ['organizationId'],
+    'applications': ['organizationId'],
+    'interviews': ['organizationId'],
+    'job_matches': ['organizationId'],
+    'users': ['organizationId'],
+    'teams': ['organizationId'],
+    'api_keys': ['organizationId'],
+    'organization_settings': ['organizationId'],
+    'job_board_credentials': ['organizationId'],
+    'report_templates': ['organizationId'],
+    // These tables don't need organization filter
     'organizations': [],
     'team_members': [],
     'report_executions': [],

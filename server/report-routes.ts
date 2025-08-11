@@ -10,7 +10,7 @@ const aiRateLimiter = new RateLimiter(10, 60000);
 // Extend AuthRequest to include all Express request properties
 interface ExtendedAuthRequest extends AuthRequest {
   query?: any;
-  body?: any;
+  body: any;
   params?: any;
   organization?: any;
 }

@@ -59,10 +59,15 @@ app.use((req, res, next) => {
     const endTime = Date.now();
     const duration = endTime - startTime;
     
-    // console.log(`📤 RESPONSE[${requestId}]: ============= OUTGOING RESPONSE =============`);
-    // console.log(`📤 RESPONSE[${requestId}]: Status: ${res.statusCode} | Duration: ${duration}ms`);
-    // console.log(`📤 RESPONSE[${requestId}]: Response size:`, JSON.stringify(data || {}).length, 'bytes');
+    console.log(`📤 RESPONSE[${requestId}]: ============= OUTGOING RESPONSE =============`);
+    console.log(`📤 RESPONSE[${requestId}]: Status: ${res.statusCode} | Duration: ${duration}ms`);
+    console.log(`📤 RESPONSE[${requestId}]: Response size:`, JSON.stringify(data || {}).length, 'bytes');
     console.log(`📤 RESPONSE[${requestId}]: ${req.method} ${req.originalUrl} -> ${res.statusCode} (${duration}ms)`);
+    
+    // Log full response data for error responses (400+ status codes)
+    if (res.statusCode >= 400) {
+      console.log(`📤 RESPONSE[${requestId}]: Full error response:`, JSON.stringify(data, null, 2));
+    }
     
     return originalJson(data);
   };
