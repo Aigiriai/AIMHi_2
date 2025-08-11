@@ -18,8 +18,8 @@ import {
   Save, 
   Download, 
   BarChart3, 
-  PieChart, 
-  LineChart, 
+  PieChart as PieChartIcon, 
+  LineChart as LineChartIcon, 
   Settings,
   Trash2,
   Eye,
@@ -82,7 +82,79 @@ interface ReportResult {
   row_count: number;
   execution_time: number;
   status: string;
+  chart_type?: string;
   metadata?: any;
+}
+
+// Chart rendering constants and utilities
+const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
+
+// Helper function to convert report results to chart data
+function convertResultsToChartData(results: any[], rows: string[], columns: string[], measures: string[]) {
+  if (!results || results.length === 0) return [];
+  
+  // For simple case, use results as-is but ensure proper format
+  return results.map((item, index) => {
+    const chartItem: any = { name: item.name || item[Object.keys(item)[0]] || `Item ${index + 1}` };
+    
+    // Add all numeric fields as values
+    Object.entries(item).forEach(([key, value]) => {
+      if (key !== 'name' && typeof value === 'number') {
+        chartItem[key] = value;
+      }
+    });
+    
+    return chartItem;
+  });
+}
+
+// Chart rendering function
+function renderChart(data: any[], chartType: string, selectedMeasures: string[]) {
+  if (!data || data.length === 0) {
+    const IconComponent = chartType === 'bar' ? BarChart3 : 
+                         chartType === 'line' ? LineChartIcon : 
+                         chartType === 'pie' ? PieChartIcon : BarChart3;
+    return (
+      <div className="h-64 flex items-center justify-center text-gray-500 dark:text-gray-400">
+        <div className="text-center">
+          <IconComponent className="h-12 w-12 mx-auto mb-2 opacity-50" />
+          <p>No data to display</p>
+        </div>
+      </div>
+    );
+  }
+
+  // For now, show a placeholder with chart type until recharts is properly set up
+  return (
+    <div className="h-96 flex items-center justify-center bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+      <div className="text-center p-6">
+        {chartType === 'bar' && <BarChart3 className="w-16 h-16 mx-auto mb-4 text-blue-500" />}
+        {chartType === 'line' && <LineChartIcon className="w-16 h-16 mx-auto mb-4 text-green-500" />}
+        {chartType === 'pie' && <PieChartIcon className="w-16 h-16 mx-auto mb-4 text-orange-500" />}
+        {(chartType === 'table' || !chartType) && <Table2 className="w-16 h-16 mx-auto mb-4 text-gray-500" />}
+        
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+          {chartType === 'table' ? 'Table View' : `${chartType.charAt(0).toUpperCase() + chartType.slice(1)} Chart`}
+        </h3>
+        
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+          Ready to render with {data.length} data points
+        </p>
+        
+        <div className="text-xs text-gray-500 dark:text-gray-500 space-y-1">
+          <div>Data fields: {Object.keys(data[0] || {}).join(', ')}</div>
+          {selectedMeasures.length > 0 && (
+            <div>Selected measures: {selectedMeasures.join(', ')}</div>
+          )}
+        </div>
+        
+        <div className="mt-4 text-xs text-blue-600 dark:text-blue-400">
+          Chart rendering will be enabled once recharts is properly configured
+        </div>
+      </div>
+    </div>
+  );
+}
 }
 
 export function MatrixReportBuilder() {
@@ -239,16 +311,13 @@ export function MatrixReportBuilder() {
     });
     
     if (field.field_type === 'dimension') {
-      // For dimensions, user chooses whether it goes to rows or columns
-      // For now, default to rows - can be enhanced with drag & drop
-      if (checked) {
-        console.log('🎯 MATRIX_REPORT: Adding dimension to rows:', fieldId);
-        setSelectedRows(prev => [...prev, fieldId]);
-      } else {
+      // For dimensions, remove from both if unchecked
+      if (!checked) {
         console.log('🎯 MATRIX_REPORT: Removing dimension from all sections:', fieldId);
         setSelectedRows(prev => prev.filter(id => id !== fieldId));
         setSelectedColumns(prev => prev.filter(id => id !== fieldId));
       }
+      // When checked, don't auto-add to rows - let user drag/drop or use buttons
     } else {
       // Measures
       if (checked) {
@@ -259,6 +328,20 @@ export function MatrixReportBuilder() {
         setSelectedMeasures(prev => prev.filter(id => id !== fieldId));
       }
     }
+  };
+
+  // Add field to rows
+  const addFieldToRows = (fieldId: string) => {
+    console.log('🎯 MATRIX_REPORT: Adding field to rows:', fieldId);
+    setSelectedColumns(prev => prev.filter(id => id !== fieldId)); // Remove from columns if present
+    setSelectedRows(prev => prev.includes(fieldId) ? prev : [...prev, fieldId]);
+  };
+
+  // Add field to columns
+  const addFieldToColumns = (fieldId: string) => {
+    console.log('🎯 MATRIX_REPORT: Adding field to columns:', fieldId);
+    setSelectedRows(prev => prev.filter(id => id !== fieldId)); // Remove from rows if present
+    setSelectedColumns(prev => prev.includes(fieldId) ? prev : [...prev, fieldId]);
   };
 
   // Move field between rows and columns
@@ -349,8 +432,8 @@ export function MatrixReportBuilder() {
   const chartTypes = [
     { id: 'table', name: 'Table', icon: Table2 },
     { id: 'bar', name: 'Bar Chart', icon: BarChart3 },
-    { id: 'line', name: 'Line Chart', icon: LineChart },
-    { id: 'pie', name: 'Pie Chart', icon: PieChart }
+    { id: 'line', name: 'Line Chart', icon: LineChartIcon },
+    { id: 'pie', name: 'Pie Chart', icon: PieChartIcon }
   ];
 
   if (tablesLoading) {
@@ -502,17 +585,30 @@ export function MatrixReportBuilder() {
                         </h4>
                         <div className="space-y-1">
                           {dimensions.map((field) => (
-                            <div key={field.id} className="flex items-center space-x-2 p-1">
-                              <Checkbox
-                                id={field.field_name}
-                                checked={selectedRows.includes(field.field_name) || selectedColumns.includes(field.field_name)}
-                                onCheckedChange={(checked) => handleFieldSelection(field, checked as boolean)}
-                              />
+                            <div key={field.id} className="flex items-center space-x-2 p-2 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">
                               <div className="flex-1">
                                 <span className="text-sm font-medium">{field.display_name}</span>
                                 {field.description && (
                                   <p className="text-xs text-gray-500">{field.description}</p>
                                 )}
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Button
+                                  size="sm"
+                                  variant={selectedRows.includes(field.field_name) ? 'default' : 'outline'}
+                                  onClick={() => addFieldToRows(field.field_name)}
+                                  className="text-xs px-2 py-1 h-6"
+                                >
+                                  → Rows
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={selectedColumns.includes(field.field_name) ? 'default' : 'outline'}
+                                  onClick={() => addFieldToColumns(field.field_name)}
+                                  className="text-xs px-2 py-1 h-6"
+                                >
+                                  → Columns
+                                </Button>
                               </div>
                             </div>
                           ))}
@@ -835,30 +931,47 @@ export function MatrixReportBuilder() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {/* Chart Visualization - Only show if chart type is not table */}
+                  {(reportResults.chart_type && reportResults.chart_type !== 'table') && (
+                    <div className="mb-6">
+                      <h4 className="font-medium mb-4">Chart Visualization</h4>
+                      <div className="border rounded-lg p-4 bg-white dark:bg-gray-900">
+                        {renderChart(
+                          convertResultsToChartData(reportResults.results, selectedRows, selectedColumns, selectedMeasures),
+                          reportResults.chart_type,
+                          selectedMeasures
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Results Table */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
-                      <thead>
-                        <tr className="bg-gray-50 dark:bg-gray-800">
-                          {reportResults.results.length > 0 && Object.keys(reportResults.results[0]).map(key => (
-                            <th key={key} className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left">
-                              {key}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {reportResults.results.map((row, index) => (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
-                            {Object.values(row).map((value, valueIndex) => (
-                              <td key={valueIndex} className="border border-gray-300 dark:border-gray-600 px-4 py-2">
-                                {typeof value === 'number' ? value.toLocaleString() : String(value)}
-                              </td>
+                  <div className="mb-6">
+                    <h4 className="font-medium mb-2">Data Table</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300 dark:border-gray-600">
+                        <thead>
+                          <tr className="bg-gray-50 dark:bg-gray-800">
+                            {reportResults.results.length > 0 && Object.keys(reportResults.results[0]).map(key => (
+                              <th key={key} className="border border-gray-300 dark:border-gray-600 px-4 py-2 text-left">
+                                {key}
+                              </th>
                             ))}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {reportResults.results.map((row, index) => (
+                            <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}>
+                              {Object.values(row).map((value, valueIndex) => (
+                                <td key={valueIndex} className="border border-gray-300 dark:border-gray-600 px-4 py-2">
+                                  {typeof value === 'number' ? value.toLocaleString() : String(value)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
 
                   {/* SQL Query */}

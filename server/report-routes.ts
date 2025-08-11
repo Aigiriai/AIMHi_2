@@ -129,6 +129,7 @@ export default function reportRoutes(app: Express) {
       console.log(`📊 REPORT_API[${requestId}]: Returning mock table metadata for development`);
       
       // Return mock table metadata for the matrix-style report builder
+      // Adding comprehensive tables based on the actual database schema
       const mockTables = [
         {
           id: 1,
@@ -361,6 +362,456 @@ export default function reportRoutes(app: Express) {
               sort_order: 4
             }
           ]
+        },
+        {
+          id: 4,
+          table_name: 'applications',
+          display_name: 'Job Applications',
+          description: 'All job applications and candidate pipeline status',
+          category: 'Core Data',
+          is_active: true,
+          sort_order: 4,
+          fields: [
+            {
+              id: 15,
+              table_id: 4,
+              field_name: 'status',
+              display_name: 'Application Status',
+              description: 'Current status in the pipeline',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 1
+            },
+            {
+              id: 16,
+              table_id: 4,
+              field_name: 'source',
+              display_name: 'Application Source',
+              description: 'How the application was received',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 2
+            },
+            {
+              id: 17,
+              table_id: 4,
+              field_name: 'applied_month',
+              display_name: 'Application Month',
+              description: 'Month when application was submitted',
+              field_type: 'dimension' as const,
+              data_type: 'date',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 3
+            },
+            {
+              id: 18,
+              table_id: 4,
+              field_name: 'match_percentage',
+              display_name: 'Match Score',
+              description: 'AI matching score percentage',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: true,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'AVG',
+              is_active: true,
+              sort_order: 4
+            },
+            {
+              id: 19,
+              table_id: 4,
+              field_name: 'count',
+              display_name: 'Application Count',
+              description: 'Count of applications',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: false,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'COUNT',
+              is_active: true,
+              sort_order: 5
+            }
+          ]
+        },
+        {
+          id: 5,
+          table_name: 'job_matches',
+          display_name: 'AI Matching Results',
+          description: 'AI-generated job-candidate matches',
+          category: 'Analytics',
+          is_active: true,
+          sort_order: 5,
+          fields: [
+            {
+              id: 20,
+              table_id: 5,
+              field_name: 'match_score',
+              display_name: 'Match Score',
+              description: 'AI matching confidence score',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: true,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'AVG',
+              is_active: true,
+              sort_order: 1
+            },
+            {
+              id: 21,
+              table_id: 5,
+              field_name: 'match_date',
+              display_name: 'Match Date',
+              description: 'When the match was generated',
+              field_type: 'dimension' as const,
+              data_type: 'date',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 2
+            },
+            {
+              id: 22,
+              table_id: 5,
+              field_name: 'count',
+              display_name: 'Match Count',
+              description: 'Count of matches',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: false,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'COUNT',
+              is_active: true,
+              sort_order: 3
+            }
+          ]
+        },
+        {
+          id: 6,
+          table_name: 'users',
+          display_name: 'System Users',
+          description: 'Recruiters, managers, and other system users',
+          category: 'Core Data',
+          is_active: true,
+          sort_order: 6,
+          fields: [
+            {
+              id: 23,
+              table_id: 6,
+              field_name: 'role',
+              display_name: 'User Role',
+              description: 'Role in the organization',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 1
+            },
+            {
+              id: 24,
+              table_id: 6,
+              field_name: 'is_active',
+              display_name: 'User Status',
+              description: 'Whether user is active',
+              field_type: 'dimension' as const,
+              data_type: 'boolean',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 2
+            },
+            {
+              id: 25,
+              table_id: 6,
+              field_name: 'created_month',
+              display_name: 'User Creation Month',
+              description: 'Month when user was created',
+              field_type: 'dimension' as const,
+              data_type: 'date',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 3
+            },
+            {
+              id: 26,
+              table_id: 6,
+              field_name: 'count',
+              display_name: 'User Count',
+              description: 'Count of users',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: false,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'COUNT',
+              is_active: true,
+              sort_order: 4
+            }
+          ]
+        },
+        {
+          id: 7,
+          table_name: 'teams',
+          display_name: 'Teams',
+          description: 'Organizational teams and departments',
+          category: 'Core Data',
+          is_active: true,
+          sort_order: 7,
+          fields: [
+            {
+              id: 27,
+              table_id: 7,
+              field_name: 'name',
+              display_name: 'Team Name',
+              description: 'Name of the team',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 1
+            },
+            {
+              id: 28,
+              table_id: 7,
+              field_name: 'department',
+              display_name: 'Department',
+              description: 'Department the team belongs to',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 2
+            },
+            {
+              id: 29,
+              table_id: 7,
+              field_name: 'count',
+              display_name: 'Team Count',
+              description: 'Count of teams',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: false,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'COUNT',
+              is_active: true,
+              sort_order: 3
+            }
+          ]
+        },
+        {
+          id: 8,
+          table_name: 'job_assignments',
+          display_name: 'Job Assignments',
+          description: 'User permissions and assignments to jobs',
+          category: 'Assignment Data',
+          is_active: true,
+          sort_order: 8,
+          fields: [
+            {
+              id: 30,
+              table_id: 8,
+              field_name: 'role',
+              display_name: 'Assignment Role',
+              description: 'Role in the job (owner, assigned, viewer)',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 1
+            },
+            {
+              id: 31,
+              table_id: 8,
+              field_name: 'assigned_month',
+              display_name: 'Assignment Month',
+              description: 'Month when assignment was made',
+              field_type: 'dimension' as const,
+              data_type: 'date',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 2
+            },
+            {
+              id: 32,
+              table_id: 8,
+              field_name: 'count',
+              display_name: 'Assignment Count',
+              description: 'Count of job assignments',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: false,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'COUNT',
+              is_active: true,
+              sort_order: 3
+            }
+          ]
+        },
+        {
+          id: 9,
+          table_name: 'candidate_assignments',
+          display_name: 'Candidate Assignments',
+          description: 'User permissions and assignments to candidates',
+          category: 'Assignment Data',
+          is_active: true,
+          sort_order: 9,
+          fields: [
+            {
+              id: 33,
+              table_id: 9,
+              field_name: 'role',
+              display_name: 'Assignment Role',
+              description: 'Role for the candidate (owner, assigned, viewer)',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 1
+            },
+            {
+              id: 34,
+              table_id: 9,
+              field_name: 'assigned_month',
+              display_name: 'Assignment Month',
+              description: 'Month when assignment was made',
+              field_type: 'dimension' as const,
+              data_type: 'date',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 2
+            },
+            {
+              id: 35,
+              table_id: 9,
+              field_name: 'count',
+              display_name: 'Assignment Count',
+              description: 'Count of candidate assignments',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: false,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'COUNT',
+              is_active: true,
+              sort_order: 3
+            }
+          ]
+        },
+        {
+          id: 10,
+          table_name: 'status_history',
+          display_name: 'Status Change History',
+          description: 'Audit trail of all status changes',
+          category: 'Analytics',
+          is_active: true,
+          sort_order: 10,
+          fields: [
+            {
+              id: 36,
+              table_id: 10,
+              field_name: 'entity_type',
+              display_name: 'Entity Type',
+              description: 'Type of entity that changed (job, candidate, etc.)',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 1
+            },
+            {
+              id: 37,
+              table_id: 10,
+              field_name: 'old_status',
+              display_name: 'Previous Status',
+              description: 'Status before the change',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 2
+            },
+            {
+              id: 38,
+              table_id: 10,
+              field_name: 'new_status',
+              display_name: 'New Status',
+              description: 'Status after the change',
+              field_type: 'dimension' as const,
+              data_type: 'string',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 3
+            },
+            {
+              id: 39,
+              table_id: 10,
+              field_name: 'change_month',
+              display_name: 'Change Month',
+              description: 'Month when status change occurred',
+              field_type: 'dimension' as const,
+              data_type: 'date',
+              is_filterable: true,
+              is_groupable: true,
+              is_aggregatable: false,
+              is_active: true,
+              sort_order: 4
+            },
+            {
+              id: 40,
+              table_id: 10,
+              field_name: 'count',
+              display_name: 'Change Count',
+              description: 'Count of status changes',
+              field_type: 'measure' as const,
+              data_type: 'number',
+              is_filterable: false,
+              is_groupable: false,
+              is_aggregatable: true,
+              default_aggregation: 'COUNT',
+              is_active: true,
+              sort_order: 5
+            }
+          ]
         }
       ];
       
@@ -441,6 +892,7 @@ export default function reportRoutes(app: Express) {
         row_count: filteredResults.length,
         execution_time: Math.round(executionTime),
         status: 'success',
+        chart_type: reportRequest.chart_type || 'table', // Include chart type in response
         metadata: {
           selected_tables: reportRequest.selected_tables,
           selected_rows: reportRequest.selected_rows,
