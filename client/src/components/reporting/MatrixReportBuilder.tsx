@@ -411,18 +411,20 @@ export function MatrixReportBuilder() {
     });
     
     if (field.field_type === 'dimension') {
-      // For dimensions, remove from both if unchecked
+      // For dimensions, only remove from rows/columns when unchecked
+      // This allows users to manage where dimensions are placed independently
       if (!checked) {
         console.log('🎯 MATRIX_REPORT: Removing dimension from all sections:', fieldId);
         setSelectedRows(prev => prev.filter(id => id !== fieldId));
         setSelectedColumns(prev => prev.filter(id => id !== fieldId));
       }
-      // When checked, don't auto-add to rows - let user drag/drop or use buttons
+      // When checked, dimension is now available for assignment but not auto-placed
+      // User must explicitly use "→ Rows" or "→ Columns" buttons
     } else {
-      // Measures
+      // Measures - handle normally
       if (checked) {
         console.log('🎯 MATRIX_REPORT: Adding measure:', fieldId);
-        setSelectedMeasures(prev => [...prev, fieldId]);
+        setSelectedMeasures(prev => prev.includes(fieldId) ? prev : [...prev, fieldId]);
       } else {
         console.log('🎯 MATRIX_REPORT: Removing measure:', fieldId);
         setSelectedMeasures(prev => prev.filter(id => id !== fieldId));
@@ -433,15 +435,75 @@ export function MatrixReportBuilder() {
   // Add field to rows
   const addFieldToRows = (fieldId: string) => {
     console.log('🎯 MATRIX_REPORT: Adding field to rows:', fieldId);
-    setSelectedColumns(prev => prev.filter(id => id !== fieldId)); // Remove from columns if present
-    setSelectedRows(prev => prev.includes(fieldId) ? prev : [...prev, fieldId]);
+    console.log('🎯 MATRIX_REPORT: Before row addition - Current state:', {
+      selectedRows: selectedRows,
+      selectedColumns: selectedColumns,
+      selectedMeasures: selectedMeasures
+    });
+    
+    // Remove from columns if present
+    setSelectedColumns(prev => {
+      const newColumns = prev.filter(id => id !== fieldId);
+      console.log('🎯 MATRIX_REPORT: Removed from columns:', { 
+        oldColumns: prev, 
+        newColumns: newColumns, 
+        removed: fieldId 
+      });
+      return newColumns;
+    });
+    
+    // Add to rows if not already present
+    setSelectedRows(prev => {
+      if (prev.includes(fieldId)) {
+        console.log('🎯 MATRIX_REPORT: Field already in rows, no change:', fieldId);
+        return prev;
+      } else {
+        const newRows = [...prev, fieldId];
+        console.log('🎯 MATRIX_REPORT: Added to rows:', { 
+          oldRows: prev, 
+          newRows: newRows, 
+          added: fieldId 
+        });
+        return newRows;
+      }
+    });
   };
 
   // Add field to columns
   const addFieldToColumns = (fieldId: string) => {
     console.log('🎯 MATRIX_REPORT: Adding field to columns:', fieldId);
-    setSelectedRows(prev => prev.filter(id => id !== fieldId)); // Remove from rows if present
-    setSelectedColumns(prev => prev.includes(fieldId) ? prev : [...prev, fieldId]);
+    console.log('🎯 MATRIX_REPORT: Before column addition - Current state:', {
+      selectedRows: selectedRows,
+      selectedColumns: selectedColumns,
+      selectedMeasures: selectedMeasures
+    });
+    
+    // Remove from rows if present
+    setSelectedRows(prev => {
+      const newRows = prev.filter(id => id !== fieldId);
+      console.log('🎯 MATRIX_REPORT: Removed from rows:', { 
+        oldRows: prev, 
+        newRows: newRows, 
+        removed: fieldId 
+      });
+      return newRows;
+    });
+    
+    // Add to columns if not already present
+    setSelectedColumns(prev => {
+      if (prev.includes(fieldId)) {
+        console.log('🎯 MATRIX_REPORT: Field already in columns, no change:', fieldId);
+        return prev;
+      } else {
+        const newColumns = [...prev, fieldId];
+        console.log('🎯 MATRIX_REPORT: Added to columns:', { 
+          oldColumns: prev, 
+          newColumns: newColumns, 
+          added: fieldId 
+        });
+        return newColumns;
+      }
+    });
   };
 
   // Move field between rows and columns
@@ -459,7 +521,17 @@ export function MatrixReportBuilder() {
 
   // Execute the report
   const executeReport = () => {
+    console.log('🎯 MATRIX_REPORT: Execute report triggered');
+    console.log('🎯 MATRIX_REPORT: Current selections before execution:', {
+      selectedTables: selectedTables,
+      selectedRows: selectedRows,
+      selectedColumns: selectedColumns,
+      selectedMeasures: selectedMeasures,
+      chartType: chartType
+    });
+    
     if (selectedTables.length === 0 || (selectedRows.length === 0 && selectedColumns.length === 0 && selectedMeasures.length === 0)) {
+      console.log('🎯 MATRIX_REPORT: Validation failed - missing selections');
       toast({
         title: 'Selection Required',
         description: 'Please select at least one table and one field',
@@ -478,6 +550,7 @@ export function MatrixReportBuilder() {
       chart_config: {}
     };
 
+    console.log('🎯 MATRIX_REPORT: Sending report request:', JSON.stringify(reportRequest, null, 2));
     executeReportMutation.mutate(reportRequest);
   };
 
@@ -696,7 +769,10 @@ export function MatrixReportBuilder() {
                                 <Button
                                   size="sm"
                                   variant={selectedRows.includes(field.field_name) ? 'default' : 'outline'}
-                                  onClick={() => addFieldToRows(field.field_name)}
+                                  onClick={() => {
+                                    console.log('🎯 MATRIX_REPORT: Row button clicked for field:', field.field_name);
+                                    addFieldToRows(field.field_name);
+                                  }}
                                   className="text-xs px-2 py-1 h-6"
                                 >
                                   → Rows
@@ -704,7 +780,10 @@ export function MatrixReportBuilder() {
                                 <Button
                                   size="sm"
                                   variant={selectedColumns.includes(field.field_name) ? 'default' : 'outline'}
-                                  onClick={() => addFieldToColumns(field.field_name)}
+                                  onClick={() => {
+                                    console.log('🎯 MATRIX_REPORT: Column button clicked for field:', field.field_name);
+                                    addFieldToColumns(field.field_name);
+                                  }}
                                   className="text-xs px-2 py-1 h-6"
                                 >
                                   → Columns

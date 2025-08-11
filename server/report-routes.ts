@@ -44,11 +44,19 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
     measures: request.selected_measures?.length || 0,
     filters: request.filters?.length || 0
   });
+  
+  console.log('🔧 REPORT_SQL: Detailed selections:', {
+    selected_tables: request.selected_tables,
+    selected_rows: request.selected_rows,
+    selected_columns: request.selected_columns,
+    selected_measures: request.selected_measures
+  });
 
   const { selected_tables, selected_rows, selected_columns, selected_measures, filters } = request;
   
   // Default to jobs table if none selected
   const primaryTable = selected_tables.length > 0 ? selected_tables[0] : 'jobs';
+  console.log('🔧 REPORT_SQL: Using primary table:', primaryTable);
   
   // Map UI field names to actual database columns
   const fieldMapping: { [key: string]: { [table: string]: string } } = {
@@ -65,6 +73,8 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
 
   // Build SELECT clause with proper field mapping
   const allFields = [...selected_rows, ...selected_columns, ...selected_measures];
+  console.log('🔧 REPORT_SQL: All fields combined:', allFields);
+  
   let selectFields = [];
   
   if (allFields.length === 0) {
@@ -89,13 +99,19 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
       }
       
       selectFields.push(`${sqlField} as ${field}`);
+      console.log('🔧 REPORT_SQL: Mapped field:', { 
+        originalField: field, 
+        mappedField: sqlField, 
+        finalSelect: `${sqlField} as ${field}` 
+      });
     }
-    console.log('🔧 REPORT_SQL: Mapped select fields:', selectFields);
+    console.log('🔧 REPORT_SQL: Final select fields:', selectFields);
   }
   
   // Build query
   let query = `SELECT ${selectFields.join(', ')}`;
   query += ` FROM ${primaryTable}`;
+  console.log('🔧 REPORT_SQL: Base query built:', query);
   
   // Add organization filter (security requirement)
   let whereClause = `organization_id = ${organizationId || 1}`;
@@ -143,7 +159,7 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
   // Add LIMIT for safety
   query += ' LIMIT 100';
   
-  console.log('🔧 REPORT_SQL: Generated query:', query);
+  console.log('🔧 REPORT_SQL: Generated final query:', query);
   return query;
 }
 
