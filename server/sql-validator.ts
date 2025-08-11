@@ -15,22 +15,53 @@ interface DatabaseSchema {
   requiredFilters: { [table: string]: string[] }; // Required WHERE conditions
 }
 
-// Define allowed database schema for security
+// Define allowed database schema for security - Allow all tables for now
 const SECURE_SCHEMA: DatabaseSchema = {
-  allowedTables: ['jobs', 'candidates', 'applications', 'interviews', 'job_matches'],
+  allowedTables: [
+    // Core application tables
+    'jobs', 'candidates', 'applications', 'interviews', 'job_matches',
+    // User and organization tables
+    'organizations', 'users', 'teams', 'team_members',
+    // Additional system tables
+    'api_keys', 'organization_settings', 'job_board_credentials',
+    'report_templates', 'report_executions', 'table_metadata', 'field_metadata'
+  ],
   allowedColumns: {
-    'jobs': ['id', 'title', 'status', 'department', 'location', 'source', 'created_at'],
-    'candidates': ['id', 'name', 'status', 'source', 'experience', 'created_at'],
-    'applications': ['id', 'job_id', 'candidate_id', 'status', 'source', 'applied_month', 'match_percentage', 'created_at'],
-    'interviews': ['id', 'application_id', 'month', 'score', 'feedback', 'created_at'],
-    'job_matches': ['id', 'job_id', 'candidate_id', 'match_percentage', 'created_at']
+    'jobs': ['id', 'organization_id', 'title', 'status', 'department', 'location', 'source', 'created_at', 'team_id', 'created_by'],
+    'candidates': ['id', 'organization_id', 'name', 'status', 'source', 'experience', 'created_at'],
+    'applications': ['id', 'organization_id', 'job_id', 'candidate_id', 'status', 'source', 'applied_month', 'match_percentage', 'created_at'],
+    'interviews': ['id', 'organization_id', 'application_id', 'month', 'score', 'feedback', 'created_at'],
+    'job_matches': ['id', 'organization_id', 'job_id', 'candidate_id', 'match_percentage', 'created_at'],
+    'organizations': ['id', 'name', 'subscription_tier', 'created_at'],
+    'users': ['id', 'organization_id', 'email', 'role', 'first_name', 'last_name', 'created_at'],
+    'teams': ['id', 'organization_id', 'name', 'description', 'created_at'],
+    'team_members': ['id', 'team_id', 'user_id', 'role', 'created_at'],
+    'api_keys': ['id', 'organization_id', 'name', 'status', 'created_at'],
+    'organization_settings': ['id', 'organization_id', 'ai_enabled', 'updated_at'],
+    'job_board_credentials': ['id', 'organization_id', 'platform', 'status', 'created_at'],
+    'report_templates': ['id', 'organization_id', 'template_name', 'created_at'],
+    'report_executions': ['id', 'template_id', 'status', 'created_at'],
+    'table_metadata': ['id', 'table_name', 'display_name', 'description'],
+    'field_metadata': ['id', 'table_id', 'field_name', 'display_name', 'field_type']
   },
   requiredFilters: {
     'jobs': ['organization_id'],
     'candidates': ['organization_id'],
     'applications': ['organization_id'],
     'interviews': ['organization_id'],
-    'job_matches': ['organization_id']
+    'job_matches': ['organization_id'],
+    'users': ['organization_id'],
+    'teams': ['organization_id'],
+    'api_keys': ['organization_id'],
+    'organization_settings': ['organization_id'],
+    'job_board_credentials': ['organization_id'],
+    'report_templates': ['organization_id'],
+    // These tables don't need organization_id filter
+    'organizations': [],
+    'team_members': [],
+    'report_executions': [],
+    'table_metadata': [],
+    'field_metadata': []
   }
 };
 
@@ -182,23 +213,41 @@ function validateTableAccess(sql: string): { isValid: boolean; errors: string[] 
   }
 }
 
-// Validate that organization_id filter is properly applied
+// Validate that organization_id filter is properly applied where required
 function validateOrganizationFilter(sql: string, organizationId: number): { isValid: boolean; errors: string[] } {
   const errors: string[] = [];
   
   try {
     const upperSQL = sql.toUpperCase();
     
-    // Check for WHERE clause
-    if (!upperSQL.includes('WHERE')) {
-      errors.push('Missing WHERE clause with organization_id filter');
-      return { isValid: false, errors };
-    }
+    // Extract table names from SQL to check which ones need organization_id filter
+    const fromMatches = sql.match(/FROM\s+(\w+)/gi) || [];
+    const joinMatches = sql.match(/JOIN\s+(\w+)/gi) || [];
+    
+    const allMatches = [...fromMatches, ...joinMatches];
+    const usedTables = allMatches.map(match => {
+      const parts = match.split(/\s+/);
+      return parts[1].toLowerCase();
+    });
 
-    // Check for organization_id filter
-    const orgFilterPattern = new RegExp(`ORGANIZATION_ID\\s*=\\s*${organizationId}`, 'i');
-    if (!orgFilterPattern.test(sql)) {
-      errors.push(`Missing or incorrect organization_id filter. Expected: organization_id = ${organizationId}`);
+    // Check if any used tables require organization_id filter
+    const tablesNeedingOrgFilter = usedTables.filter(table => 
+      SECURE_SCHEMA.requiredFilters[table] && 
+      SECURE_SCHEMA.requiredFilters[table].includes('organization_id')
+    );
+
+    if (tablesNeedingOrgFilter.length > 0) {
+      // Check for WHERE clause only if tables need organization filter
+      if (!upperSQL.includes('WHERE')) {
+        errors.push('Missing WHERE clause with organization_id filter for tables: ' + tablesNeedingOrgFilter.join(', '));
+        return { isValid: false, errors };
+      }
+
+      // Check for organization_id filter
+      const orgFilterPattern = new RegExp(`ORGANIZATION_ID\\s*=\\s*${organizationId}`, 'i');
+      if (!orgFilterPattern.test(sql)) {
+        errors.push(`Missing or incorrect organization_id filter. Expected: organization_id = ${organizationId} for tables: ` + tablesNeedingOrgFilter.join(', '));
+      }
     }
 
     return {

@@ -32,15 +32,8 @@ interface AIReportResponse {
 // Load the unified schema file securely
 function loadUnifiedSchema(): string {
   try {
-    const schemaPath = path.join(process.cwd(), 'unified-schema.ts');
-    if (fs.existsSync(schemaPath)) {
-      const schemaContent = fs.readFileSync(schemaPath, 'utf8');
-      // Sanitize schema content to prevent injection
-      return schemaContent.substring(0, 10000); // Limit schema size
-    }
-    
-    // Fallback to a basic schema if file doesn't exist
-    console.warn('🤖 AI_REPORT: unified-schema.ts not found, using fallback schema');
+    // Always use our curated schema for AI to prevent unauthorized table access
+    console.log('🤖 AI_REPORT: Using curated schema for AI (security-focused)');
     return `
 -- Database Schema for AIMHi Recruitment System
 -- Tables: jobs, candidates, applications, interviews, job_matches
@@ -114,14 +107,14 @@ ${schema}
 CRITICAL SECURITY RULES:
 1. ALWAYS include "organization_id = ${organizationId}" in WHERE clause for data security
 2. ONLY generate SELECT queries - no INSERT, UPDATE, DELETE, DROP, CREATE, ALTER
-3. Use appropriate aggregations (COUNT, SUM, AVG) for measures
-4. Use proper GROUP BY for dimensions
-5. Limit results to 100 rows max using "LIMIT 100"
-6. Use meaningful column aliases with "AS"
-7. Handle date formatting with STRFTIME when needed
-8. Return only valid SQLite syntax
-9. Do not include any system tables or metadata queries
-10. Only access the specified application tables: jobs, candidates, applications, interviews, job_matches
+3. ONLY use these 5 tables: jobs, candidates, applications, interviews, job_matches
+4. DO NOT access organizations, users, teams or any system tables
+5. Use appropriate aggregations (COUNT, SUM, AVG) for measures
+6. Use proper GROUP BY for dimensions
+7. Limit results to 100 rows max using "LIMIT 100"
+8. Use meaningful column aliases with "AS"
+9. Handle date formatting with STRFTIME when needed
+10. Return only valid SQLite syntax
 
 USER REQUEST: "${userPrompt}"
 ${additionalContext ? `\nADDITIONAL CONTEXT: "${additionalContext}"` : ''}
