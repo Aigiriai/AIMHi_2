@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequestJson } from "@/lib/queryClient";
 import type { Job } from "@shared/schema";
 
 const advancedMatchingSchema = z.object({
@@ -79,14 +79,13 @@ export default function AdvancedAIMatchingModal({
   const runMatchingMutation = useMutation({
     mutationFn: async (data: AdvancedMatchingFormData) => {
       setIsAnalyzing(true);
-      const response = await apiRequest("POST", "/api/matches/advanced", {
+      const result = await apiRequestJson("POST", "/api/matches/advanced", {
         jobId: data.jobId,
         minMatchPercentage: data.minMatchPercentage,
         weights: data.weights,
         prioritizeRecent: data.prioritizeRecent,
         strictMatchMode: data.strictMatchMode,
       });
-      const result = await response.json();
       console.log("Advanced matching result:", result);
       return result;
     },

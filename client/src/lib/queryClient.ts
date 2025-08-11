@@ -50,6 +50,50 @@ export async function apiRequest(
   }
 }
 
+// Helper function for JSON API requests that handles response parsing
+export async function apiRequestJson<T = any>(
+  method: string,
+  url: string,
+  data?: unknown | undefined,
+): Promise<T> {
+  console.log(`🌐 API JSON REQUEST: ${method} ${url}`, data ? { data } : '');
+  
+  // Temporarily use Node.js backend until Python server is properly configured
+  const backendUrl = url;
+  
+  const requestBody = data ? JSON.stringify(data) : undefined;
+  if (requestBody) {
+    console.log(`🌐 API JSON REQUEST: Body:`, requestBody);
+  }
+  
+  try {
+    const res = await fetch(backendUrl, {
+      method,
+      headers: {
+        ...getAuthHeaders(),
+        ...(data ? { "Content-Type": "application/json" } : {}),
+      },
+      body: requestBody,
+      credentials: "include",
+    });
+
+    console.log(`🌐 API JSON RESPONSE: ${res.status} ${res.statusText}`);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`❌ API JSON ERROR: ${res.status}`, errorText);
+      throw new Error(`${res.status}: ${errorText}`);
+    }
+    
+    const result = await res.json();
+    console.log(`✅ API JSON SUCCESS: ${method} ${url}`);
+    return result;
+  } catch (error) {
+    console.error(`❌ API JSON REQUEST FAILED: ${method} ${url}`, error);
+    throw error;
+  }
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
