@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { getAuthHeaders } from '@/lib/auth';
+import { AIReportBuilder } from './AIReportBuilder';
 import { 
   Table2, 
   Database, 
@@ -25,7 +26,8 @@ import {
   Eye,
   Plus,
   Grid,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -685,8 +687,12 @@ export function MatrixReportBuilder() {
       </div>
 
       <Tabs defaultValue="builder" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="builder">Report Builder</TabsTrigger>
+          <TabsTrigger value="ai-builder" className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            AI Reports
+          </TabsTrigger>
           <TabsTrigger value="templates">My Templates ({templates.length})</TabsTrigger>
           <TabsTrigger value="results">Results</TabsTrigger>
         </TabsList>
@@ -1034,6 +1040,10 @@ export function MatrixReportBuilder() {
               </Card>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="ai-builder">
+          <AIReportBuilder />
         </TabsContent>
 
         <TabsContent value="templates">

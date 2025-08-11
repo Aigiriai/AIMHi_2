@@ -1,6 +1,11 @@
 import type { Express, Request, Response } from "express";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
 import { getSQLiteDB } from "./unified-db-manager";
+import { generateSQLFromPrompt } from "./ai-report-service-secure";
+import { validateAndSanitizeSQL, sanitizePrompt, RateLimiter } from "./sql-validator";
+
+// Rate limiter for AI requests (10 requests per minute per user)
+const aiRateLimiter = new RateLimiter(10, 60000);
 
 // Extend AuthRequest to include all Express request properties
 interface ExtendedAuthRequest extends AuthRequest {
@@ -1461,6 +1466,167 @@ export default function reportRoutes(app: Express) {
       res.status(500).json({ 
         error: 'Failed to fetch execution history',
         details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // AI-powered report generation endpoint with security
+  app.post("/api/report/ai-generate", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
+    console.log('🤖 AI_REPORT: Starting secure AI report generation');
+    const startTime = Date.now();
+    
+    try {
+      const { prompt, preferred_chart_type, additional_context } = req.body;
+      const userId = String(req.user?.id || 'unknown');
+      const organizationId = req.organization?.id || req.user?.organizationId;
+      
+      // Security validation
+      if (!organizationId) {
+        console.error('🤖 AI_REPORT: No organization ID found for user');
+        return res.status(403).json({ 
+          error: 'Organization access required',
+          details: 'Unable to determine user organization'
+        });
+      }
+
+      // Rate limiting check
+      const rateLimitCheck = aiRateLimiter.checkLimit(userId);
+      if (!rateLimitCheck.allowed) {
+        console.warn('🤖 AI_REPORT: Rate limit exceeded for user:', userId);
+        return res.status(429).json({ 
+          error: 'Rate limit exceeded',
+          details: 'Too many AI requests. Please try again later.',
+          resetTime: rateLimitCheck.resetTime
+        });
+      }
+
+      // Input validation
+      if (!prompt || prompt.trim().length === 0) {
+        console.error('🤖 AI_REPORT: No prompt provided');
+        return res.status(400).json({ 
+          error: 'Prompt is required',
+          details: 'Please provide a natural language description of the report you want to generate'
+        });
+      }
+
+      // Validate prompt length and content
+      if (prompt.length > 2000) {
+        console.error('🤖 AI_REPORT: Prompt too long');
+        return res.status(400).json({ 
+          error: 'Prompt too long',
+          details: 'Please limit your prompt to 2000 characters or less'
+        });
+      }
+
+      // Validate chart type
+      const validChartTypes = ['auto', 'table', 'bar', 'line', 'pie'];
+      if (preferred_chart_type && !validChartTypes.includes(preferred_chart_type)) {
+        console.error('🤖 AI_REPORT: Invalid chart type:', preferred_chart_type);
+        return res.status(400).json({ 
+          error: 'Invalid chart type',
+          details: 'Chart type must be one of: ' + validChartTypes.join(', ')
+        });
+      }
+
+      console.log('🤖 AI_REPORT: Processing request for organization:', organizationId);
+      console.log('🤖 AI_REPORT: Preferred chart type:', preferred_chart_type);
+      
+      // Generate SQL using secure AI service
+      const aiResult = await generateSQLFromPrompt(
+        prompt, 
+        organizationId,
+        preferred_chart_type,
+        additional_context
+      );
+      
+      console.log('🤖 AI_REPORT: AI SQL generated, validating...');
+      
+      // Validate and sanitize the generated SQL
+      const sqlValidation = await validateAndSanitizeSQL(aiResult.sql, organizationId, 100);
+      
+      if (!sqlValidation.isValid) {
+        console.error('🤖 AI_REPORT: SQL validation failed:', sqlValidation.errors);
+        return res.status(400).json({ 
+          error: 'Generated SQL query is invalid',
+          details: 'The AI-generated query failed security validation',
+          validation_errors: sqlValidation.errors,
+          risk_level: sqlValidation.riskLevel
+        });
+      }
+
+      if (sqlValidation.warnings.length > 0) {
+        console.warn('🤖 AI_REPORT: SQL validation warnings:', sqlValidation.warnings);
+      }
+
+      const validatedSQL = sqlValidation.sanitizedSQL;
+      console.log('🤖 AI_REPORT: SQL validation passed, executing query...');
+
+      // Execute the validated SQL query
+      const dbManager = await getSQLiteDB();
+      const db = dbManager.sqlite;
+      
+      const sqlStartTime = Date.now();
+      const queryResults = db.prepare(validatedSQL).all();
+      const sqlExecutionTime = Date.now() - sqlStartTime;
+      
+      console.log('🤖 AI_REPORT: Query executed successfully');
+      console.log('🤖 AI_REPORT: Results count:', queryResults.length);
+      console.log('🤖 AI_REPORT: SQL execution time:', sqlExecutionTime, 'ms');
+
+      const totalExecutionTime = Date.now() - startTime;
+      const executionId = Date.now(); // Simple execution ID
+
+      // Format response (sanitize sensitive data)
+      const response = {
+        execution_id: executionId,
+        generated_sql: validatedSQL, // Return validated SQL, not original
+        results: queryResults,
+        row_count: queryResults.length,
+        execution_time: totalExecutionTime,
+        sql_execution_time: sqlExecutionTime,
+        status: 'completed',
+        chart_type: aiResult.chartType,
+        ai_analysis: {
+          interpreted_request: aiResult.interpretation,
+          recommended_chart: aiResult.chartType,
+          confidence_score: aiResult.confidence
+        },
+        security_info: {
+          validation_warnings: sqlValidation.warnings,
+          risk_level: sqlValidation.riskLevel
+        }
+      };
+
+      console.log('🤖 AI_REPORT: Secure AI report generation completed successfully');
+      console.log('🤖 AI_REPORT: Total execution time:', totalExecutionTime, 'ms');
+      
+      res.json(response);
+
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+      console.error('🤖 AI_REPORT: Error during secure AI report generation:', error);
+      
+      // Sanitize error messages for security
+      let errorMessage = 'Report generation failed';
+      let errorDetails = 'An internal error occurred while generating the report';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage = 'Request timeout';
+          errorDetails = 'The request took too long to process. Please try a simpler query.';
+        } else if (error.message.includes('SQL') || error.message.includes('database')) {
+          errorMessage = 'Database query error';
+          errorDetails = 'There was an error executing the generated query. Please try rephrasing your request.';
+        }
+        // Don't expose internal error details to client
+        console.error('🤖 AI_REPORT: Internal error details:', error.message);
+      }
+      
+      res.status(500).json({ 
+        error: errorMessage,
+        details: errorDetails,
+        execution_time: executionTime,
+        timestamp: new Date().toISOString()
       });
     }
   });
