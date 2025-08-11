@@ -1,3 +1,6 @@
+// Minimal Node globals declaration safeguard (remove if @types/node present)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const process: any;
 import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -32,11 +35,29 @@ interface AIReportResponse {
 // Load the unified schema file securely
 function loadUnifiedSchema(): string {
   try {
-    // Always use our curated schema for AI to prevent unauthorized table access
-    console.log('🤖 AI_REPORT: Using curated schema for AI (security-focused)');
+    // Use expanded curated schema for AI including users table
+    console.log('🤖 AI_REPORT: Using expanded curated schema for AI (security-focused)');
     return `
 -- Database Schema for AIMHi Recruitment System
--- Tables: jobs, candidates, applications, interviews, job_matches
+-- Tables: jobs, candidates, applications, interviews, job_matches, users, organizations
+
+CREATE TABLE organizations (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  status TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY,
+  organization_id INTEGER NOT NULL,
+  email TEXT NOT NULL,
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  role TEXT NOT NULL, -- 'super_admin', 'admin', 'manager', 'recruiter', 'interviewer'
+  status TEXT NOT NULL, -- 'active', 'inactive', 'suspended'
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE jobs (
   id INTEGER PRIMARY KEY,
@@ -96,39 +117,47 @@ CREATE TABLE job_matches (
   }
 }
 
-// Generate AI prompt for SQL generation with security controls
+// Generate AI prompt for SQL generation with enhanced security + reasoning rules
 function generateAIPrompt(userPrompt: string, schema: string, organizationId: number, additionalContext?: string): string {
-  const basePrompt = `
-You are an expert SQL analyst for a recruitment management system. Generate a SQL query based on the user's natural language request.
+  const basePrompt = `You are an expert secure SQL generator for a recruitment analytics platform. Produce ONE safe SQLite SELECT query (or report inability) from the user's natural language.
 
-DATABASE SCHEMA:
+CURATED SCHEMA (excerpt):
 ${schema}
 
-CRITICAL SECURITY RULES:
-1. ALWAYS include "organization_id = ${organizationId}" in WHERE clause for data security
-2. ONLY generate SELECT queries - no INSERT, UPDATE, DELETE, DROP, CREATE, ALTER
-3. ONLY use these 5 tables: jobs, candidates, applications, interviews, job_matches
-4. DO NOT access organizations, users, teams or any system tables
-5. Use appropriate aggregations (COUNT, SUM, AVG) for measures
-6. Use proper GROUP BY for dimensions
-7. Limit results to 100 rows max using "LIMIT 100"
-8. Use meaningful column aliases with "AS"
-9. Handle date formatting with STRFTIME when needed
-10. Return only valid SQLite syntax
+TABLE ROLES & SYNONYMS:
+- users (system user accounts; synonyms: user accounts, staff, recruiters)
+- candidates (job applicants; synonyms: applicants, talent, prospects)
+- jobs (job postings; synonyms: postings, positions, openings)
+- applications (candidate job applications; synonyms: submissions)
+- interviews (interview events)
+- job_matches (AI match scores)
+- organizations (org metadata)
 
-USER REQUEST: "${userPrompt}"
-${additionalContext ? `\nADDITIONAL CONTEXT: "${additionalContext}"` : ''}
+SECURITY & OUTPUT RULES (MANDATORY):
+1. Query MUST be a single SELECT. Never write mutating or DDL statements.
+2. Enforce org scoping: Every table with organization_id must include <alias_or_table>.organization_id = ${organizationId} in WHERE (skip tables lacking that column like organizations if appropriate).
+3. Limit rows: Add LIMIT 100 unless a smaller explicit LIMIT/TOP N implied (still cap at 100).
+4. No SELECT *; choose only required columns.
+5. Use COUNT(DISTINCT id) when user explicitly asks for distinct ids; otherwise COUNT(*).
+6. JOIN only when selecting or filtering on the joined table's columns.
+7. Avoid fabricated columns; only reference columns plausible from schema snippet.
+8. If request is for restricted/sensitive data (credentials, passwords) output sql: null with low confidence (<=30) and explanatory interpretation.
+9. Additional Context overrides other heuristics when present.
+10. If intent cannot be fulfilled, return sql: null with confidence <=30.
+11. Response MUST be raw JSON ONLY (no markdown) with keys: sql (string or null), chart_type, interpretation, confidence (integer 1-100).
 
-Please respond with a JSON object containing:
-{
-  "sql": "your generated SQL query here",
-  "chart_type": "table|bar|line|pie (recommend the best visualization)",
-  "interpretation": "brief explanation of what the query does",
-  "confidence": number (1-100, your confidence in this solution)
-}
+INTERPRETATION HEURISTICS:
+* login/account/role/admin => users table.
+* applicant/pipeline/candidate/talent => candidates table.
+* people/humans ambiguous unless clarified: lower confidence or use context.
+* Time phrases: "last month" => STRFTIME('%Y-%m', created_at) = STRFTIME('%Y-%m', DATE('now','-1 month')); "this month" => STRFTIME('%Y-%m', created_at)=STRFTIME('%Y-%m','now'); "this year" similarly with %Y.
+* Chart suggestion: time series → line; ranked categories/top-N → bar; part-to-whole <=8 slices → pie; else table.
 
-Only return valid JSON, no other text.`;
+USER PROMPT: "${userPrompt}"
+${additionalContext ? `ADDITIONAL CONTEXT (highest priority): "${additionalContext}"` : ''}
 
+Return ONLY JSON like:
+{"sql":"SELECT ...","chart_type":"bar","interpretation":"...","confidence":85}`;
   return basePrompt;
 }
 
@@ -243,7 +272,16 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
   let chartType = preferredChartType || 'table';
   
   // Simple rule-based SQL generation with organization security
-  if (prompt.includes('job') && prompt.includes('application')) {
+  if (prompt.includes('user') && (prompt.includes('count') || prompt.includes('how many'))) {
+    sql = `SELECT 
+      COUNT(*) as total_users
+    FROM users 
+    WHERE organization_id = ${organizationId} 
+    LIMIT 100`;
+    interpretation = 'Total count of system users in the organization';
+    chartType = 'table';
+  }
+  else if (prompt.includes('job') && prompt.includes('application')) {
     sql = `SELECT 
       j.title,
       j.status,

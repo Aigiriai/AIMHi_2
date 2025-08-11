@@ -1,3 +1,8 @@
+// Node environment typings safeguard (if @types/node not present, we declare minimal process env)
+// Remove this block once @types/node is added to devDependencies.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+declare const process: any;
+
 import OpenAI from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -28,52 +33,62 @@ interface AIReportResponse {
   };
 }
 
-// Generate AI prompt for SQL generation
-function generateAIPrompt(userPrompt: string, schema: string, organizationId: number, additionalContext?: string): string {
-  const basePrompt = `
-You are an expert SQL analyst for a recruitment management system. Generate a SQL query based on the user's natural language request.
+// Generate AI prompt for SQL generation (enhanced version)
+function generateAIPrompt(
+  userPrompt: string,
+  schema: string,
+  organizationId: number,
+  additionalContext?: string
+): string {
+  // IMPORTANT: Keep this prompt concise but explicit; model output must be raw JSON only.
+  const basePrompt = `You are an expert SQL generator for a recruitment analytics platform. Produce ONE safe SQLite SELECT query (or report inability) from the user's natural language.
 
-DATABASE SCHEMA:
+CONTEXT SCHEMA (excerpt):
 ${schema}
 
-CRITICAL SECURITY RULES:
-1. ALWAYS include "organization_id = ${organizationId}" in WHERE clause for data security
-2. ONLY generate SELECT queries - no INSERT, UPDATE, DELETE, DROP, CREATE, ALTER
-3. Use appropriate aggregations (COUNT, SUM, AVG) for measures
-4. Use proper GROUP BY for dimensions
-5. Limit results to 100 rows max using "LIMIT 100"
-6. Use meaningful column aliases with "AS"
-7. Handle date formatting with STRFTIME when needed
-8. Return only valid SQLite syntax
-9. Do not include any system tables or metadata queries
-10. Only access the specified application tables: jobs, candidates, applications, interviews, job_matches
+TABLE ROLES & SYNONYMS:
+- users (system user accounts; synonyms: user accounts, staff, recruiters)
+- candidates (job applicants; synonyms: applicants, talent, prospects)
+- jobs (job postings; synonyms: postings, positions, openings)
+- applications (candidate job applications; synonyms: submissions)
+- interviews (interview events)
+- job_matches (AI match scores)
+- organizations (organization metadata)
 
-USER REQUEST: "${userPrompt}"
-${additionalContext ? `\nADDITIONAL CONTEXT: "${additionalContext}"` : ''}
+INTERPRETATION RULES:
+1. Disambiguate terms:
+   * If prompt mentions login / account / role / admin → users table.
+   * If prompt mentions applicant / pipeline / candidate / talent → candidates table.
+   * "People" is ambiguous → lower confidence unless clarified by context.
+2. For "how many <thing> ids" or "distinct <thing>" use COUNT(DISTINCT <id_column>). Otherwise use COUNT(*).
+3. Only JOIN when fields from the joined table are selected or filtered.
+4. Never SELECT *; return only minimal necessary columns.
+5. Use meaningful snake_case aliases (no spaces). Avoid quoting unless required.
+6. Push filters into WHERE; only use HAVING for aggregated predicates.
+7. Always add organization scoping: <table>.organization_id = ${organizationId} for every table that has organization_id (skip tables without the column).
+8. Enforce LIMIT <= 100 (cap any larger user request to 100). If user asks TOP N, apply LIMIT N (still capped at 100).
+9. Time phrases heuristics:
+   * "last month" → data where STRFTIME('%Y-%m', created_at) = STRFTIME('%Y-%m', DATE('now','-1 month'))
+   * "this month" → STRFTIME('%Y-%m', created_at) = STRFTIME('%Y-%m','now')
+   * "this year" → STRFTIME('%Y', created_at) = STRFTIME('%Y','now')
+10. Chart selection logic:
+    * Time series (date/month sequence) → line
+    * Ranked comparison / top-N categories → bar
+    * Part-to-whole with <= 8 categories → pie
+    * Otherwise → table
+11. If the user requests sensitive or unavailable data (e.g. password hashes) return sql: null, low confidence (<=30) and explain in interpretation.
+12. Additional Context OVERRIDES heuristic inference.
+13. If intent cannot be satisfied with available tables, return sql: null, confidence <= 30.
+14. Output MUST be raw JSON ONLY (no Markdown, no prose) with keys: sql (string or null), chart_type, interpretation, confidence (integer 1-100).
+15. Do NOT fabricate columns; only use those plausibly present given the schema excerpt.
 
-Please respond with a JSON object containing:
-{
-  "sql": "your generated SQL query here",
-  "chart_type": "table|bar|line|pie (recommend the best visualization)",
-  "interpretation": "brief explanation of what the query does",
-  "confidence": number (1-100, your confidence in this solution)
-}
+USER PROMPT: "${userPrompt}"
+${additionalContext ? `ADDITIONAL CONTEXT (highest priority): "${additionalContext}"` : ''}
 
-Only return valid JSON, no other text.`;
+Return ONLY JSON like:
+{"sql":"SELECT ...","chart_type":"bar","interpretation":"...","confidence":85}`;
 
   return basePrompt;
-}
-  generated_sql: string;
-  results: any[];
-  row_count: number;
-  execution_time: number;
-  status: string;
-  chart_type: string;
-  ai_analysis: {
-    interpreted_request: string;
-    recommended_chart: string;
-    confidence_score: number;
-  };
 }
 
 // Load the unified schema file
@@ -239,8 +254,17 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
   let interpretation = '';
   let chartType = preferredChartType || 'table';
   
-  // Simple rule-based SQL generation
-  if (prompt.includes('job') && prompt.includes('application')) {
+  // Simple rule-based SQL generation with better table detection
+  if (prompt.includes('user') && (prompt.includes('count') || prompt.includes('how many'))) {
+    sql = `SELECT 
+      COUNT(*) as total_users
+    FROM users 
+    WHERE organization_id = ${organizationId} 
+    LIMIT 100`;
+    interpretation = 'Total count of system users in the organization';
+    chartType = 'table';
+  }
+  else if (prompt.includes('job') && prompt.includes('application')) {
     sql = `SELECT 
       j.title,
       j.status,
