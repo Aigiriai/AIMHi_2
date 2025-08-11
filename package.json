@@ -88,6 +88,7 @@
     "openai": "^4.103.0",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
+    "pdf-parse": "^1.1.1",
     "pg": "^8.16.0",
     "postgres": "^3.4.7",
     "react": "^18.3.1",

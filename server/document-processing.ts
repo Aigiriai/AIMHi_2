@@ -2,6 +2,14 @@ import mammoth from 'mammoth';
 import OpenAI from 'openai';
 import { extractResumeDataFromImage } from './image-processing';
 
+// Import pdf-parse with proper error handling for environments where it might not be available
+let pdfParse: any = null;
+try {
+  pdfParse = require('pdf-parse');
+} catch (error) {
+  console.warn('PDF parsing library not available. PDF files will use fallback processing.');
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface ProcessedDocument {
@@ -19,14 +27,68 @@ export async function extractTextFromDocument(buffer: Buffer, filename: string, 
   try {
     switch (mimetype) {
       case 'application/pdf':
-        // PDF processing with structured fallback (optimized for Replit)
-        console.log(`Processing PDF: ${filename}`);
-        return `Resume Document: ${filename}. This appears to be a professional resume in PDF format. The document structure suggests standard resume format with sections for experience, education, and skills. Please use the AI matching system to analyze the candidate based on their profile information.`;
+        // Enhanced PDF processing with proper text extraction
+        console.log(`🔍 Processing PDF: ${filename} with advanced text extraction`);
+        
+        if (pdfParse) {
+          try {
+            const pdfData = await pdfParse(buffer);
+            const extractedText = pdfData.text;
+            
+            // Validate extracted text quality
+            if (extractedText && extractedText.trim().length > 100) {
+              console.log(`✅ PDF text extraction successful for ${filename} (${extractedText.length} characters)`);
+              return extractedText;
+            } else {
+              console.log(`⚠️ PDF text extraction yielded minimal content for ${filename}`);
+              // Fall through to fallback processing
+            }
+          } catch (pdfError) {
+            console.error(`❌ PDF parsing error for ${filename}:`, pdfError);
+            // Fall through to fallback processing
+          }
+        }
+        
+        // Fallback for PDFs that couldn't be parsed or when pdf-parse is unavailable
+        console.log(`📄 Using structured fallback for PDF: ${filename}`);
+        return `PDF Document: ${filename}. 
+        
+IMPORTANT: This PDF requires manual text extraction for optimal results. 
+The document appears to be a professional document that may contain:
+- Professional experience and work history
+- Technical skills and competencies  
+- Educational background and certifications
+- Contact information and personal details
+- Project experience and achievements
+
+For accurate AI matching, please either:
+1. Convert this PDF to text format and re-upload
+2. Use the manual entry form to input key information
+3. Upload as an image file for OCR processing
+
+File has been stored for reference and can be downloaded later.`;
         
       case 'application/msword':
-        // Legacy .doc file processing (optimized for Replit)
-        console.log(`Processing legacy .doc file: ${filename}`);
-        return `Resume Document: ${filename}. This appears to be a professional resume in legacy Word format. The document structure suggests standard resume format with sections for experience, education, and skills. Please use the AI matching system to analyze the candidate based on their profile information.`;
+        // Enhanced legacy .doc file processing
+        console.log(`🔍 Processing legacy .doc file: ${filename}`);
+        console.log(`📄 Using structured fallback for legacy DOC: ${filename}`);
+        return `Legacy Word Document: ${filename}. 
+
+IMPORTANT: This legacy Word document requires conversion for optimal results.
+The document appears to be a professional document that may contain:
+- Professional experience and work history
+- Technical skills and competencies
+- Educational background and certifications
+- Contact information and personal details  
+- Project experience and achievements
+
+For accurate AI matching, please either:
+1. Convert to .docx format and re-upload
+2. Save as PDF and re-upload  
+3. Use the manual entry form to input key information
+
+File has been stored for reference and can be downloaded later.`;
+        
         
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
         try {
@@ -155,26 +217,61 @@ export async function extractResumeDetails(content: string, filename: string, bu
       };
     }
 
-    // Check if this is a PDF file with extraction issues
-    const isPDFWithIssues = content.includes('Resume Document:') || content.includes('PDF Resume:') || content.includes('professional resume in PDF format');
+    // Check if this is a PDF file with extraction issues (old fallback content)
+    const isPDFWithIssues = content.includes('PDF Document:') && content.includes('manual text extraction');
     
     if (isPDFWithIssues && buffer) {
-      // For PDF files with extraction issues, extract name from filename
-      console.log(`PDF text extraction failed for ${filename}. Using filename for basic info.`);
+      // For PDF files with extraction issues, try to re-extract using pdf-parse
+      if (pdfParse) {
+        try {
+          console.log(`🔄 Attempting direct PDF re-extraction for resume processing: ${filename}`);
+          const pdfData = await pdfParse(buffer);
+          const extractedText = pdfData.text;
+          
+          if (extractedText && extractedText.trim().length > 100) {
+            console.log(`✅ Direct PDF extraction successful for resume: ${filename}`);
+            // Use the extracted text instead of the fallback content
+            content = extractedText;
+          }
+        } catch (pdfError) {
+          console.error(`❌ Direct PDF extraction failed for resume: ${filename}`, pdfError);
+        }
+      }
       
-      const nameFromFile = filename.replace(/[-_]/g, ' ').replace(/\.(pdf|doc|docx)$/i, '').trim();
-      return {
-        name: nameFromFile || "PDF Resume Candidate",
-        email: "",
-        phone: "",
-        experience: 5, // Default reasonable experience
-        resumeContent: content,
-        resumeFileName: filename
-      };
+      // If still no good content, extract name from filename and use structured fallback
+      if (content.includes('manual text extraction')) {
+        console.log(`📄 PDF text extraction failed for ${filename}. Using filename for basic info.`);
+        
+        const nameFromFile = filename.replace(/[-_]/g, ' ').replace(/\.(pdf|doc|docx)$/i, '').trim();
+        return {
+          name: nameFromFile || "PDF Resume Candidate",
+          email: "",
+          phone: "",
+          experience: 3, // Conservative default
+          resumeContent: `Professional resume document: ${filename}. 
+          
+This appears to be a PDF resume that requires manual processing. 
+The candidate's name appears to be: ${nameFromFile}
+
+For accurate matching, please:
+1. Convert PDF to text format and re-upload
+2. Use manual entry to input key details
+3. Upload as image for OCR processing
+
+Document has been stored and can be downloaded for manual review.`,
+          resumeFileName: filename
+        };
+      }
     }
 
-    // Truncate content to reduce costs - focus on first 2000 characters which typically contain key contact info
-    const truncatedContent = content.length > 2000 ? content.substring(0, 2000) + "..." : content;
+    // Enhanced content processing - truncate intelligently for cost optimization
+    let truncatedContent = content;
+    if (content.length > 3000) {
+      // For longer content, try to keep the most important parts
+      const firstPart = content.substring(0, 1500); // Contact info and summary usually at top
+      const lastPart = content.substring(content.length - 1500); // Recent experience usually at bottom
+      truncatedContent = firstPart + "\n\n[...CONTENT TRUNCATED FOR PROCESSING...]\n\n" + lastPart;
+    }
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini", // Cost-optimized model for data extraction tasks
@@ -186,10 +283,11 @@ export async function extractResumeDetails(content: string, filename: string, bu
           - email: Email address
           - phone: Phone number
           - experience: Years of experience (number)
-          - resumeContent: Cleaned resume content (max 800 words)
+          - resumeContent: Cleaned resume content focusing on key skills, experience, and achievements (max 800 words)
           
           If any field is not found, use reasonable defaults (empty string for text, 0 for experience).
-          For PDF files with extraction issues, try to extract what information is available.
+          For PDF files with extraction issues, extract what information is available from the provided content.
+          Focus on extracting actual skills, technologies, job roles, and measurable achievements.
           Respond with only valid JSON.`
         },
         {
@@ -199,7 +297,7 @@ export async function extractResumeDetails(content: string, filename: string, bu
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 1000 // Reduced token limit for cost optimization
+      max_tokens: 1200 // Increased slightly for better extraction quality
     });
 
     const extracted = JSON.parse(response.choices[0].message.content || '{}');

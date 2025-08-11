@@ -4,6 +4,14 @@ import { extractResumeDataFromImage } from './image-processing';
 import { fileStorage } from './file-storage';
 import { preprocessResumeContent, formatPreprocessedForAI } from './resume-preprocessor';
 
+// Import pdf-parse with proper error handling for environments where it might not be available
+let pdfParse: any = null;
+try {
+  pdfParse = require('pdf-parse');
+} catch (error) {
+  console.warn('PDF parsing library not available. PDF files will use fallback processing.');
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface ProcessedDocument {
@@ -21,32 +29,68 @@ export async function extractTextFromDocument(buffer: Buffer, filename: string, 
   try {
     switch (mimetype) {
       case 'application/pdf':
-        // Use simple PDF text extraction without external processes
-        try {
-          console.log(`Processing PDF: ${filename} (optimized mode)`);
-          // For cost optimization, return structured fallback for PDFs requiring OCR
-          const fallbackContent = `PDF Document: ${filename}. 
-          This is a professional document that requires manual text extraction for optimal results. 
-          Key information should be entered manually for best accuracy.
-          File has been stored for reference.`;
-          return fallbackContent;
-        } catch (pdfError) {
-          console.error(`PDF processing error for ${filename}:`, pdfError);
-          return `Resume Document: ${filename}. PDF format detected. Manual data entry recommended for accuracy.`;
+        // Enhanced PDF processing with proper text extraction
+        console.log(`🔍 OPTIMIZED: Processing PDF: ${filename} with advanced text extraction`);
+        
+        if (pdfParse) {
+          try {
+            const pdfData = await pdfParse(buffer);
+            const extractedText = pdfData.text;
+            
+            // Validate extracted text quality
+            if (extractedText && extractedText.trim().length > 100) {
+              console.log(`✅ OPTIMIZED: PDF text extraction successful for ${filename} (${extractedText.length} characters)`);
+              return extractedText;
+            } else {
+              console.log(`⚠️ OPTIMIZED: PDF text extraction yielded minimal content for ${filename}`);
+              // Fall through to fallback processing
+            }
+          } catch (pdfError) {
+            console.error(`❌ OPTIMIZED: PDF parsing error for ${filename}:`, pdfError);
+            // Fall through to fallback processing
+          }
         }
         
+        // Fallback for PDFs that couldn't be parsed or when pdf-parse is unavailable
+        console.log(`📄 OPTIMIZED: Using structured fallback for PDF: ${filename}`);
+        return `PDF Document: ${filename}. 
+
+IMPORTANT: This PDF requires manual text extraction for optimal results. 
+The document appears to be a professional document that may contain:
+- Professional experience and work history
+- Technical skills and competencies  
+- Educational background and certifications
+- Contact information and personal details
+- Project experience and achievements
+
+For accurate AI matching and cost optimization, please either:
+1. Convert this PDF to text format and re-upload
+2. Use the manual entry form to input key information
+3. Upload as an image file for OCR processing
+
+File has been stored for reference and can be downloaded later.`;
+
       case 'application/msword':
-        // Simplified .doc handling without antiword
-        try {
-          console.log(`Processing legacy .doc file: ${filename} (optimized mode)`);
-          const fallbackContent = `Legacy Word Document: ${filename}. 
-          For best results, please convert to .docx format and re-upload, or enter key information manually.
-          This appears to be a professional document in legacy format.`;
-          return fallbackContent;
-        } catch (docError) {
-          console.error(`Legacy .doc processing error for ${filename}:`, docError);
-          return `Document: ${filename}. Legacy Word format detected. Please convert to .docx or enter information manually.`;
-        }
+        // Enhanced legacy .doc handling
+        console.log(`🔍 OPTIMIZED: Processing legacy .doc file: ${filename}`);
+        console.log(`📄 OPTIMIZED: Using structured fallback for legacy DOC: ${filename}`);
+        return `Legacy Word Document: ${filename}. 
+
+IMPORTANT: This legacy Word document requires conversion for optimal results.
+The document appears to be a professional document that may contain:
+- Professional experience and work history
+- Technical skills and competencies
+- Educational background and certifications
+- Contact information and personal details  
+- Project experience and achievements
+
+For accurate AI matching and cost optimization, please either:
+1. Convert to .docx format and re-upload
+2. Save as PDF and re-upload (will use enhanced PDF processing)
+3. Use the manual entry form to input key information
+
+File has been stored for reference and can be downloaded later.`;
+        
         
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
         try {
@@ -144,19 +188,54 @@ export async function extractResumeDetails(content: string, filename: string, bu
       };
     }
 
-    // For PDF/DOC files with extraction issues, provide structured fallback
-    const isPDFWithIssues = content.includes('Resume Document:') || content.includes('PDF Resume:') || content.includes('Legacy Word Document:');
+    // Enhanced PDF/DOC handling with actual text extraction attempts
+    const isPDFWithIssues = content.includes('PDF Document:') && content.includes('manual text extraction');
+    const isLegacyDocWithIssues = content.includes('Legacy Word Document:');
     
-    if (isPDFWithIssues) {
-      const nameFromFile = filename.replace(/[-_]/g, ' ').replace(/\.(pdf|doc|docx)$/i, '').trim();
-      return {
-        name: nameFromFile || "Document Resume Candidate",
-        email: "",
-        phone: "",
-        experience: 0,
-        resumeContent: content,
-        resumeFileName: filename
-      };
+    if ((isPDFWithIssues || isLegacyDocWithIssues) && buffer) {
+      // For PDF files, try to re-extract using pdf-parse
+      if (isPDFWithIssues && pdfParse) {
+        try {
+          console.log(`🔄 OPTIMIZED: Attempting direct PDF re-extraction for resume processing: ${filename}`);
+          const pdfData = await pdfParse(buffer);
+          const extractedText = pdfData.text;
+          
+          if (extractedText && extractedText.trim().length > 100) {
+            console.log(`✅ OPTIMIZED: Direct PDF extraction successful for resume: ${filename}`);
+            // Use the extracted text for preprocessing
+            content = extractedText;
+          }
+        } catch (pdfError) {
+          console.error(`❌ OPTIMIZED: Direct PDF extraction failed for resume: ${filename}`, pdfError);
+        }
+      }
+      
+      // If still no good content, use filename-based extraction
+      if (content.includes('manual text extraction') || content.includes('requires conversion')) {
+        console.log(`📄 OPTIMIZED: Text extraction failed for ${filename}. Using filename for basic info.`);
+        
+        const nameFromFile = filename.replace(/[-_]/g, ' ').replace(/\.(pdf|doc|docx)$/i, '').trim();
+        return {
+          name: nameFromFile || "Document Resume Candidate",
+          email: "",
+          phone: "",
+          experience: 0,
+          resumeContent: `Professional document: ${filename}
+          
+Candidate name (extracted from filename): ${nameFromFile}
+
+This document requires manual processing for accurate data extraction.
+For optimal AI matching results:
+
+1. Convert to .docx format and re-upload
+2. Convert to text format and re-upload  
+3. Use manual entry form for key details
+4. Upload as image for OCR processing
+
+Document stored for manual review and download.`,
+          resumeFileName: filename
+        };
+      }
     }
 
     // Apply intelligent local preprocessing to extract only essential information
