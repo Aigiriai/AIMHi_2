@@ -1,0 +1,55 @@
+~/workspace$ git status
+interactive rebase in progress; onto 6f4247e
+Last command done (1 command done):
+   pick 0220b02 Improve data security and logging for enhanced platform integrity
+No commands remaining.
+You are currently rebasing branch 'main' on '6f4247e'.
+  (fix conflicts and then run "git rebase --continue")
+  (use "git rebase --skip" to skip this patch)
+  (use "git rebase --abort" to check out the original branch)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+    new file:   attached_assets/Pasted--AUTH-r0u61v7zl-Verifying-JWT-token-AUTH-r0u61v7zl-Token-decoded-for-user-1-in-1ms--1754905262245_1754905262246.txt
+    modified:   server/index.ts
+    modified:   server/report-routes.ts
+
+Unmerged paths:
+  (use "git restore --staged <file>..." to unstage)
+  (use "git add <file>..." to mark resolution)
+    both modified:   server/sql-validator.ts
+
+~/workspace$ git rebase --continue
+server/sql-validator.ts: needs merge
+You must edit all merge conflicts and then
+mark them as resolved using git add
+~/workspace$ git rebase --abort
+error: Unable to create '/home/runner/workspace/.git/index.lock': File exists.
+
+Another git process seems to be running in this repository, e.g.
+an editor opened by 'git commit'. Please make sure all processes
+are terminated then try again. If it still fails, a git process
+may have crashed in this repository earlier:
+remove the file manually to continue.
+fatal: could not move back to 0220b027d9223ee0875f572f1f1a80c952e93128
+~/workspace$ rm .git/index.lock
+~/workspace$ git status
+interactive rebase in progress; onto 6f4247e
+Last command done (1 command done):
+   pick 0220b02 Improve data security and logging for enhanced platform integrity
+No commands remaining.
+You are currently rebasing branch 'main' on '6f4247e'.
+  (fix conflicts and then run "git rebase --continue")
+  (use "git rebase --skip" to skip this patch)
+  (use "git rebase --abort" to check out the original branch)
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+    new file:   attached_assets/Pasted--AUTH-r0u61v7zl-Verifying-JWT-token-AUTH-r0u61v7zl-Token-decoded-for-user-1-in-1ms--1754905262245_1754905262246.txt
+    modified:   server/index.ts
+    modified:   server/report-routes.ts
+
+Unmerged paths:
+  (use "git restore --staged <file>..." to unstage)
+  (use "git add <file>..." to mark resolution)
+    both modified:   server/sql-validator.ts
