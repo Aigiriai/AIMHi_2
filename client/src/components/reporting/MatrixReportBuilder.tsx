@@ -155,7 +155,6 @@ function renderChart(data: any[], chartType: string, selectedMeasures: string[])
     </div>
   );
 }
-}
 
 export function MatrixReportBuilder() {
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
