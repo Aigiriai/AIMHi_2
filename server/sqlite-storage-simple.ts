@@ -520,24 +520,57 @@ export class SQLiteStorage implements IStorage {
       console.log(`🗑️ CANDIDATE DELETE: Starting deletion for candidate ${id}`);
       
       // Delete related records in the correct order to avoid foreign key constraints
+      // Using try-catch for each table in case they don't exist yet
       
       // 1. Delete applications first
-      const applicationsResult = this.sqlite.prepare('DELETE FROM applications WHERE candidate_id = ?').run(id);
-      console.log(`🗑️ CANDIDATE DELETE: Deleted ${applicationsResult.changes} applications`);
+      try {
+        const applicationsResult = this.sqlite.prepare('DELETE FROM applications WHERE candidate_id = ?').run(id);
+        console.log(`🗑️ CANDIDATE DELETE: Deleted ${applicationsResult.changes} applications`);
+      } catch (error) {
+        console.log(`ℹ️ CANDIDATE DELETE: applications table not found or no records to delete`);
+      }
       
-      // 2. Delete interview schedules
-      const interviewSchedulesResult = this.sqlite.prepare('DELETE FROM interview_schedules WHERE candidate_id = ?').run(id);
-      console.log(`🗑️ CANDIDATE DELETE: Deleted ${interviewSchedulesResult.changes} interview schedules`);
+      // 2. Delete interviews 
+      try {
+        const interviewsResult = this.sqlite.prepare('DELETE FROM interviews WHERE candidate_id = ?').run(id);
+        console.log(`🗑️ CANDIDATE DELETE: Deleted ${interviewsResult.changes} interviews`);
+      } catch (error) {
+        console.log(`ℹ️ CANDIDATE DELETE: interviews table not found or no records to delete`);
+      }
       
-      // 3. Delete interviews
-      const interviewsResult = this.sqlite.prepare('DELETE FROM interviews WHERE candidate_id = ?').run(id);
-      console.log(`🗑️ CANDIDATE DELETE: Deleted ${interviewsResult.changes} interviews`);
+      // 3. Delete job matches
+      try {
+        const matchesResult = this.sqlite.prepare('DELETE FROM job_matches WHERE candidate_id = ?').run(id);
+        console.log(`🗑️ CANDIDATE DELETE: Deleted ${matchesResult.changes} job matches`);
+      } catch (error) {
+        console.log(`ℹ️ CANDIDATE DELETE: job_matches table not found or no records to delete`);
+      }
       
-      // 4. Delete job matches
-      const matchesResult = this.sqlite.prepare('DELETE FROM job_matches WHERE candidate_id = ?').run(id);
-      console.log(`🗑️ CANDIDATE DELETE: Deleted ${matchesResult.changes} job matches`);
+      // 4. Delete status history
+      try {
+        const statusHistoryResult = this.sqlite.prepare('DELETE FROM status_history WHERE entity_id = ? AND entity_type = ?').run(id, 'candidate');
+        console.log(`🗑️ CANDIDATE DELETE: Deleted ${statusHistoryResult.changes} status history records`);
+      } catch (error) {
+        console.log(`ℹ️ CANDIDATE DELETE: status_history table not found or no records to delete`);
+      }
       
-      // 5. Finally, delete the candidate
+      // 5. Delete candidate assignments
+      try {
+        const candidateAssignmentsResult = this.sqlite.prepare('DELETE FROM candidate_assignments WHERE candidate_id = ?').run(id);
+        console.log(`🗑️ CANDIDATE DELETE: Deleted ${candidateAssignmentsResult.changes} candidate assignments`);
+      } catch (error) {
+        console.log(`ℹ️ CANDIDATE DELETE: candidate_assignments table not found or no records to delete`);
+      }
+      
+      // 6. Delete candidate submissions  
+      try {
+        const candidateSubmissionsResult = this.sqlite.prepare('DELETE FROM candidate_submissions WHERE candidate_id = ?').run(id);
+        console.log(`🗑️ CANDIDATE DELETE: Deleted ${candidateSubmissionsResult.changes} candidate submissions`);
+      } catch (error) {
+        console.log(`ℹ️ CANDIDATE DELETE: candidate_submissions table not found or no records to delete`);
+      }
+      
+      // 7. Finally, delete the candidate
       const stmt = this.sqlite.prepare('DELETE FROM candidates WHERE id = ?');
       const result = stmt.run(id);
       
