@@ -36,6 +36,56 @@ interface ReportTemplate {
 }
 
 // SQL query generation utility
+// Generic field mapping generator - creates mappings from table metadata
+function generateFieldMappings(tableMetadata: any[]): { [key: string]: { [table: string]: string } } {
+  const mappings: { [key: string]: { [table: string]: string } } = {};
+  
+  // Universal fallbacks for common fields
+  const universalMappings: { [key: string]: { [table: string]: string } } = {
+    'count': { '*': 'COUNT(*)' },
+    'title': { '*': 'title' },
+    'name': { '*': 'name' },
+    'status': { '*': 'status' }
+  };
+  
+  // Generate mappings from metadata
+  tableMetadata.forEach(table => {
+    table.fields?.forEach((field: any) => {
+      const fieldName = field.field_name;
+      
+      if (!mappings[fieldName]) {
+        mappings[fieldName] = {};
+      }
+      
+      // Map field to its native table column
+      mappings[fieldName][table.table_name] = fieldName;
+      
+      // Add cross-table fallbacks for common fields
+      if (fieldName === 'status' || fieldName === 'name' || fieldName === 'title') {
+        // These fields can exist in multiple tables, so add fallbacks
+        tableMetadata.forEach(otherTable => {
+          if (otherTable.table_name !== table.table_name) {
+            if (!mappings[fieldName][otherTable.table_name]) {
+              mappings[fieldName][otherTable.table_name] = `'${fieldName}_fallback'`;
+            }
+          }
+        });
+      }
+    });
+  });
+  
+  // Merge with universal mappings
+  Object.keys(universalMappings).forEach(field => {
+    if (!mappings[field]) {
+      mappings[field] = universalMappings[field];
+    } else {
+      mappings[field] = { ...mappings[field], ...universalMappings[field] };
+    }
+  });
+  
+  return mappings;
+}
+
 function generateReportSQL(request: ReportRequest, organizationId?: number): string {
   console.log('🔧 REPORT_SQL: Generating query with request:', {
     tables: request.selected_tables,
@@ -58,22 +108,167 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
   const primaryTable = selected_tables.length > 0 ? selected_tables[0] : 'jobs';
   console.log('🔧 REPORT_SQL: Using primary table:', primaryTable);
   
-  // Map UI field names to actual database columns
+  // Generic field to table mapping - maps field names to their source tables
+  const fieldToTableMapping: { [fieldName: string]: string } = {
+    // Jobs table fields
+    'title': 'jobs',
+    'status': 'jobs', // Can exist in multiple tables, prioritize jobs
+    'department': 'jobs',
+    'location': 'jobs',
+    'count': 'jobs', // Default measure table
+    
+    // Candidates table fields  
+    'name': 'candidates',
+    'source': 'candidates', // Prioritize candidates for source
+    'experience_years': 'candidates',
+    
+    // Applications table fields
+    'applied_month': 'applications',
+    'application_source': 'applications',
+    'application_month': 'applications',
+    'match_percentage': 'applications',
+    
+    // Interviews table fields
+    'month': 'interviews',
+    'interview_month': 'interviews',
+    'score': 'interviews',
+    
+    // Job matches table fields
+    'match_score': 'job_matches',
+    'match_date': 'job_matches'
+  };
+  
+  // Analyze all selected fields to determine which tables are needed
+  const allSelectedFields = [...selected_rows, ...selected_columns, ...selected_measures];
+  const requiredTables = new Set<string>();
+  
+  allSelectedFields.forEach(field => {
+    const sourceTable = fieldToTableMapping[field];
+    if (sourceTable) {
+      requiredTables.add(sourceTable);
+      console.log('🔧 REPORT_SQL: Field', field, 'requires table:', sourceTable);
+    } else {
+      // If field not in mapping, assume it belongs to primary table
+      requiredTables.add(primaryTable);
+      console.log('🔧 REPORT_SQL: Field', field, 'defaulted to primary table:', primaryTable);
+    }
+  });
+  
+  console.log('🔧 REPORT_SQL: Required tables:', Array.from(requiredTables));
+  
+  // Determine the best table to use - prioritize based on field count and primary selection
+  let actualTable = primaryTable;
+  if (requiredTables.size === 1) {
+    actualTable = Array.from(requiredTables)[0];
+    console.log('🔧 REPORT_SQL: Single table detected:', actualTable);
+  } else if (requiredTables.size > 1) {
+    // Multi-table scenario - for now, use the table with most fields
+    const tableCounts: { [table: string]: number } = {};
+    allSelectedFields.forEach(field => {
+      const sourceTable = fieldToTableMapping[field] || primaryTable;
+      tableCounts[sourceTable] = (tableCounts[sourceTable] || 0) + 1;
+    });
+    
+    actualTable = Object.keys(tableCounts).reduce((a, b) => 
+      tableCounts[a] > tableCounts[b] ? a : b
+    );
+    
+    console.log('🔧 REPORT_SQL: Multi-table scenario - table counts:', tableCounts);
+    console.log('🔧 REPORT_SQL: Selected table with most fields:', actualTable);
+  }
+
+  // Generic field mapping system - maps field names to SQL expressions for each table
   const fieldMapping: { [key: string]: { [table: string]: string } } = {
-    'title': { 'jobs': 'title', 'candidates': 'name' },
-    'status': { 'jobs': 'status', 'candidates': 'status', 'applications': 'status' },
-    'department': { 'jobs': 'title', 'candidates': 'source' }, // Using available fields
-    'name': { 'candidates': 'name', 'users': 'first_name || \' \' || last_name' },
-    'source': { 'candidates': 'source', 'applications': 'source' },
+    // Universal fields that can exist in any table
+    'title': { 
+      'jobs': 'title', 
+      'candidates': 'name', 
+      'applications': `'Application Title'`,
+      'interviews': `'Interview'`,
+      'job_matches': `'Match'`
+    },
+    'status': { 
+      'jobs': 'status', 
+      'candidates': 'status', 
+      'applications': 'status',
+      'interviews': `'Scheduled'`,
+      'job_matches': `'Active'`
+    },
+    'name': { 
+      'candidates': 'name', 
+      'users': 'first_name || \' \' || last_name',
+      'jobs': 'title',
+      'applications': `'Applicant'`,
+      'interviews': `'Candidate'`
+    },
+    'source': { 
+      'candidates': 'source', 
+      'jobs': `'Direct'`, 
+      'applications': 'source',
+      'interviews': `'Internal'`
+    },
+    'department': { 
+      'jobs': 'department', 
+      'candidates': `'General'`,
+      'applications': `'General'`
+    },
+    'location': {
+      'jobs': 'location',
+      'candidates': `'Remote'`,
+      'applications': `'Remote'`
+    },
+    
+    // Date/time fields with table-specific expressions
+    'applied_month': { 
+      'applications': 'applied_month', 
+      'jobs': `STRFTIME('%Y-%m', created_at)`,
+      'candidates': `STRFTIME('%Y-%m', created_at)`
+    },
+    'application_month': { 
+      'applications': 'applied_month', 
+      'jobs': `STRFTIME('%Y-%m', created_at)`
+    },
+    'month': {
+      'interviews': 'month',
+      'applications': 'applied_month',
+      'jobs': `STRFTIME('%Y-%m', created_at)`
+    },
+    
+    // Numeric/measure fields
     'count': { '*': 'COUNT(*)' },
-    'experience_years': { 'candidates': 'experience' },
-    'match_score': { 'job_matches': 'match_percentage' },
-    'match_date': { 'job_matches': 'created_at' }
+    'experience_years': { 
+      'candidates': 'experience',
+      'applications': `0`,
+      'jobs': `0`
+    },
+    'match_percentage': {
+      'applications': 'match_percentage',
+      'job_matches': 'match_percentage',
+      'candidates': `0`
+    },
+    'match_score': { 
+      'job_matches': 'match_percentage', 
+      'applications': 'match_percentage',
+      'candidates': `0`
+    },
+    'score': {
+      'interviews': 'score',
+      'applications': 'match_percentage',
+      'candidates': `0`
+    }
   };
 
-  // Build SELECT clause with proper field mapping
+  console.log('🔧 REPORT_SQL: Available field mappings:', Object.keys(fieldMapping));
+  console.log('🔧 REPORT_SQL: Will query table:', actualTable);
+
+  // Build SELECT clause with proper matrix report logic
   const allFields = [...selected_rows, ...selected_columns, ...selected_measures];
   console.log('🔧 REPORT_SQL: All fields combined:', allFields);
+  console.log('🔧 REPORT_SQL: Matrix structure:', {
+    rows: selected_rows,
+    columns: selected_columns, 
+    measures: selected_measures
+  });
   
   let selectFields = [];
   
@@ -81,36 +276,116 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
     selectFields.push('COUNT(*) as count');
     console.log('🔧 REPORT_SQL: Using default COUNT query - no fields selected');
   } else {
-    for (const field of allFields) {
+    // For matrix reports, we need to handle rows and columns differently
+    
+    // Add row fields (primary dimensions)
+    for (const field of selected_rows) {
       let sqlField = field;
       
-      // Map special fields to database columns
+      // Map field to database column using the correct table
       if (fieldMapping[field]) {
-        if (fieldMapping[field][primaryTable]) {
-          sqlField = fieldMapping[field][primaryTable];
+        if (fieldMapping[field][actualTable]) {
+          sqlField = fieldMapping[field][actualTable];
         } else if (fieldMapping[field]['*']) {
           sqlField = fieldMapping[field]['*'];
+        } else {
+          // Use first available mapping as fallback
+          const availableMapping = Object.values(fieldMapping[field])[0];
+          sqlField = availableMapping;
+          console.warn('🔧 REPORT_SQL: Using fallback mapping for ROW field:', field, '->', sqlField);
         }
-      }
-      
-      // Handle count aggregation
-      if (field === 'count' || selected_measures.includes(field)) {
-        sqlField = sqlField.includes('COUNT') ? sqlField : `COUNT(*) as ${field}`;
+      } else {
+        // If no mapping found, check if it exists as-is in the table
+        console.warn('🔧 REPORT_SQL: No field mapping found for:', field, '- using as-is');
       }
       
       selectFields.push(`${sqlField} as ${field}`);
-      console.log('🔧 REPORT_SQL: Mapped field:', { 
+      console.log('🔧 REPORT_SQL: Added ROW field:', { 
         originalField: field, 
         mappedField: sqlField, 
         finalSelect: `${sqlField} as ${field}` 
       });
     }
+    
+    // Add column fields (secondary dimensions) 
+    for (const field of selected_columns) {
+      let sqlField = field;
+      
+      // Map field to database column using the correct table
+      if (fieldMapping[field]) {
+        if (fieldMapping[field][actualTable]) {
+          sqlField = fieldMapping[field][actualTable];
+        } else if (fieldMapping[field]['*']) {
+          sqlField = fieldMapping[field]['*'];
+        } else {
+          // Use first available mapping as fallback
+          const availableMapping = Object.values(fieldMapping[field])[0];
+          sqlField = availableMapping;
+          console.warn('🔧 REPORT_SQL: Using fallback mapping for COLUMN field:', field, '->', sqlField);
+        }
+      } else {
+        // If no mapping found, try to create a safe fallback
+        console.warn('🔧 REPORT_SQL: No field mapping found for:', field);
+        if (field.includes('source')) {
+          sqlField = 'source';
+        } else if (field.includes('month') || field.includes('date')) {
+          sqlField = `STRFTIME('%Y-%m', created_at)`;
+        } else {
+          sqlField = `'${field}' as fallback_${field}`;
+        }
+        console.warn('🔧 REPORT_SQL: Using fallback mapping:', sqlField);
+      }
+      
+      selectFields.push(`${sqlField} as ${field}`);
+      console.log('🔧 REPORT_SQL: Added COLUMN field:', { 
+        originalField: field, 
+        mappedField: sqlField, 
+        finalSelect: `${sqlField} as ${field}` 
+      });
+    }
+    
+    // Add measure fields (aggregations)
+    if (selected_measures.length === 0) {
+      // Default measure if none selected
+      selectFields.push('COUNT(*) as count');
+      console.log('🔧 REPORT_SQL: Added default COUNT measure');
+    } else {
+      for (const field of selected_measures) {
+        let sqlField = field;
+        
+        // Handle measure aggregations
+        if (field === 'count' || field.toLowerCase().includes('count')) {
+          sqlField = 'COUNT(*)';
+        } else if (fieldMapping[field]) {
+          if (fieldMapping[field][primaryTable]) {
+            sqlField = fieldMapping[field][primaryTable];
+          } else if (fieldMapping[field]['*']) {
+            sqlField = fieldMapping[field]['*'];
+          }
+          
+          // Apply aggregation if it's not already a COUNT
+          if (!sqlField.includes('COUNT') && !sqlField.includes('SUM') && !sqlField.includes('AVG')) {
+            sqlField = `COUNT(${sqlField})`;
+          }
+        } else {
+          sqlField = 'COUNT(*)';
+        }
+        
+        selectFields.push(`${sqlField} as ${field}`);
+        console.log('🔧 REPORT_SQL: Added MEASURE field:', { 
+          originalField: field, 
+          mappedField: sqlField, 
+          finalSelect: `${sqlField} as ${field}` 
+        });
+      }
+    }
+    
     console.log('🔧 REPORT_SQL: Final select fields:', selectFields);
   }
   
-  // Build query
+  // Build query using the determined table
   let query = `SELECT ${selectFields.join(', ')}`;
-  query += ` FROM ${primaryTable}`;
+  query += ` FROM ${actualTable}`;
   console.log('🔧 REPORT_SQL: Base query built:', query);
   
   // Add organization filter (security requirement)
@@ -143,17 +418,27 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
   
   query += ` WHERE ${whereClause}`;
   
-  // Add GROUP BY for aggregations
-  const dimensionFields = [...selected_rows, ...selected_columns].filter(f => !selected_measures.includes(f));
-  if (selected_measures.length > 0 && dimensionFields.length > 0) {
-    query += ` GROUP BY ${dimensionFields.join(', ')}`;
-    console.log('🔧 REPORT_SQL: Added GROUP BY:', dimensionFields);
+  // Add GROUP BY for matrix reports - only group by dimensions, not measures
+  const allDimensions = [...selected_rows, ...selected_columns];
+  console.log('🔧 REPORT_SQL: Matrix dimensions for GROUP BY:', allDimensions);
+  
+  if (allDimensions.length > 0) {
+    // For matrix reports, we group by ALL dimensions (both rows and columns)
+    // The client will handle the pivoting/cross-tabulation
+    query += ` GROUP BY ${allDimensions.join(', ')}`;
+    console.log('🔧 REPORT_SQL: Added GROUP BY for matrix report:', allDimensions);
+  } else if (selected_measures.length > 0) {
+    // If only measures are selected (no dimensions), no GROUP BY needed
+    console.log('🔧 REPORT_SQL: No GROUP BY needed - measures only');
   }
   
-  // Add ORDER BY
-  if (dimensionFields.length > 0) {
-    query += ` ORDER BY ${dimensionFields[0]}`;
-    console.log('🔧 REPORT_SQL: Added ORDER BY:', dimensionFields[0]);
+  // Add ORDER BY - prioritize row fields for better matrix display
+  if (selected_rows.length > 0) {
+    query += ` ORDER BY ${selected_rows.join(', ')}`;
+    console.log('🔧 REPORT_SQL: Added ORDER BY for rows:', selected_rows);
+  } else if (selected_columns.length > 0) {
+    query += ` ORDER BY ${selected_columns[0]}`;
+    console.log('🔧 REPORT_SQL: Added ORDER BY for first column:', selected_columns[0]);
   }
   
   // Add LIMIT for safety
