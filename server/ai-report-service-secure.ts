@@ -110,6 +110,25 @@ CREATE TABLE job_matches (
   match_percentage REAL, -- AI matching score 0-100
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Assignment tables used to link users to jobs/candidates
+CREATE TABLE job_assignments (
+  id INTEGER PRIMARY KEY,
+  job_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  role TEXT NOT NULL, -- owner, assigned, viewer
+  assigned_by INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE candidate_assignments (
+  id INTEGER PRIMARY KEY,
+  candidate_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  role TEXT NOT NULL, -- owner, assigned, viewer
+  assigned_by INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `;
   } catch (error) {
     console.error('🤖 AI_REPORT: Error loading schema:', error);
@@ -132,6 +151,12 @@ TABLE ROLES & SYNONYMS:
 - interviews (interview events)
 - job_matches (AI match scores)
 - organizations (org metadata)
+- job_assignments (user ↔ job permissions; synonyms: job ownership, job assigned to user)
+- candidate_assignments (user ↔ candidate permissions; synonyms: candidate ownership, candidate assigned to user)
+
+ASSIGNMENT LOGIC TIPS:
+- "jobs assigned to X" → count rows in job_assignments joined to users (by email/name) and jobs, filtered by organization.
+- "applications assigned to X" → count DISTINCT applications where the user is assigned to the job (via job_assignments) OR to the candidate (via candidate_assignments). Enforce organization filters on applications + joined jobs/candidates + users.
 
 SECURITY & OUTPUT RULES (MANDATORY):
 1. Query MUST be a single SELECT. Never write mutating or DDL statements.
@@ -270,8 +295,47 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
   let sql = '';
   let interpretation = '';
   let chartType = preferredChartType || 'table';
+
+  // Helper: extract email-like token (between quotes or raw)
+  const emailRegex = /"([^"]+@[^\s"]+)"|'([^'\s]+@[^\s']+)'|\b([\w.+-]+@[\w.-]+\.[A-Za-z]{2,})\b/;
+  const emailMatch = userPrompt.match(emailRegex);
+  const rawEmail = (emailMatch && (emailMatch[1] || emailMatch[2] || emailMatch[3])) || '';
+  const email = rawEmail.replace(/'/g, "''"); // basic SQL escape for single quote
   
   // Simple rule-based SQL generation with organization security
+  // Assignment-driven queries
+  if ((prompt.includes('assigned to') || prompt.includes('assignment') || prompt.includes('assigned')) && email) {
+    sql = `SELECT 
+  -- Jobs directly assigned to the user
+  (
+    SELECT COUNT(*)
+    FROM job_assignments ja
+    JOIN users u ON u.id = ja.user_id
+    JOIN jobs j ON j.id = ja.job_id
+    WHERE u.email = '${email}'
+      AND u.organization_id = ${organizationId}
+      AND j.organization_id = ${organizationId}
+  ) AS jobs_assigned,
+  -- Applications where the user is assigned to the job OR the candidate
+  (
+    SELECT COUNT(DISTINCT a.id)
+    FROM applications a
+    LEFT JOIN jobs j ON j.id = a.job_id AND j.organization_id = ${organizationId}
+    LEFT JOIN job_assignments ja ON ja.job_id = j.id
+    LEFT JOIN candidates c ON c.id = a.candidate_id AND c.organization_id = ${organizationId}
+    LEFT JOIN candidate_assignments ca ON ca.candidate_id = c.id
+    JOIN users u ON u.email = '${email}' AND u.organization_id = ${organizationId}
+    WHERE a.organization_id = ${organizationId}
+      AND (
+        (ja.user_id = u.id AND j.id IS NOT NULL)
+        OR (ca.user_id = u.id AND c.id IS NOT NULL)
+      )
+  ) AS applications_assigned
+LIMIT 1`;
+    interpretation = `Counts of jobs and applications assigned to ${email} (via job or candidate assignments)`;
+    chartType = 'table';
+  }
+  else 
   if (prompt.includes('user') && (prompt.includes('count') || prompt.includes('how many'))) {
     sql = `SELECT 
       COUNT(*) as total_users

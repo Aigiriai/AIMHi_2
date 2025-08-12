@@ -218,6 +218,15 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
       'candidates': `'General'`,
       'applications': `'General'`
     },
+    // Assignment fields
+    'role': {
+      'job_assignments': 'role',
+      'candidate_assignments': 'role'
+    },
+    'assigned_month': {
+      'job_assignments': `STRFTIME('%Y-%m', created_at)`,
+      'candidate_assignments': `STRFTIME('%Y-%m', created_at)`
+    },
     'location': {
       'jobs': 'location',
       'candidates': `'Remote'`,
@@ -237,7 +246,9 @@ function generateReportSQL(request: ReportRequest, organizationId?: number): str
     'month': {
       'interviews': 'month',
       'applications': 'applied_month',
-      'jobs': `STRFTIME('%Y-%m', created_at)`
+  'jobs': `STRFTIME('%Y-%m', created_at)`,
+  'job_assignments': `STRFTIME('%Y-%m', created_at)`,
+  'candidate_assignments': `STRFTIME('%Y-%m', created_at)`
     },
     
     // Numeric/measure fields

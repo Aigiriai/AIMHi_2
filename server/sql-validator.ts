@@ -27,21 +27,25 @@ const SECURE_SCHEMA: DatabaseSchema = {
     // Core application tables
     'jobs', 'candidates', 'applications', 'interviews', 'job_matches',
     // User and organization tables
-    'organizations', 'users', 'teams', 'team_members',
+  'organizations', 'users', 'teams', 'team_members',
+  // Assignment tables
+  'job_assignments', 'candidate_assignments',
     // Additional system tables
     'api_keys', 'organization_settings', 'job_board_credentials',
     'report_templates', 'report_executions', 'table_metadata', 'field_metadata'
   ],
   allowedColumns: {
-    'jobs': ['id', 'organizationId', 'title', 'status', 'department', 'location', 'source', 'created_at', 'teamId', 'createdBy'],
-    'candidates': ['id', 'organizationId', 'name', 'status', 'source', 'experience', 'created_at'],
-    'applications': ['id', 'organizationId', 'job_id', 'candidate_id', 'status', 'source', 'applied_month', 'match_percentage', 'created_at'],
-    'interviews': ['id', 'organizationId', 'application_id', 'month', 'score', 'feedback', 'created_at'],
-    'job_matches': ['id', 'organizationId', 'job_id', 'candidate_id', 'match_percentage', 'created_at'],
-    'organizations': ['id', 'name', 'plan', 'created_at'],
-    'users': ['id', 'organizationId', 'email', 'role', 'firstName', 'lastName', 'created_at'],
-    'teams': ['id', 'organizationId', 'name', 'description', 'created_at'],
+  'jobs': ['id', 'organization_id', 'title', 'status', 'department', 'location', 'source', 'created_at', 'team_id', 'created_by'],
+  'candidates': ['id', 'organization_id', 'name', 'status', 'source', 'experience', 'created_at'],
+  'applications': ['id', 'organization_id', 'job_id', 'candidate_id', 'status', 'source', 'applied_month', 'match_percentage', 'created_at'],
+  'interviews': ['id', 'organization_id', 'application_id', 'month', 'score', 'feedback', 'created_at'],
+  'job_matches': ['id', 'organization_id', 'job_id', 'candidate_id', 'match_percentage', 'created_at'],
+  'organizations': ['id', 'name', 'plan', 'created_at'],
+  'users': ['id', 'organization_id', 'email', 'role', 'first_name', 'last_name', 'created_at'],
+  'teams': ['id', 'organization_id', 'name', 'description', 'created_at'],
     'team_members': ['id', 'team_id', 'user_id', 'role', 'created_at'],
+  'job_assignments': ['id', 'job_id', 'user_id', 'role', 'assigned_by', 'created_at'],
+  'candidate_assignments': ['id', 'candidate_id', 'user_id', 'role', 'assigned_by', 'created_at'],
     'api_keys': ['id', 'organizationId', 'name', 'status', 'created_at'],
     'organization_settings': ['id', 'organizationId', 'ai_enabled', 'updated_at'],
     'job_board_credentials': ['id', 'organizationId', 'platform', 'status', 'created_at'],
@@ -59,6 +63,8 @@ const SECURE_SCHEMA: DatabaseSchema = {
   'job_matches': ['organization_id'],
   'users': ['organization_id'],
   'teams': ['organization_id'],
+  'job_assignments': [],
+  'candidate_assignments': [],
   'api_keys': ['organization_id'],
   'organization_settings': ['organization_id'],
   'job_board_credentials': ['organization_id'],
