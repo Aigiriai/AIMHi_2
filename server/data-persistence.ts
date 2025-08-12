@@ -10,7 +10,7 @@ export class DataPersistenceManager {
   private cloudBackupService: DatabaseBackupService | null = null;
   
   constructor() {
-    // Ensure backup directory exists for local fallback
+    // Ensure base backup directory exists for local fallback (env-specific subdirs will be created on demand)
     if (!fs.existsSync(this.backupDir)) {
       fs.mkdirSync(this.backupDir, { recursive: true });
     }
@@ -33,6 +33,11 @@ export class DataPersistenceManager {
     // Use environment-appropriate database file
     const dbName = process.env.NODE_ENV === "production" ? "production.db" : "development.db";
     const currentDbPath = path.join(this.dataDir, dbName);
+    const envSeg = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
+    const envBackupDir = path.join(this.backupDir, envSeg);
+    if (!fs.existsSync(envBackupDir)) {
+      fs.mkdirSync(envBackupDir, { recursive: true });
+    }
     
     if (!fs.existsSync(currentDbPath)) {
       console.log(`⚠️ BACKUP: No database found to backup at: ${currentDbPath}`);
@@ -76,8 +81,8 @@ export class DataPersistenceManager {
     }
 
     // Define backup file path (single backup file)
-    const backupFileName = `backup.db`; // Single backup file name
-    const localBackupPath = path.join(this.backupDir, backupFileName);
+  const backupFileName = `backup.db`; // Single backup file name
+  const localBackupPath = path.join(envBackupDir, backupFileName);
 
     try {
       console.log(`🔄 BACKUP: Creating backup from ${dbName} database...`);
@@ -91,7 +96,7 @@ export class DataPersistenceManager {
         
         // Also create local backup for faster restore
         fs.copyFileSync(currentDbPath, localBackupPath);
-        console.log(`✅ Local backup copy created: ${localBackupPath}`);
+  console.log(`✅ Local backup copy created: ${localBackupPath}`);
         
         return cloudBackupName;
       }
@@ -124,6 +129,8 @@ export class DataPersistenceManager {
     // Use environment-appropriate database file
     const dbName = process.env.NODE_ENV === "production" ? "production.db" : "development.db";
     const targetDbPath = path.join(this.dataDir, dbName);
+  const envSeg = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
+  const envBackupDir = path.join(this.backupDir, envSeg);
     
     console.log(`🔄 RESTORE: Starting database restoration process...`);
     console.log(`📁 RESTORE: Target database path: ${targetDbPath}`);
@@ -167,8 +174,8 @@ export class DataPersistenceManager {
       }
       
       // Try local backup (single backup.db file)
-      const localBackupPath = path.join(this.backupDir, 'backup.db');
-      console.log(`📁 RESTORE: Checking for local backup: ${localBackupPath}`);
+  const localBackupPath = path.join(envBackupDir, 'backup.db');
+  console.log(`📁 RESTORE: Checking for local ${envSeg} backup: ${localBackupPath}`);
       
       if (!fs.existsSync(localBackupPath)) {
         console.log(`📁 RESTORE: No local backup file found`);
@@ -176,7 +183,7 @@ export class DataPersistenceManager {
       }
 
       const backupStats = fs.statSync(localBackupPath);
-      console.log(`📊 RESTORE: Local backup found (${Math.round(backupStats.size / 1024)}KB, modified: ${backupStats.mtime.toISOString()})`);
+  console.log(`📊 RESTORE: Local ${envSeg} backup found (${Math.round(backupStats.size / 1024)}KB, modified: ${backupStats.mtime.toISOString()})`);
       
       // Validate backup before restoration
       try {
@@ -211,7 +218,7 @@ export class DataPersistenceManager {
       }
       
       // Perform restoration
-      console.log(`🔄 RESTORE: Restoring from local backup: backup.db`);
+  console.log(`🔄 RESTORE: Restoring from local ${envSeg} backup: backup.db`);
       fs.copyFileSync(localBackupPath, targetDbPath);
       console.log(`✅ RESTORE: Database restored from local backup`);
       

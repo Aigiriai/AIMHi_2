@@ -264,39 +264,47 @@ async function performInitialization(): Promise<DatabaseInstance> {
     // ✅ ENHANCED LOGIC: Smart decision making for database initialization
     let result: DatabaseInstance;
     
-    // PRODUCTION: Smart initialization with backup restoration priority
+    // PRODUCTION: Preserve existing DB when healthy; restore only if missing or invalid
     if (process.env.NODE_ENV === "production") {
-      console.log("🏭 DB_MANAGER: Production mode - attempting backup restoration first");
-      
-      // First, try to restore from backup (highest priority)
-      console.log("🔄 DB_MANAGER: Checking for available backups before initialization...");
-      const backupRestored = await attemptBackupRestoration(dbPath);
-      
-      if (backupRestored) {
-        console.log("✅ DB_MANAGER: Successfully restored production database from backup!");
+      console.log("🏭 DB_MANAGER: Production mode - preserve if healthy, restore only if needed");
+
+      if (existsSync(dbPath)) {
+        console.log("📂 DB_MANAGER: Existing production database found - validating...");
         try {
           result = await openAndValidateDatabase(dbPath);
-          console.log("✅ DB_MANAGER: Restored database validated successfully");
+          console.log("✅ DB_MANAGER: Existing production database is healthy - skipping restore");
         } catch (error) {
-          console.warn("⚠️ DB_MANAGER: Restored database validation failed:", (error as Error).message);
-          console.log("🔄 DB_MANAGER: Creating fresh database after backup validation failure");
-          result = await createFreshDatabase(dbPath, true); // Force recreate after validation failure
+          console.warn("⚠️ DB_MANAGER: Existing production database validation failed:", (error as Error).message);
+          console.log("🔄 DB_MANAGER: Attempting restoration from latest production backup...");
+          const backupRestored = await attemptBackupRestoration(dbPath);
+          if (backupRestored) {
+            try {
+              result = await openAndValidateDatabase(dbPath);
+              console.log("✅ DB_MANAGER: Restored production database validated successfully");
+            } catch (restoreValidationError) {
+              console.warn("⚠️ DB_MANAGER: Restored DB validation failed:", (restoreValidationError as Error).message);
+              result = await createFreshDatabase(dbPath, true);
+            }
+          } else {
+            console.log("� DB_MANAGER: No valid backup available - creating fresh production database");
+            result = await createFreshDatabase(dbPath, true);
+          }
         }
       } else {
-        console.log("� DB_MANAGER: No backup available - creating fresh production database");
-        
-        // Clean up any corrupted files only if no backup was restored
-        try {
-          if (existsSync(dbPath)) {
-            unlinkSync(dbPath);
-            console.log("🗑️ DB_MANAGER: Removed existing corrupted database");
+        console.log("📂 DB_MANAGER: No production database found - attempting restoration before fresh create...");
+        const backupRestored = await attemptBackupRestoration(dbPath);
+        if (backupRestored) {
+          try {
+            result = await openAndValidateDatabase(dbPath);
+            console.log("✅ DB_MANAGER: Restored production database validated successfully");
+          } catch (restoreValidationError) {
+            console.warn("⚠️ DB_MANAGER: Restored DB validation failed:", (restoreValidationError as Error).message);
+            result = await createFreshDatabase(dbPath, false);
           }
-        } catch (cleanupError) {
-          console.warn("⚠️ DB_MANAGER: Cleanup warning (continuing):", cleanupError);
+        } else {
+          console.log("📦 DB_MANAGER: No backup available - creating fresh production database...");
+          result = await createFreshDatabase(dbPath, false);
         }
-        
-        result = await createFreshDatabase(dbPath, false);
-        console.log("✅ DB_MANAGER: Fresh production database created successfully");
       }
     } else {
       // DEVELOPMENT: Full logic with validation and backup restoration

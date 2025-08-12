@@ -2,6 +2,16 @@ import { Storage, File } from "@google-cloud/storage";
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import * as os from "os";
+
+// Minimal type for backup metadata we derive from Object Storage
+type BackupMeta = {
+  name: string;
+  fullName: string;
+  timeCreated: Date;
+  updated: Date;
+  env?: 'production' | 'development';
+};
 
 const REPLIT_SIDECAR_ENDPOINT =
   process.env.REPLIT_SIDECAR_ENDPOINT || "http://127.0.0.1:1106";
@@ -89,6 +99,19 @@ export class DatabaseBackupService {
     return objectStorageClient.bucket(this.bucketId);
   }
 
+  // Determine current environment and path prefix
+  private getEnvironment(): 'production' | 'development' {
+    return process.env.NODE_ENV === 'production' ? 'production' : 'development';
+  }
+
+  private getEnvSegment(): 'prod' | 'dev' {
+    return this.getEnvironment() === 'production' ? 'prod' : 'dev';
+  }
+
+  private getBackupNamePrefix(): 'production-backup' | 'development-backup' {
+    return this.getEnvironment() === 'production' ? 'production-backup' : 'development-backup';
+  }
+
   // Calculate MD5 checksum for file integrity verification
   private async calculateFileChecksum(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -102,7 +125,7 @@ export class DatabaseBackupService {
   }
 
   // Verify backup content by downloading and reading it
-  private async verifyBackupContent(backupName: string): Promise<void> {
+  private async verifyBackupContent(backupKey: string): Promise<void> {
     try {
       // Create temporary file for verification
       const tempDir = path.join(process.cwd(), "temp");
@@ -110,15 +133,14 @@ export class DatabaseBackupService {
         fs.mkdirSync(tempDir, { recursive: true });
       }
 
-      const tempBackupPath = path.join(tempDir, `verify-${backupName}`);
+      // Use filename portion for local temp naming
+      const tempFileName = backupKey.split('/').pop() || backupKey;
+      const tempBackupPath = path.join(tempDir, `verify-${tempFileName}`);
 
       console.log(`🔍 BACKUP VERIFY: Downloading backup to verify content...`);
 
       // Download the backup file
-      const downloaded = await this.downloadDatabaseBackup(
-        backupName,
-        tempBackupPath,
-      );
+      const downloaded = await this.downloadDatabaseBackup(backupKey, tempBackupPath);
 
       if (downloaded) {
         // Read and verify the backup content
@@ -166,9 +188,9 @@ export class DatabaseBackupService {
   }
 
   // Upload database backup to Object Storage
-  async uploadDatabaseBackup(
+  private async uploadDatabaseBackup(
     localDbPath: string,
-    backupName: string = "production-backup.db",
+    backupName?: string,
   ): Promise<string> {
     // Validate input parameters
     if (!localDbPath || typeof localDbPath !== "string") {
@@ -177,11 +199,13 @@ export class DatabaseBackupService {
       );
     }
 
-    if (!backupName || typeof backupName !== "string") {
-      throw new ObjectStorageUploadError(
-        "Invalid backupName: must be a non-empty string",
-      );
-    }
+    // Default to environment-appropriate backup name if not provided
+    const namePrefix = this.getBackupNamePrefix();
+  const effectiveName = backupName && typeof backupName === 'string' && backupName.trim().length > 0
+      ? backupName
+      : `${namePrefix}.db`;
+  // Prevent callers from injecting paths; keep only basename
+  const sanitizedName = path.basename(effectiveName);
 
     // Check if local file exists
     if (!fs.existsSync(localDbPath)) {
@@ -200,10 +224,11 @@ export class DatabaseBackupService {
 
     try {
       const bucket = this.getBucket();
-      const destinationPath = `database-backups/${backupName}`;
+      const envSegment = this.getEnvSegment();
+  const destinationPath = `database-backups/${envSegment}/${sanitizedName}`;
 
       console.log(
-        `☁️ Uploading database backup: ${backupName} (${Math.round(stats.size / 1024)}KB)`,
+        `☁️ Uploading database backup: ${destinationPath} (${Math.round(stats.size / 1024)}KB)`,
       );
 
       await bucket.upload(localDbPath, {
@@ -212,7 +237,8 @@ export class DatabaseBackupService {
           metadata: {
             uploadedAt: new Date().toISOString(),
             originalPath: localDbPath,
-            backupType: "production",
+            backupType: this.getEnvironment(),
+            environment: this.getEnvironment(),
             fileSize: stats.size.toString(),
             checksumMD5: await this.calculateFileChecksum(localDbPath),
           },
@@ -221,26 +247,26 @@ export class DatabaseBackupService {
         timeout: 60000, // 60 second timeout
       });
 
-      console.log(`✅ Database backup uploaded successfully: ${backupName}`);
-      return destinationPath;
+      console.log(`✅ Database backup uploaded successfully: ${destinationPath}`);
+      return destinationPath; // return full key
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       console.error(`❌ Failed to upload database backup:`, error);
       throw new ObjectStorageUploadError(
-        `Failed to upload database backup '${backupName}': ${errorMessage}`,
+        `Failed to upload database backup: ${errorMessage}`,
         error instanceof Error ? error : undefined,
       );
     }
   }
 
   // Download database backup from Object Storage
-  async downloadDatabaseBackup(
-    backupName: string = "production-backup.db",
+  private async downloadDatabaseBackup(
+    backupKeyOrName: string,
     localDbPath: string,
   ): Promise<boolean> {
     // Validate input parameters
-    if (!backupName || typeof backupName !== "string") {
+    if (!backupKeyOrName || typeof backupKeyOrName !== "string") {
       throw new ObjectStorageDownloadError(
         "Invalid backupName: must be a non-empty string",
       );
@@ -260,12 +286,17 @@ export class DatabaseBackupService {
 
     try {
       const bucket = this.getBucket();
-      const file = bucket.file(`database-backups/${backupName}`);
+      // If a full key is provided (contains '/'), use it directly; otherwise, assume env-specific prefix
+      const envSegment = this.getEnvSegment();
+      const objectKey = backupKeyOrName.includes('/')
+        ? backupKeyOrName
+        : `database-backups/${envSegment}/${backupKeyOrName}`;
+      const file = bucket.file(objectKey);
 
       // Check if backup exists
       const [exists] = await file.exists();
       if (!exists) {
-        console.log(`⚠️ No backup found: ${backupName}`);
+        console.log(`⚠️ No backup found: ${objectKey}`);
         return false;
       }
 
@@ -275,9 +306,7 @@ export class DatabaseBackupService {
         ? Math.round(parseInt(metadata.size.toString()) / 1024)
         : "unknown";
 
-      console.log(
-        `☁️ Downloading database backup: ${backupName} (${fileSize}KB)`,
-      );
+  console.log(`☁️ Downloading database backup: ${objectKey} (${fileSize}KB)`);
 
       // Download with timeout and validation
       await file.download({
@@ -296,9 +325,7 @@ export class DatabaseBackupService {
         throw new ObjectStorageDownloadError("Downloaded file is empty");
       }
 
-      console.log(
-        `✅ Database backup downloaded successfully to: ${localDbPath}`,
-      );
+  console.log(`✅ Database backup downloaded successfully to: ${localDbPath}`);
       return true;
     } catch (error) {
       const errorMessage =
@@ -315,18 +342,21 @@ export class DatabaseBackupService {
       }
 
       throw new ObjectStorageDownloadError(
-        `Failed to download database backup '${backupName}': ${errorMessage}`,
+        `Failed to download database backup '${backupKeyOrName}': ${errorMessage}`,
         error instanceof Error ? error : undefined,
       );
     }
   }
 
   // List available database backups
-  async listBackups(): Promise<string[]> {
+  async listBackups(environment?: 'production' | 'development'): Promise<string[]> {
     try {
       const bucket = this.getBucket();
+      const envSeg = environment
+        ? (environment === 'production' ? 'prod' : 'dev')
+        : this.getEnvSegment();
       const [files] = await bucket.getFiles({
-        prefix: "database-backups/",
+        prefix: `database-backups/${envSeg}/`,
         maxResults: 1000, // Limit to prevent memory issues
       });
 
@@ -334,14 +364,14 @@ export class DatabaseBackupService {
       const backupNames = files
         .filter(
           (file) =>
-            file.name.startsWith("database-backups/") &&
+            file.name.startsWith(`database-backups/${envSeg}/`) &&
             file.name.endsWith(".db"),
         )
-        .map((file) => file.name.replace("database-backups/", ""))
+        .map((file) => file.name.replace(`database-backups/${envSeg}/`, ""))
         .sort(); // Sort alphabetically
 
       console.log(
-        `📋 Found ${backupNames.length} database backups in Object Storage`,
+        `📋 Found ${backupNames.length} ${envSeg} database backups in Object Storage`,
       );
       return backupNames;
     } catch (error) {
@@ -379,7 +409,6 @@ export class DatabaseBackupService {
       }
 
       // Step 2: Clean up WAL and SHM files that might interfere with restoration
-      const fs = await import("fs");
       const walFiles = [
         `${localDbPath}-wal`,
         `${localDbPath}-shm`,
@@ -392,7 +421,7 @@ export class DatabaseBackupService {
             fs.unlinkSync(walFile);
             console.log(`🗑️ Cleaned up interfering file: ${walFile}`);
           } catch (error) {
-            console.warn(`⚠️ Could not remove ${walFile}:`, error.message);
+            console.warn(`⚠️ Could not remove ${walFile}:`, error instanceof Error ? error.message : String(error));
           }
         }
       }
@@ -401,10 +430,10 @@ export class DatabaseBackupService {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       console.log("✅ Database preparation complete - ready for restoration");
-    } catch (error) {
+  } catch (error) {
       console.warn(
         "⚠️ Database preparation had issues, but continuing with restoration:",
-        error.message,
+    error instanceof Error ? error.message : String(error),
       );
     }
   }
@@ -441,15 +470,15 @@ export class DatabaseBackupService {
       throw new Error(`Failed to checkpoint database: ${error.message}`);
     }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const backupName = `production-backup-${timestamp}.db`;
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const namePrefix = this.getBackupNamePrefix();
+  const backupName = `${namePrefix}-${timestamp}.db`;
+  const uploadedKey = await this.uploadDatabaseBackup(localDbPath, backupName);
 
-    await this.uploadDatabaseBackup(localDbPath, backupName);
+  // CRITICAL: Verify backup by downloading and reading it (use full key returned)
+  await this.verifyBackupContent(uploadedKey);
 
-    // CRITICAL: Verify backup by downloading and reading it
-    await this.verifyBackupContent(backupName);
-
-    return backupName;
+  return backupName; // return the file name (without env prefix)
   }
 
   // Restore latest backup based on file modification timestamp
@@ -462,47 +491,53 @@ export class DatabaseBackupService {
       // await this.deleteAllBackups();
 
       // Get all backup files with their metadata
+      const envSeg = this.getEnvSegment();
       const bucket = this.getBucket();
-      const [files] = await bucket.getFiles({
-        prefix: "database-backups/",
+  const [files] = await bucket.getFiles({
+        prefix: `database-backups/${envSeg}/`,
         maxResults: 1000,
       });
 
       // Filter backup files and get their metadata
-      const backupFiles = files
+  const backupFiles = files
         .filter(
-          (file) =>
-            file.name.startsWith("database-backups/") &&
+          (file: File) =>
+    file.name.startsWith(`database-backups/${envSeg}/`) &&
             file.name.endsWith(".db"),
         )
         .map(async (file) => {
           const [metadata] = await file.getMetadata();
+          const objEnv = (metadata.metadata && (metadata.metadata as any).environment) || undefined;
           return {
-            name: file.name.replace("database-backups/", ""),
-            fullName: file.name,
+            name: file.name.replace(`database-backups/${envSeg}/`, ""),
+            fullName: file.name, // full object key
             timeCreated: new Date(metadata.timeCreated || 0),
             updated: new Date(metadata.updated || metadata.timeCreated || 0),
+            env: objEnv as ('production' | 'development' | undefined),
           };
         });
 
       if (backupFiles.length === 0) {
-        console.log(
-          `✅ No backup files found in Object Storage (all deleted) - will trigger fresh seeding`,
-        );
+        console.log(`✅ No ${envSeg} backup files found in Object Storage - will trigger fresh seeding`);
         return false;
       }
 
       // Wait for all metadata to be retrieved
-      const backupsWithMetadata = await Promise.all(backupFiles);
+  let backupsWithMetadata: BackupMeta[] = await Promise.all(backupFiles);
+
+      // Additional safeguard: only consider backups whose metadata.environment matches our current env.
+      const currentEnv = this.getEnvironment();
+  const envMatched = backupsWithMetadata.filter((b: BackupMeta) => b.env === currentEnv);
+      if (envMatched.length > 0) {
+        backupsWithMetadata = envMatched;
+      }
 
       // Sort by most recent modification time (updated timestamp)
       backupsWithMetadata.sort(
-        (a, b) => b.updated.getTime() - a.updated.getTime(),
+        (a: BackupMeta, b: BackupMeta) => b.updated.getTime() - a.updated.getTime(),
       );
 
-      console.log(
-        `📋 Found ${backupsWithMetadata.length} backup files, checking most recent:`,
-      );
+  console.log(`📋 Found ${backupsWithMetadata.length} ${envSeg} backup files, checking most recent:`);
 
       // DEBUG: Check organizations in the top 3 backups
       for (let i = 0; i < Math.min(3, backupsWithMetadata.length); i++) {
@@ -512,14 +547,11 @@ export class DatabaseBackupService {
 
         // Download and check organizations in this backup
         try {
-          const tempPath = `/tmp/debug_backup_${i}.db`;
-          const downloaded = await this.downloadDatabaseBackup(
-            backup.name,
-            tempPath,
-          );
+          const tempPath = path.join(os.tmpdir(), `debug_backup_${i}.db`);
+          const downloaded = await this.downloadDatabaseBackup(backup.fullName, tempPath);
           if (downloaded) {
             // Use dynamic import instead of require for ES modules
-            const Database = (await import("better-sqlite3")).default;
+            const Database: any = (await import("better-sqlite3")).default;
             const db = new Database(tempPath, { readonly: true });
 
             // Check if organizations table exists first
@@ -534,7 +566,7 @@ export class DatabaseBackupService {
                 .all();
               console.log(
                 `     📋 Organizations in ${backup.name}:`,
-                orgs.map((o) => `${o.name} (${o.domain})`).join(", ") || "None",
+        orgs.map((o: any) => `${o.name} (${o.domain})`).join(", ") || "None",
               );
             } else {
               console.log(
@@ -543,13 +575,12 @@ export class DatabaseBackupService {
             }
 
             db.close();
-            const fs = await import("fs");
             fs.unlinkSync(tempPath); // Clean up temp file
           }
         } catch (error) {
           console.log(
             `     ⚠️ Could not analyze backup ${backup.name}:`,
-            error.message,
+      error instanceof Error ? error.message : String(error),
           );
         }
       }
@@ -563,10 +594,7 @@ export class DatabaseBackupService {
       // CRITICAL FIX: Close all database connections and clean up WAL files before restoration
       await this.prepareForDatabaseRestoration(localDbPath);
 
-      const restored = await this.downloadDatabaseBackup(
-        latestBackup.name,
-        localDbPath,
-      );
+  const restored = await this.downloadDatabaseBackup(latestBackup.fullName, localDbPath);
 
       if (restored) {
         console.log(
@@ -575,7 +603,7 @@ export class DatabaseBackupService {
 
         // DEBUG: Check what organizations exist in the restored database
         try {
-          const Database = (await import("better-sqlite3")).default;
+          const Database: any = (await import("better-sqlite3")).default;
           const db = new Database(localDbPath, { readonly: true });
 
           // Check if organizations table exists first
@@ -599,7 +627,7 @@ export class DatabaseBackupService {
         } catch (error) {
           console.log(
             `⚠️ DEBUG: Could not read organizations from restored backup:`,
-            error.message,
+            error instanceof Error ? error.message : String(error),
           );
         }
 
@@ -622,14 +650,15 @@ export class DatabaseBackupService {
       );
 
       const bucket = this.getBucket();
+      const envSeg = this.getEnvSegment();
       const [files] = await bucket.getFiles({
-        prefix: "database-backups/",
+        prefix: `database-backups/${envSeg}/`,
         maxResults: 1000,
       });
 
       const backupFiles = files.filter(
-        (file) =>
-          file.name.startsWith("database-backups/") &&
+        (file: File) =>
+          file.name.startsWith(`database-backups/${envSeg}/`) &&
           file.name.endsWith(".db"),
       );
 
@@ -643,14 +672,14 @@ export class DatabaseBackupService {
       );
 
       // Delete all backup files
-      const deletePromises = backupFiles.map(async (file, index) => {
+    const deletePromises = backupFiles.map(async (file: File, index: number) => {
         try {
           await file.delete();
           console.log(
             `  ✓ Deleted backup ${index + 1}/${backupFiles.length}: ${file.name}`,
           );
         } catch (error) {
-          console.error(`  ✗ Failed to delete ${file.name}:`, error.message);
+      console.error(`  ✗ Failed to delete ${file.name}:`, error instanceof Error ? error.message : String(error));
         }
       });
 
