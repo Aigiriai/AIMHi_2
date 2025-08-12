@@ -45,17 +45,18 @@ const SECURE_SCHEMA: DatabaseSchema = {
     'field_metadata': ['id', 'table_id', 'field_name', 'display_name', 'field_type']
   },
   requiredFilters: {
-    'jobs': ['organizationId'],
-    'candidates': ['organizationId'],
-    'applications': ['organizationId'],
-    'interviews': ['organizationId'],
-    'job_matches': ['organizationId'],
-    'users': ['organizationId'],
-    'teams': ['organizationId'],
-    'api_keys': ['organizationId'],
-    'organization_settings': ['organizationId'],
-    'job_board_credentials': ['organizationId'],
-    'report_templates': ['organizationId'],
+  // Use snake_case to match actual DB columns
+  'jobs': ['organization_id'],
+  'candidates': ['organization_id'],
+  'applications': ['organization_id'],
+  'interviews': ['organization_id'],
+  'job_matches': ['organization_id'],
+  'users': ['organization_id'],
+  'teams': ['organization_id'],
+  'api_keys': ['organization_id'],
+  'organization_settings': ['organization_id'],
+  'job_board_credentials': ['organization_id'],
+  'report_templates': ['organization_id'],
     // These tables don't need organization filter
     'organizations': [],
     'team_members': [],
@@ -184,15 +185,13 @@ function validateTableAccess(sql: string): { isValid: boolean; errors: string[] 
   const errors: string[] = [];
   
   try {
-    // Extract table names from SQL (basic regex approach)
-    const fromMatches = sql.match(/FROM\s+(\w+)/gi) || [];
-    const joinMatches = sql.match(/JOIN\s+(\w+)/gi) || [];
-    
-    const allMatches = [...fromMatches, ...joinMatches];
-    const usedTables = allMatches.map(match => {
-      const tableName = match.replace(/^(FROM|JOIN)\s+/i, '').toLowerCase();
-      return tableName;
-    });
+    // Extract table names from SQL (handle aliases, e.g., "FROM jobs j", "JOIN applications AS a")
+    const usedTables: string[] = [];
+    const tableRegex = /\b(?:FROM|JOIN)\s+([a-zA-Z_][\w]*)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = tableRegex.exec(sql)) !== null) {
+      usedTables.push(m[1].toLowerCase());
+    }
 
     // Check if all tables are in allowed list
     for (const table of usedTables) {
@@ -219,32 +218,30 @@ function validateOrganizationFilter(sql: string, organizationId: number): { isVa
   
   try {
     const upperSQL = sql.toUpperCase();
-    
-    // Extract table names from SQL to check which ones need organization_id filter
-    const fromMatches = sql.match(/FROM\s+(\w+)/gi) || [];
-    const joinMatches = sql.match(/JOIN\s+(\w+)/gi) || [];
-    
-    const allMatches = [...fromMatches, ...joinMatches];
-    const usedTables = allMatches.map(match => {
-      const parts = match.split(/\s+/);
-      return parts[1].toLowerCase();
-    });
+
+    // Extract used tables (handle aliases)
+    const usedTables: string[] = [];
+    const tableRegex = /\b(?:FROM|JOIN)\s+([a-zA-Z_][\w]*)/gi;
+    let m: RegExpExecArray | null;
+    while ((m = tableRegex.exec(sql)) !== null) {
+      usedTables.push(m[1].toLowerCase());
+    }
 
     // Check if any used tables require organization_id filter
-    const tablesNeedingOrgFilter = usedTables.filter(table => 
-      SECURE_SCHEMA.requiredFilters[table] && 
+    const tablesNeedingOrgFilter = usedTables.filter(table =>
+      SECURE_SCHEMA.requiredFilters[table] &&
       SECURE_SCHEMA.requiredFilters[table].includes('organization_id')
     );
 
     if (tablesNeedingOrgFilter.length > 0) {
-      // Check for WHERE clause only if tables need organization filter
+      // Must have WHERE clause
       if (!upperSQL.includes('WHERE')) {
         errors.push('Missing WHERE clause with organization_id filter for tables: ' + tablesNeedingOrgFilter.join(', '));
         return { isValid: false, errors };
       }
 
-      // Check for organization_id filter
-      const orgFilterPattern = new RegExp(`ORGANIZATION_ID\\s*=\\s*${organizationId}`, 'i');
+      // Allow qualified references like alias.organization_id
+      const orgFilterPattern = new RegExp(`(?:\b|\.)ORGANIZATION_ID\s*=\s*${organizationId}`, 'i');
       if (!orgFilterPattern.test(sql)) {
         errors.push(`Missing or incorrect organization_id filter. Expected: organization_id = ${organizationId} for tables: ` + tablesNeedingOrgFilter.join(', '));
       }
