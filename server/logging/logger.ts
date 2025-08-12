@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import pino from 'pino';
-import rfs from 'rotating-file-stream';
+import * as rfs from 'rotating-file-stream';
 
 type RotationPolicy = 'size' | 'daily';
 
@@ -41,14 +41,21 @@ export function getLogger(): pino.Logger {
       return `app-${day}${idx}.log`;
     };
 
-  fileStream = (rfs as any).createStream(generator as any, {
-      path: LOG_DIR,
-      size: LOG_ROTATION === 'size' ? LOG_MAX_SIZE : undefined,
-      interval: LOG_ROTATION === 'daily' ? '1d' : undefined,
-      compress: 'gzip',
-      maxFiles: LOG_MAX_FILES,
-      teeToStdout: false,
-    } as any);
+    const createRotatingStream: any = (rfs as any).createStream || (rfs as any).default?.createStream || (rfs as any).default;
+
+    if (typeof createRotatingStream === 'function') {
+      fileStream = createRotatingStream(generator as any, {
+        path: LOG_DIR,
+        size: LOG_ROTATION === 'size' ? LOG_MAX_SIZE : undefined,
+        interval: LOG_ROTATION === 'daily' ? '1d' : undefined,
+        compress: 'gzip',
+        maxFiles: LOG_MAX_FILES,
+      } as any);
+    } else {
+      // Fallback: non-rotating file (should rarely happen)
+      const basePath = path.join(LOG_DIR, 'app.log');
+      fileStream = fs.createWriteStream(basePath, { flags: 'a' });
+    }
   }
 
   logger = pino(
