@@ -18,6 +18,10 @@
     "test-startup": "node test-startup-validation.js"
   },
   "dependencies": {
+  "pino": "^9.4.0",
+  "pino-pretty": "^11.3.0",
+  "pino-abstract-transport": "^1.1.0",
+  "rotating-file-stream": "^3.2.5",
     "@google-cloud/storage": "^7.16.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",

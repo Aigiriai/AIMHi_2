@@ -22,6 +22,7 @@ import twilio from "twilio";
 import fs from "fs";
 import path from "path";
 import { FileStorageService } from "./file-storage";
+import { registerAdminLogRoutes } from './admin-logs-routes';
 
 // Simple text similarity calculation using word overlap
 function calculateSimilarity(text1: string, text2: string): number {
@@ -70,6 +71,8 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   const jobBoardService = new JobBoardService();
   const fileStorage = new FileStorageService();
+  // Admin log management routes (secured by super admin)
+  registerAdminLogRoutes(app);
 
   // Seeding now handled during database initialization in sqlite-db.ts
 

@@ -4,6 +4,7 @@ import ProtectedRoute from "@/components/auth/protected-route";
 import Navbar from "@/components/navigation/navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Link } from 'wouter';
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -132,6 +133,11 @@ export default function SuperAdminDashboard() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Platform Administration</h1>
                 <p className="text-gray-600">Manage all organizations and monitor platform usage</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link href="/admin/logs">
+                  <Button variant="outline">Server Logs</Button>
+                </Link>
               </div>
             </div>
           </div>

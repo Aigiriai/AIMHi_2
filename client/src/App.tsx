@@ -13,6 +13,7 @@ import LoginPage from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import OrganizationDashboard from "@/pages/organization-dashboard";
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
+import AdminLogsPage from "@/pages/admin-logs";
 import ManagementDashboard from "@/pages/management";
 import RecruitmentDashboard from "@/pages/recruitment";
 import OrganizationsPage from "@/pages/organizations";
@@ -148,6 +149,7 @@ function Router() {
               {/* Legacy Routes for backward compatibility */}
               <Route path="/admin/dashboard" component={SuperAdminDashboard} />
               <Route path="/admin/platform" component={SuperAdminDashboard} />
+              <Route path="/admin/logs" component={AdminLogsPage} />
               <Route path="/admin/organizations" component={OrganizationsPage} />
               <Route path="/admin/onboarding" component={OnboardingDashboard} />
               <Route path="/organizations" component={OrganizationsPage} />

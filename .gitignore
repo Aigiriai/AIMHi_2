@@ -33,3 +33,4 @@ uploads/
 *.tmp
 *.log
 ngrok.log
+server/logs/

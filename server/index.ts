@@ -8,6 +8,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import { handleMediaStream, initializeCallContext } from "./ai-calling";
 // Updated to use unified database manager
 import { getDatabase } from "./unified-db-manager";
+import { getLogger, closeLogger } from "./logging/logger";
+import { patchConsole } from "./logging/console-patch";
 
 // Function to get direct domain based on environment
 function getDirectDomain(): string {
@@ -32,6 +34,10 @@ export { getDirectDomain };
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Initialize Pino logger and patch console
+const appLogger = getLogger();
+patchConsole(appLogger);
 
 // ✅ COMPREHENSIVE REQUEST LOGGING MIDDLEWARE
 app.use((req, res, next) => {
@@ -206,6 +212,7 @@ app.use((req, res, next) => {
     log('Shutting down services...');
     wss.close();
     httpServer.close();
+  closeLogger();
     process.exit(0);
   });
 
@@ -213,6 +220,7 @@ app.use((req, res, next) => {
     log('Shutting down services...');
     wss.close();
     httpServer.close();
+  closeLogger();
     process.exit(0);
   });
 })();
