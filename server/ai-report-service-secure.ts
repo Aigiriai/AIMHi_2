@@ -63,7 +63,7 @@ CREATE TABLE jobs (
   id INTEGER PRIMARY KEY,
   organization_id INTEGER NOT NULL,
   title TEXT NOT NULL,
-  status TEXT NOT NULL, -- 'active', 'draft', 'closed'
+  status TEXT NOT NULL, -- e.g., 'active', 'draft', 'withdrawn', 'paused', 'filled', 'closed'
   department TEXT,
   location TEXT,
   source TEXT,
@@ -159,6 +159,10 @@ ASSIGNMENT LOGIC TIPS:
 - "applications assigned to X" → count DISTINCT applications where the user is assigned to the job (via job_assignments) OR to the candidate (via candidate_assignments). Enforce organization filters on applications + joined jobs/candidates + users.
  - IMPORTANT: job_assignments and candidate_assignments DO NOT have organization_id. Do NOT add org filters on these tables or their aliases; instead, apply organization scoping on users, jobs, candidates, and applications as appropriate.
 
+STATUS/Pipeline GUIDANCE:
+- Job status comes from jobs.status. To get per-user job status, JOIN job_assignments→users→jobs and GROUP BY jobs.status.
+- Candidate pipeline states (Interviewing, Offered, etc.) are derived from applications.status. To get per-user candidate pipeline, include candidates assigned directly (candidate_assignments) OR via jobs they applied to that are assigned to the user (job_assignments→applications). When multiple applications exist per candidate, use the latest application by applications.created_at and group by that status.
+
 SECURITY & OUTPUT RULES (MANDATORY):
 1. Query MUST be a single SELECT. Never write mutating or DDL statements.
 2. Enforce org scoping: Every table with organization_id must include <alias_or_table>.organization_id = ${organizationId} in WHERE (skip tables lacking that column like organizations if appropriate).
@@ -178,6 +182,10 @@ INTERPRETATION HEURISTICS:
 * people/humans ambiguous unless clarified: lower confidence or use context.
 * Time phrases: "last month" => STRFTIME('%Y-%m', created_at) = STRFTIME('%Y-%m', DATE('now','-1 month')); "this month" => STRFTIME('%Y-%m', created_at)=STRFTIME('%Y-%m','now'); "this year" similarly with %Y.
 * Chart suggestion: time series → line; ranked categories/top-N → bar; part-to-whole <=8 slices → pie; else table.
+
+EXAMPLES (patterns to follow, adapt aliases as needed):
+- Job status by user: SELECT j.status, COUNT(*) FROM job_assignments ja JOIN users u ON u.id=ja.user_id AND u.email='user@org.com' AND u.organization_id=${organizationId} JOIN jobs j ON j.id=ja.job_id AND j.organization_id=${organizationId} GROUP BY j.status LIMIT 100;
+- Candidate pipeline by user (latest application per candidate, considering both candidate- and job-based assignments): WITH assigned_candidates AS ( SELECT c.id AS candidate_id FROM candidate_assignments ca JOIN users u ON u.id=ca.user_id AND u.email='user@org.com' AND u.organization_id=${organizationId} JOIN candidates c ON c.id=ca.candidate_id AND c.organization_id=${organizationId} UNION SELECT c2.id FROM job_assignments ja JOIN users u2 ON u2.id=ja.user_id AND u2.email='user@org.com' AND u2.organization_id=${organizationId} JOIN jobs j ON j.id=ja.job_id AND j.organization_id=${organizationId} JOIN applications a ON a.job_id=j.id AND a.organization_id=${organizationId} JOIN candidates c2 ON c2.id=a.candidate_id AND c2.organization_id=${organizationId} ), last_app AS ( SELECT a1.candidate_id, a1.status FROM applications a1 JOIN ( SELECT candidate_id, MAX(created_at) AS max_created FROM applications WHERE organization_id=${organizationId} GROUP BY candidate_id ) lm ON lm.candidate_id=a1.candidate_id AND lm.max_created=a1.created_at WHERE a1.organization_id=${organizationId} ) SELECT COALESCE(la.status,'unknown') AS stage, COUNT(*) AS candidate_count FROM assigned_candidates ac LEFT JOIN last_app la ON la.candidate_id=ac.candidate_id GROUP BY COALESCE(la.status,'unknown') ORDER BY candidate_count DESC LIMIT 100;
 
 USER PROMPT: "${userPrompt}"
 ${additionalContext ? `ADDITIONAL CONTEXT (highest priority): "${additionalContext}"` : ''}
@@ -335,6 +343,57 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
 LIMIT 1`;
     interpretation = `Counts of jobs and applications assigned to ${email} (via job or candidate assignments)`;
     chartType = 'table';
+  }
+  // Status breakdown for jobs assigned to a user
+  else if ((prompt.includes('job') && prompt.includes('status')) && email) {
+    sql = `SELECT 
+  j.status AS job_status,
+  COUNT(*) AS count
+FROM job_assignments ja
+JOIN users u ON u.id = ja.user_id AND u.email = '${email}' AND u.organization_id = ${organizationId}
+JOIN jobs j ON j.id = ja.job_id AND j.organization_id = ${organizationId}
+GROUP BY j.status
+ORDER BY count DESC
+LIMIT 100`;
+    interpretation = `Job status breakdown for items assigned to ${email}`;
+    chartType = chartType === 'auto' ? 'bar' : chartType;
+  }
+  // Status/pipeline breakdown for candidates assigned to a user
+  else if ((prompt.includes('candidate') && (prompt.includes('status') || prompt.includes('stage') || prompt.includes('pipeline'))) && email) {
+    sql = `WITH assigned_candidates AS (
+  -- Candidates directly assigned to the user
+  SELECT c.id AS candidate_id
+  FROM candidate_assignments ca
+  JOIN users u ON u.id = ca.user_id AND u.email = '${email}' AND u.organization_id = ${organizationId}
+  JOIN candidates c ON c.id = ca.candidate_id AND c.organization_id = ${organizationId}
+  UNION
+  -- Candidates linked via applications to jobs assigned to the user
+  SELECT c2.id AS candidate_id
+  FROM job_assignments ja
+  JOIN users u2 ON u2.id = ja.user_id AND u2.email = '${email}' AND u2.organization_id = ${organizationId}
+  JOIN jobs j ON j.id = ja.job_id AND j.organization_id = ${organizationId}
+  JOIN applications a ON a.job_id = j.id AND a.organization_id = ${organizationId}
+  JOIN candidates c2 ON c2.id = a.candidate_id AND c2.organization_id = ${organizationId}
+), last_app AS (
+  SELECT a1.candidate_id, a1.status
+  FROM applications a1
+  JOIN (
+    SELECT candidate_id, MAX(created_at) AS max_created
+    FROM applications
+    WHERE organization_id = ${organizationId}
+    GROUP BY candidate_id
+  ) lm ON lm.candidate_id = a1.candidate_id AND lm.max_created = a1.created_at
+  WHERE a1.organization_id = ${organizationId}
+)
+SELECT COALESCE(la.status, 'unknown') AS pipeline_stage,
+       COUNT(*) AS candidate_count
+FROM assigned_candidates ac
+LEFT JOIN last_app la ON la.candidate_id = ac.candidate_id
+GROUP BY COALESCE(la.status, 'unknown')
+ORDER BY candidate_count DESC
+LIMIT 100`;
+    interpretation = `Candidate pipeline/status breakdown for people assigned to ${email}`;
+    chartType = chartType === 'auto' ? 'bar' : chartType;
   }
   else 
   if (prompt.includes('user') && (prompt.includes('count') || prompt.includes('how many'))) {
