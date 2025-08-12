@@ -44,13 +44,17 @@ export function getLogger(): pino.Logger {
     const createRotatingStream: any = (rfs as any).createStream || (rfs as any).default?.createStream || (rfs as any).default;
 
     if (typeof createRotatingStream === 'function') {
-      fileStream = createRotatingStream(generator as any, {
+      const opts: any = {
         path: LOG_DIR,
-        size: LOG_ROTATION === 'size' ? LOG_MAX_SIZE : undefined,
-        interval: LOG_ROTATION === 'daily' ? '1d' : undefined,
         compress: 'gzip',
         maxFiles: LOG_MAX_FILES,
-      } as any);
+      };
+      if (LOG_ROTATION === 'size') {
+        opts.size = LOG_MAX_SIZE; // e.g., '10M'
+      } else if (LOG_ROTATION === 'daily') {
+        opts.interval = '1d';
+      }
+      fileStream = createRotatingStream(generator as any, opts);
     } else {
       // Fallback: non-rotating file (should rarely happen)
       const basePath = path.join(LOG_DIR, 'app.log');
