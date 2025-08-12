@@ -328,7 +328,16 @@ export function MatrixReportBuilder() {
         },
       });
       if (!response.ok) throw new Error('Failed to fetch templates');
-      return response.json();
+      const rows = await response.json();
+      // Normalize to ensure required array fields exist even if the backend doesn't return them in the listing API
+      return rows.map((t: any) => ({
+        ...t,
+        selected_tables: Array.isArray(t.selected_tables) ? t.selected_tables : [],
+        selected_rows: Array.isArray(t.selected_rows) ? t.selected_rows : [],
+        selected_columns: Array.isArray(t.selected_columns) ? t.selected_columns : [],
+        selected_measures: Array.isArray(t.selected_measures) ? t.selected_measures : [],
+        filters: Array.isArray(t.filters) ? t.filters : [],
+      })) as ReportTemplate[];
     },
   });
 
@@ -584,10 +593,11 @@ export function MatrixReportBuilder() {
 
   // Load template
   const loadTemplate = (template: ReportTemplate) => {
-    setSelectedTables(template.selected_tables);
-    setSelectedRows(template.selected_rows);
-    setSelectedColumns(template.selected_columns);
-    setSelectedMeasures(template.selected_measures);
+  // Defensive defaults in case list API didn't include full arrays
+  setSelectedTables(template.selected_tables || []);
+  setSelectedRows(template.selected_rows || []);
+  setSelectedColumns(template.selected_columns || []);
+  setSelectedMeasures(template.selected_measures || []);
     setChartType((template.chart_type as any) || 'table');
     
     toast({
@@ -1076,10 +1086,10 @@ export function MatrixReportBuilder() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                          <div>Tables: {template.selected_tables.join(', ')}</div>
-                          <div>Rows: {template.selected_rows.length}</div>
-                          <div>Columns: {template.selected_columns.length}</div>
-                          <div>Measures: {template.selected_measures.length}</div>
+                          <div>Tables: {(template.selected_tables || []).join(', ')}</div>
+                          <div>Rows: {(template.selected_rows || []).length}</div>
+                          <div>Columns: {(template.selected_columns || []).length}</div>
+                          <div>Measures: {(template.selected_measures || []).length}</div>
                           {template.execution_count !== undefined && (
                             <div>Executed: {template.execution_count} times</div>
                           )}
