@@ -71,9 +71,9 @@ const DANGEROUS_PATTERNS = [
   /\b(DROP|DELETE|UPDATE|INSERT|CREATE|ALTER|TRUNCATE)\b/i,
   /\b(EXEC|EXECUTE|xp_|sp_)\b/i,
   /(\||&|;|--|\*\/|\/\*)/,
-  /\b(UNION|HAVING)\b.*\b(SELECT)\b/i,
+  /\bUNION\b[\s\S]*\bSELECT\b/i,
   /\b(INTO OUTFILE|INTO DUMPFILE|LOAD_FILE)\b/i,
-  /(@@|@)/,
+  /@@/, // Block SQL Server variable pattern, allow '@' in emails/strings
   /\b(INFORMATION_SCHEMA|MYSQL|SQLITE_MASTER)\b/i
 ];
 
@@ -142,20 +142,42 @@ export async function validateAndSanitizeSQL(
     console.log('🔒 SQL_VALIDATOR: Adding security enhancements...');
     let sanitizedSQL = sql;
 
-    // Ensure LIMIT clause
-    if (!sql.toUpperCase().includes('LIMIT')) {
-      sanitizedSQL += ` LIMIT ${maxRows}`;
-      result.warnings.push(`Added LIMIT ${maxRows} for performance`);
+    if (hasUnion(sql)) {
+      const unionCheck = validateAndSanitizeUnion(sql, organizationId, maxRows);
+      if (!unionCheck.isValid) {
+        result.errors.push(...unionCheck.errors);
+        result.riskLevel = 'HIGH';
+        return result;
+      }
+      sanitizedSQL = unionCheck.sanitizedSQL;
+      if (unionCheck.warnings.length) {
+        result.warnings.push(...unionCheck.warnings);
+      }
     } else {
-      // Validate existing LIMIT
-      const limitMatch = sql.match(/LIMIT\s+(\d+)/i);
-      if (limitMatch && parseInt(limitMatch[1]) > maxRows) {
-        sanitizedSQL = sql.replace(/LIMIT\s+\d+/i, `LIMIT ${maxRows}`);
-        result.warnings.push(`Reduced LIMIT to ${maxRows} for security`);
+      // Ensure LIMIT clause for non-UNION queries
+      if (!sql.toUpperCase().includes('LIMIT')) {
+        sanitizedSQL += ` LIMIT ${maxRows}`;
+        result.warnings.push(`Added LIMIT ${maxRows} for performance`);
+      } else {
+        // Validate existing LIMIT
+        const limitMatch = sql.match(/LIMIT\s+(\d+)/i);
+        if (limitMatch && parseInt(limitMatch[1]) > maxRows) {
+          sanitizedSQL = sql.replace(/LIMIT\s+\d+/i, `LIMIT ${maxRows}`);
+          result.warnings.push(`Reduced LIMIT to ${maxRows} for security`);
+        }
       }
     }
 
-    // 7. Final syntax validation (basic)
+    // 7. HAVING validation (safe usage)
+    console.log('🔒 SQL_VALIDATOR: Validating HAVING clause...');
+    const havingValidation = validateHavingClause(sanitizedSQL);
+    if (!havingValidation.isValid) {
+      result.errors.push(...havingValidation.errors);
+      result.riskLevel = 'HIGH';
+      return result;
+    }
+
+    // 8. Final syntax validation (basic)
     console.log('🔒 SQL_VALIDATOR: Performing syntax validation...');
     const syntaxValidation = validateSQLSyntax(sanitizedSQL);
     if (!syntaxValidation.isValid) {
@@ -164,7 +186,7 @@ export async function validateAndSanitizeSQL(
       return result;
     }
 
-    // 8. Success - query is validated
+    // 9. Success - query is validated
     result.isValid = true;
     result.sanitizedSQL = sanitizedSQL;
     result.riskLevel = result.warnings.length > 0 ? 'MEDIUM' : 'LOW';
@@ -234,16 +256,10 @@ function validateOrganizationFilter(sql: string, organizationId: number): { isVa
     );
 
     if (tablesNeedingOrgFilter.length > 0) {
-      // Must have WHERE clause
-      if (!upperSQL.includes('WHERE')) {
-        errors.push('Missing WHERE clause with organization_id filter for tables: ' + tablesNeedingOrgFilter.join(', '));
-        return { isValid: false, errors };
-      }
-
-      // Allow qualified references like alias.organization_id
+      // Allow qualified references like alias.organization_id in either WHERE or JOIN ON
       const orgFilterPattern = new RegExp(`(?:\b|\.)ORGANIZATION_ID\s*=\s*${organizationId}`, 'i');
       if (!orgFilterPattern.test(sql)) {
-        errors.push(`Missing or incorrect organization_id filter. Expected: organization_id = ${organizationId} for tables: ` + tablesNeedingOrgFilter.join(', '));
+        errors.push(`Missing or incorrect organization_id filter. Expected a condition like [alias.]organization_id = ${organizationId} for tables: ` + tablesNeedingOrgFilter.join(', '));
       }
     }
 
@@ -297,6 +313,221 @@ function validateSQLSyntax(sql: string): { isValid: boolean; errors: string[] } 
       isValid: false,
       errors: ['SQL syntax validation failed']
     };
+  }
+}
+
+// ——————————— Guarded UNION support ———————————
+function hasUnion(sql: string): boolean {
+  return /\bUNION(?:\s+ALL)?\b/i.test(sql);
+}
+
+function splitUnionBranches(sql: string): { branches: string[]; connectors: string[] } {
+  const connectors: string[] = [];
+  const branches: string[] = [];
+  let start = 0;
+  let depth = 0;
+  const upper = sql.toUpperCase();
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    else if (depth === 0) {
+      // Check for UNION or UNION ALL at top-level
+      if (upper.startsWith('UNION ALL', i)) {
+        branches.push(sql.slice(start, i).trim());
+        connectors.push('UNION ALL');
+        i += 'UNION ALL'.length - 1;
+        start = i + 1;
+      } else if (upper.startsWith('UNION', i)) {
+        branches.push(sql.slice(start, i).trim());
+        connectors.push('UNION');
+        i += 'UNION'.length - 1;
+        start = i + 1;
+      }
+    }
+  }
+  branches.push(sql.slice(start).trim());
+  return { branches, connectors };
+}
+
+function topLevelIndexOf(haystack: string, needle: string): number {
+  const upper = haystack.toUpperCase();
+  const target = needle.toUpperCase();
+  let depth = 0;
+  for (let i = 0; i <= upper.length - target.length; i++) {
+    const ch = upper[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    if (depth === 0 && upper.startsWith(target, i)) return i;
+  }
+  return -1;
+}
+
+function hasTopLevelOrderBy(segment: string): boolean {
+  return topLevelIndexOf(segment, 'ORDER BY') !== -1;
+}
+
+function countTopLevelSelectColumns(selectSql: string): number | null {
+  const upper = selectSql.toUpperCase();
+  const selIdx = topLevelIndexOf(selectSql, 'SELECT');
+  if (selIdx === -1) return null;
+  let fromIdx = topLevelIndexOf(selectSql, ' FROM ');
+  if (fromIdx === -1) {
+    // Try 'FROM' without spaces
+    fromIdx = topLevelIndexOf(selectSql, 'FROM');
+    if (fromIdx === -1) return null;
+  }
+  const list = selectSql.slice(selIdx + 6, fromIdx);
+  if (/\*/.test(list)) return null; // reject star for counting
+  // Split by commas at top level
+  let depth = 0;
+  let count = 1;
+  for (let i = 0; i < list.length; i++) {
+    const c = list[i];
+    if (c === '(') depth++;
+    else if (c === ')') depth = Math.max(0, depth - 1);
+    else if (c === ',' && depth === 0) count++;
+  }
+  return count;
+}
+
+function ensureBranchLimit(sql: string, maxRows: number): { sql: string; changed: boolean } {
+  const upper = sql.toUpperCase();
+  const limitIdx = topLevelIndexOf(sql, 'LIMIT');
+  if (limitIdx === -1) {
+    return { sql: `${sql} LIMIT ${maxRows}`.trim(), changed: true };
+  }
+  const match = sql.slice(limitIdx).match(/LIMIT\s+(\d+)/i);
+  if (match) {
+    const current = parseInt(match[1]);
+    if (current > maxRows) {
+      return { sql: sql.replace(/LIMIT\s+\d+/i, `LIMIT ${maxRows}`), changed: true };
+    }
+  }
+  return { sql, changed: false };
+}
+
+function validateAndSanitizeUnion(sql: string, organizationId: number, maxRows: number): { isValid: boolean; errors: string[]; warnings: string[]; sanitizedSQL: string } {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const { branches, connectors } = splitUnionBranches(sql);
+
+  if (branches.length < 2) {
+    return { isValid: true, errors, warnings, sanitizedSQL: sql };
+  }
+
+  // Validate each branch
+  let expectedColCount: number | null = null;
+  const sanitizedBranches: string[] = [];
+
+  for (let idx = 0; idx < branches.length; idx++) {
+    const b = branches[idx];
+    const upperB = b.trim().toUpperCase();
+    if (!upperB.startsWith('SELECT')) {
+      errors.push(`UNION branch ${idx + 1} is not a SELECT`);
+      continue;
+    }
+
+    // No ORDER BY inside branches
+    if (hasTopLevelOrderBy(b)) {
+      errors.push(`ORDER BY is not allowed inside UNION branches (move it to the end of the full query)`);
+      continue;
+    }
+
+    // Table access and org filter per branch
+    const tables = validateTableAccess(b);
+    if (!tables.isValid) {
+      errors.push(...tables.errors.map(e => `Branch ${idx + 1}: ${e}`));
+      continue;
+    }
+    const org = validateOrganizationFilter(b, organizationId);
+    if (!org.isValid) {
+      errors.push(...org.errors.map(e => `Branch ${idx + 1}: ${e}`));
+      continue;
+    }
+
+    // Column count parity (reject SELECT *)
+    if (/\bSELECT\s+\*/i.test(b)) {
+      errors.push(`Branch ${idx + 1}: SELECT * is not allowed in UNION queries`);
+      continue;
+    }
+    const colCount = countTopLevelSelectColumns(b);
+    if (colCount == null) {
+      errors.push(`Branch ${idx + 1}: Unable to determine column list (avoid SELECT *)`);
+      continue;
+    }
+    if (expectedColCount == null) expectedColCount = colCount;
+    else if (colCount !== expectedColCount) {
+      errors.push(`Branch ${idx + 1}: Column count ${colCount} does not match expected ${expectedColCount}`);
+      continue;
+    }
+
+    // Ensure per-branch LIMIT
+    const limited = ensureBranchLimit(b, maxRows);
+    if (limited.changed) warnings.push(`Branch ${idx + 1}: Applied LIMIT ${maxRows}`);
+    sanitizedBranches.push(limited.sql);
+  }
+
+  if (errors.length) {
+    return { isValid: false, errors, warnings, sanitizedSQL: '' };
+  }
+
+  // Reassemble query
+  let combined = '';
+  for (let i = 0; i < sanitizedBranches.length; i++) {
+    combined += `(${sanitizedBranches[i]})`;
+    if (i < connectors.length) combined += ` ${connectors[i]} `;
+  }
+
+  // Ensure final LIMIT cap
+  const upperCombined = combined.toUpperCase();
+  if (topLevelIndexOf(combined, 'LIMIT') === -1) {
+    combined += ` LIMIT ${maxRows}`;
+    warnings.push(`Applied final LIMIT ${maxRows} to UNION result`);
+  } else {
+    // Cap final limit if larger
+    const match = upperCombined.match(/LIMIT\s+(\d+)/i);
+    if (match && parseInt(match[1]) > maxRows) {
+      combined = combined.replace(/LIMIT\s+\d+/i, `LIMIT ${maxRows}`);
+      warnings.push(`Reduced final LIMIT to ${maxRows}`);
+    }
+  }
+
+  return { isValid: true, errors, warnings, sanitizedSQL: combined };
+}
+
+// Validate safe usage of HAVING: require GROUP BY and block subqueries/functions that indicate complex logic
+function validateHavingClause(sql: string): { isValid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  try {
+    const upper = sql.toUpperCase();
+    if (!upper.includes('HAVING')) {
+      return { isValid: true, errors };
+    }
+
+    // Must have GROUP BY if HAVING present
+    if (!upper.includes('GROUP BY')) {
+      errors.push('HAVING clause requires GROUP BY');
+      return { isValid: false, errors };
+    }
+
+    // Extract HAVING section (rough heuristic up to ORDER/LIMIT end)
+    const havingIdx = upper.indexOf('HAVING');
+    let tail = sql.slice(havingIdx);
+    const endIdx = [' ORDER BY', ' LIMIT', ' OFFSET', ' FETCH', ' )'].map(k => upper.indexOf(k, havingIdx)).filter(i => i !== -1);
+    if (endIdx.length > 0) {
+      const minEnd = Math.min(...endIdx);
+      tail = sql.slice(havingIdx, minEnd);
+    }
+
+    // Disallow obvious subqueries in HAVING for safety
+    if (/HAVING[\s\S]*\(\s*SELECT\b/i.test(tail)) {
+      errors.push('Subqueries in HAVING are not allowed');
+    }
+
+    return { isValid: errors.length === 0, errors };
+  } catch (e) {
+    return { isValid: false, errors: ['Failed to validate HAVING clause'] };
   }
 }
 
