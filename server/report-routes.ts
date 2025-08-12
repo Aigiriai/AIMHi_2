@@ -38,6 +38,7 @@ interface ReportTemplate {
   filters: any[];
   chart_type?: string;
   chart_config?: any;
+  generated_sql?: string;
 }
 
 // SQL query generation utility
@@ -1297,113 +1298,70 @@ export default function reportRoutes(app: Express) {
   app.post("/api/report/templates", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
     const requestId = Date.now();
     console.log(`📊 REPORT_API[${requestId}]: POST /api/report/templates - Save template requested by user:${req.user?.id} org:${req.organizationId}`);
-    console.log(`📊 REPORT_API[${requestId}]: Template data:`, {
-      name: req.body?.template_name,
-      description: req.body?.description,
-      is_public: req.body?.is_public,
-      category: req.body?.category,
-      tables: req.body?.selected_tables?.length || 0,
-      total_fields: (req.body?.selected_rows?.length || 0) + (req.body?.selected_columns?.length || 0) + (req.body?.selected_measures?.length || 0)
-    });
-    
     try {
       const template: ReportTemplate = req.body;
-      
-      // Validate template data
       if (!template.template_name || template.template_name.trim().length === 0) {
-        console.warn(`📊 REPORT_API[${requestId}]: Template validation failed - missing name`);
-        return res.status(400).json({
-          error: 'Template name is required',
-          details: 'template_name field cannot be empty'
-        });
+        return res.status(400).json({ error: 'Template name is required' });
       }
-      
-      // Mock saving template
-      const savedTemplate = {
-        id: requestId,
-        ...template,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: req.user?.id,
-        organization_id: req.organizationId,
-        execution_count: 0,
-        last_executed_at: null
-      };
-      
-      console.log(`📊 REPORT_API[${requestId}]: Template saved successfully with ID: ${savedTemplate.id}`);
-      res.json(savedTemplate);
+
+      const dbManager = await getSQLiteDB();
+      const db = dbManager.sqlite;
+      const stmt = db.prepare(`
+        INSERT INTO report_templates (
+          organization_id, user_id, template_name, description, is_public, category,
+          selected_tables, selected_rows, selected_columns, selected_measures, filters,
+          chart_type, chart_config, generated_sql, created_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      const info = stmt.run(
+        req.organizationId,
+        req.user?.id,
+        template.template_name,
+        template.description || null,
+        template.is_public ? 1 : 0,
+        template.category || 'custom',
+        JSON.stringify(template.selected_tables || []),
+        JSON.stringify(template.selected_rows || []),
+        JSON.stringify(template.selected_columns || []),
+        JSON.stringify(template.selected_measures || []),
+        JSON.stringify(template.filters || []),
+        template.chart_type || 'table',
+        JSON.stringify(template.chart_config || {}),
+        template.generated_sql || null,
+        req.user?.id
+      );
+
+      const row = db.prepare(`
+        SELECT id, organization_id, user_id, template_name, description, is_public, category,
+               chart_type, generated_sql, created_at, updated_at, execution_count, last_executed_at
+        FROM report_templates WHERE id = ?
+      `).get(info.lastInsertRowid);
+
+      console.log(`📊 REPORT_API[${requestId}]: Template saved with ID ${row?.id}`);
+      res.json(row);
     } catch (error) {
-      console.error(`📊 REPORT_API[${requestId}]: Error saving report template:`, {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-        templateName: req.body?.template_name
-      });
-      res.status(500).json({ 
-        error: 'Failed to save report template',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      console.error(`📊 REPORT_API[${requestId}]: Error saving report template:`, error);
+      res.status(500).json({ error: 'Failed to save report template' });
     }
   });
 
   // Get user's report templates
   app.get("/api/report/templates", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
     try {
-      // Mock templates with matrix-style configurations
-      const mockTemplates = [
-        {
-          id: 1,
-          template_name: 'Job Status by Department',
-          description: 'Overview of job posting statuses across departments',
-          category: 'Operations',
-          selected_tables: ['jobs'],
-          selected_rows: ['status'],
-          selected_columns: ['department'],
-          selected_measures: ['count'],
-          chart_type: 'bar',
-          created_at: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-          created_by_name: 'Admin User',
-          execution_count: 5,
-          last_executed_at: new Date(Date.now() - 3600000).toISOString()
-        },
-        {
-          id: 2,
-          template_name: 'Candidate Sources Analysis',
-          description: 'Breakdown of candidates by source and status',
-          category: 'Recruitment',
-          selected_tables: ['candidates'],
-          selected_rows: ['source'],
-          selected_columns: ['status'],
-          selected_measures: ['count'],
-          chart_type: 'pie',
-          created_at: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-          created_by_name: 'HR Manager',
-          execution_count: 12,
-          last_executed_at: new Date(Date.now() - 7200000).toISOString()
-        },
-        {
-          id: 3,
-          template_name: 'Interview Pipeline',
-          description: 'Interview scheduling and completion trends',
-          category: 'Process Analytics',
-          selected_tables: ['interviews'],
-          selected_rows: ['type'],
-          selected_columns: ['month'],
-          selected_measures: ['count'],
-          chart_type: 'line',
-          created_at: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-          created_by_name: 'Recruiter',
-          execution_count: 8,
-          last_executed_at: new Date(Date.now() - 14400000).toISOString()
-        }
-      ];
-      
-      res.json(mockTemplates);
+      const dbManager = await getSQLiteDB();
+      const db = dbManager.sqlite;
+      const rows = db.prepare(`
+        SELECT t.id, t.template_name, t.description, t.category, t.chart_type,
+               t.created_at, t.updated_at, t.execution_count, t.last_executed_at,
+               t.user_id, t.is_public
+        FROM report_templates t
+        WHERE t.organization_id = ? AND (t.user_id = ? OR t.is_public = 1)
+        ORDER BY t.updated_at DESC
+      `).all(req.organizationId, req.user?.id);
+      res.json(rows);
     } catch (error) {
       console.error('Error fetching report templates:', error);
-      res.status(500).json({ 
-        error: 'Failed to fetch report templates',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
+      res.status(500).json({ error: 'Failed to fetch report templates' });
     }
   });
 
@@ -1411,8 +1369,13 @@ export default function reportRoutes(app: Express) {
   app.delete("/api/report/templates/:id", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
     try {
       const { id } = req.params;
-      
-      // Mock deletion
+      const dbManager = await getSQLiteDB();
+      const db = dbManager.sqlite;
+      const row = db.prepare(`SELECT id, user_id, organization_id FROM report_templates WHERE id = ?`).get(id);
+      if (!row || row.organization_id !== req.organizationId || row.user_id !== req.user?.id) {
+        return res.status(404).json({ error: 'Template not found' });
+      }
+      db.prepare(`DELETE FROM report_templates WHERE id = ?`).run(id);
       res.json({ success: true, deleted_id: parseInt(id) });
     } catch (error) {
       console.error('Error deleting report template:', error);
@@ -1420,6 +1383,79 @@ export default function reportRoutes(app: Express) {
         error: 'Failed to delete report template',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+  // Get a single saved template (details including SQL)
+  app.get("/api/report/templates/:id", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const dbManager = await getSQLiteDB();
+      const db = dbManager.sqlite;
+      const row = db.prepare(`
+        SELECT * FROM report_templates WHERE id = ?
+      `).get(id);
+      if (!row || row.organization_id !== req.organizationId || (row.user_id !== req.user?.id && row.is_public !== 1)) {
+        return res.status(404).json({ error: 'Template not found' });
+      }
+      res.json(row);
+    } catch (error) {
+      console.error('Error fetching template:', error);
+      res.status(500).json({ error: 'Failed to fetch template' });
+    }
+  });
+
+  // Execute a saved template by ID
+  app.post("/api/report/templates/:id/execute", authenticateToken, requireOrganization, async (req: ExtendedAuthRequest, res: Response) => {
+    const requestId = Date.now();
+    try {
+      const { id } = req.params;
+      const organizationId = req.organizationId;
+      const dbManager = await getSQLiteDB();
+      const db = dbManager.sqlite;
+
+      const template = db.prepare(`SELECT * FROM report_templates WHERE id = ?`).get(id);
+      if (!template || template.organization_id !== organizationId || (template.user_id !== req.user?.id && template.is_public !== 1)) {
+        return res.status(404).json({ error: 'Template not found' });
+      }
+      const rawSQL: string = template.generated_sql || '';
+      if (!rawSQL) return res.status(400).json({ error: 'Template has no SQL to execute' });
+
+      // Validate/sanitize and execute
+  const validation = await validateAndSanitizeSQL(rawSQL, organizationId || -1, 100);
+      if (!validation.isValid) {
+        return res.status(400).json({ error: 'Saved SQL failed validation', validation_errors: validation.errors });
+      }
+      const validatedSQL = validation.sanitizedSQL;
+      const start = Date.now();
+      const results = db.prepare(validatedSQL).all();
+      const execTime = Date.now() - start;
+
+      // Track execution
+      db.prepare(`
+        INSERT INTO report_executions (
+          organization_id, user_id, template_id, report_type, generated_sql, parameters,
+          result_count, execution_time, status
+        ) VALUES (?, ?, ?, 'template', ?, '{}', ?, ?, 'completed')
+      `).run(organizationId, req.user?.id, id, validatedSQL, results.length, execTime);
+      db.prepare(`
+        UPDATE report_templates SET execution_count = COALESCE(execution_count,0) + 1, last_executed_at = CURRENT_TIMESTAMP WHERE id = ?
+      `).run(id);
+
+      const response = {
+        execution_id: requestId,
+        generated_sql: validatedSQL,
+        results,
+        row_count: results.length,
+        execution_time: execTime,
+        status: 'completed',
+        chart_type: template.chart_type || 'table',
+        ai_analysis: undefined
+      };
+      res.json(response);
+    } catch (error) {
+      console.error('Error executing saved template:', error);
+      res.status(500).json({ error: 'Failed to execute saved template' });
     }
   });
 

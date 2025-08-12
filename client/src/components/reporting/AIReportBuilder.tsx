@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +18,14 @@ import {
   PieChart as PieChartIcon, 
   LineChart as LineChartIcon,
   Table2,
-  Brain
+  Brain,
+  Download as DownloadIcon,
+  Save as SaveIcon,
+  Copy as CopyIcon
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import * as XLSX from 'xlsx';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface AIReportRequest {
   prompt: string;
@@ -43,6 +48,20 @@ interface AIReportResult {
   };
 }
 
+interface SavedTemplate {
+  id: number;
+  template_name: string;
+  description?: string;
+  category?: string;
+  chart_type?: string;
+  created_at?: string;
+  updated_at?: string;
+  execution_count?: number;
+  last_executed_at?: string;
+  user_id?: number;
+  is_public?: number;
+}
+
 const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
 
 const chartTypes = [
@@ -53,74 +72,88 @@ const chartTypes = [
   { id: 'pie', name: 'Pie Chart', icon: PieChartIcon }
 ];
 
+// Helpers to normalize data and derive chart model
+function detectChartModel(data: any[]) {
+  if (!data || data.length === 0) return { xKey: undefined as string | undefined, valueKeys: [] as string[], data: [] as any[] };
+  const first = data[0];
+  const keys = Object.keys(first);
+  // Try to pick first non-numeric key as xKey
+  let xKey = keys.find(k => isNaN(Number(first[k])));
+  if (!xKey) {
+    // If all numeric, synthesize an index key
+    const normalized = data.map((row, idx) => ({ idx, ...row }));
+    return { xKey: 'idx', valueKeys: Object.keys(first), data: normalized };
+  }
+  // Collect numeric-like keys as valueKeys
+  const valueKeys = keys.filter(k => k !== xKey && (typeof first[k] === 'number' || !isNaN(Number(first[k]))));
+  // Normalize rows: coerce numeric-like strings to numbers for valueKeys
+  const normalized = data.map(row => {
+    const copy: any = { ...row };
+    valueKeys.forEach(k => {
+      const v = row[k];
+      copy[k] = typeof v === 'number' ? v : (v == null || v === '' ? 0 : Number(v));
+    });
+    return copy;
+  });
+  return { xKey, valueKeys, data: normalized };
+}
+
 // Chart rendering function
-function renderChart(data: any[], chartType: string) {
+function renderChart(data: any[], chartType: string, containerRef?: React.RefObject<HTMLDivElement>) {
   if (!data || data.length === 0) return null;
+  const model = detectChartModel(data);
+  if (!model.xKey && model.valueKeys.length === 0) return null;
   
   try {
     switch (chartType) {
-      case 'bar':
-        const barDataKeys = Object.keys(data[0]).filter(key => 
-          typeof data[0][key] === 'number' || !isNaN(Number(data[0][key]))
-        );
-        
+      case 'bar': {
+        const bars = (model.valueKeys.length > 0 ? model.valueKeys : Object.keys(model.data[0]).filter(k => k !== model.xKey)).slice(0, 4);
         return (
-          <div className="h-96">
+          <div className="h-96" ref={containerRef}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
+              <BarChart data={model.data}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey={Object.keys(data[0])[0]} />
+                {model.xKey && <XAxis dataKey={model.xKey} />}
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                {barDataKeys.slice(1, 4).map((key, index) => (
-                  <Bar key={key} dataKey={key} fill={CHART_COLORS[index]} />
+                {bars.map((key, index) => (
+                  <Bar key={key} dataKey={key} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
         );
-
-      case 'line':
-        const lineDataKeys = Object.keys(data[0]).filter(key => 
-          typeof data[0][key] === 'number' || !isNaN(Number(data[0][key]))
-        );
-        
+      }
+      case 'line': {
+        const lines = (model.valueKeys.length > 0 ? model.valueKeys : Object.keys(model.data[0]).filter(k => k !== model.xKey)).slice(0, 4);
         return (
-          <div className="h-96">
+          <div className="h-96" ref={containerRef}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
+              <LineChart data={model.data}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey={Object.keys(data[0])[0]} />
+                {model.xKey && <XAxis dataKey={model.xKey} />}
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                {lineDataKeys.slice(1, 4).map((key, index) => (
-                  <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[index]} />
+                {lines.map((key, index) => (
+                  <Line key={key} type="monotone" dataKey={key} stroke={CHART_COLORS[index % CHART_COLORS.length]} />
                 ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
         );
-
-      case 'pie':
-        const pieData = data.slice(0, 6).map((item, index) => ({
-          name: item[Object.keys(item)[0]],
-          value: Number(item[Object.keys(item)[1]] || 0)
-        }));
-        
+      }
+      case 'pie': {
+        const keys = Object.keys(model.data[0]);
+        const nameKey = model.xKey || keys[0];
+        const valKey = (model.valueKeys[0] || keys.find(k => k !== nameKey)) as string;
+        const pieData = model.data.slice(0, 8).map(item => ({ name: item[nameKey], value: Number(item[valKey] || 0) }));
         return (
-          <div className="h-96">
+          <div className="h-96" ref={containerRef}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, value }) => `${name}: ${value}`}
-                >
+                <Pie data={pieData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, value }: { name: string; value: number }) => `${name}: ${value}`}>
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                   ))}
@@ -131,7 +164,7 @@ function renderChart(data: any[], chartType: string) {
             </ResponsiveContainer>
           </div>
         );
-
+      }
       case 'table':
       default:
         return null; // Table will be rendered separately
@@ -141,9 +174,7 @@ function renderChart(data: any[], chartType: string) {
     return (
       <div className="h-96 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
         <div className="text-center">
-          <p className="text-sm text-red-600 dark:text-red-400">
-            Chart rendering failed - showing data as table
-          </p>
+          <p className="text-sm text-red-600 dark:text-red-400">Chart rendering failed - showing data as table</p>
         </div>
       </div>
     );
@@ -156,8 +187,65 @@ export function AIReportBuilder() {
   const [additionalContext, setAdditionalContext] = useState('');
   const [reportResults, setReportResults] = useState<AIReportResult | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const chartContainerRef = useRef<HTMLDivElement>(null);
 
   const { toast } = useToast();
+  
+  // Saved templates
+  const savedTemplatesQuery = useQuery<SavedTemplate[]>({
+    queryKey: ['/api/report/templates'],
+    queryFn: async () => {
+      const res = await fetch('/api/report/templates', { headers: { ...getAuthHeaders() }});
+      if (!res.ok) throw new Error('Failed to fetch saved queries');
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+
+  const runTemplate = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`/api/report/templates/${id}/execute`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) throw new Error('Failed to execute saved query');
+      return res.json();
+    },
+    onSuccess: (data: AIReportResult) => {
+      setReportResults(data);
+      setShowResults(true);
+      try {
+        sessionStorage.setItem('aiReport:last', JSON.stringify({
+          prompt,
+          chartType,
+          additionalContext,
+          reportResults: data,
+        }));
+      } catch {}
+      toast({ title: 'Executed', description: `Loaded saved query • ${data.row_count} rows` });
+    },
+    onError: (e: any) => toast({ title: 'Run failed', description: e?.message || 'Could not execute saved query', variant: 'destructive' })
+  });
+
+  // Load persisted state (results survive navigation)
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('aiReport:last');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setPrompt(parsed.prompt || '');
+        setChartType(parsed.chartType || 'auto');
+        setAdditionalContext(parsed.additionalContext || '');
+        setReportResults(parsed.reportResults || null);
+        setShowResults(!!parsed.reportResults);
+      }
+    } catch (e) {
+      console.warn('AI_REPORT: Failed to load persisted state');
+    }
+  }, []);
 
   // Execute AI report generation
   const generateAIReport = useMutation({
@@ -185,6 +273,14 @@ export function AIReportBuilder() {
       console.log('🤖 AI_REPORT: Results received:', data);
       setReportResults(data);
       setShowResults(true);
+      try {
+        sessionStorage.setItem('aiReport:last', JSON.stringify({
+          prompt,
+          chartType,
+          additionalContext,
+          reportResults: data,
+        }));
+      } catch {}
       toast({
         title: 'AI Report Generated',
         description: `Generated report with ${data.row_count} rows using AI analysis`,
@@ -217,6 +313,145 @@ export function AIReportBuilder() {
     };
 
     generateAIReport.mutate(request);
+  };
+
+  // Determine effective chart type (auto -> choose based on data)
+  const effectiveChartType = useMemo(() => {
+    if (!reportResults || !reportResults.results?.length) return 'table';
+    const preferred = (reportResults.chart_type || chartType || 'table');
+    if (preferred && preferred !== 'auto') return preferred;
+    // Auto-detect
+    const model = detectChartModel(reportResults.results);
+    if (model.valueKeys.length >= 1) {
+      // If time-like xKey, prefer line
+      const x = model.xKey || '';
+      if (/(date|month|time)/i.test(x)) return 'line';
+      return 'bar';
+    }
+    return 'table';
+  }, [reportResults, chartType]);
+
+  const copySQLToClipboard = async () => {
+    if (!reportResults?.generated_sql) return;
+    try {
+      await navigator.clipboard.writeText(reportResults.generated_sql);
+      toast({ title: 'Copied', description: 'SQL copied to clipboard' });
+    } catch {
+      toast({ title: 'Copy failed', description: 'Could not copy SQL', variant: 'destructive' });
+    }
+  };
+
+  const exportDataToXLSX = async () => {
+    if (!reportResults || !reportResults.results?.length) {
+      toast({ title: 'No data', description: 'Generate a report first', variant: 'destructive' });
+      return;
+    }
+    try {
+      const wb = XLSX.utils.book_new();
+      // Data sheet
+      const ws = XLSX.utils.json_to_sheet(reportResults.results);
+      XLSX.utils.book_append_sheet(wb, ws, 'Data');
+      // SQL sheet
+      const sqlSheet = XLSX.utils.aoa_to_sheet([["Generated SQL"], [reportResults.generated_sql || '']]);
+      sqlSheet['!cols'] = [{ wch: 120 }];
+      XLSX.utils.book_append_sheet(wb, sqlSheet, 'SQL');
+      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `AI_Report_${new Date().toISOString().slice(0,10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: 'Exported', description: 'Downloaded Excel with data and SQL' });
+    } catch (e) {
+      toast({ title: 'Export failed', description: 'Could not generate Excel', variant: 'destructive' });
+    }
+  };
+
+  // Convert SVG to PNG and download
+  const downloadChartPNG = async () => {
+    try {
+      const el = chartContainerRef.current;
+      if (!el) throw new Error('Chart not found');
+      const svg = el.querySelector('svg');
+      if (!svg) throw new Error('No SVG to export');
+      const xml = new XMLSerializer().serializeToString(svg);
+      const svgBlob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+      const DOMURL = window.URL || window.webkitURL;
+      const url = DOMURL.createObjectURL(svgBlob);
+      const img = new Image();
+      const { width, height } = svg.getBoundingClientRect();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = (e) => reject(e);
+        img.src = url;
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(800, Math.floor(width));
+      canvas.height = Math.max(450, Math.floor(height));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('No canvas context');
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--background') || '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const png = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = png;
+      a.download = `AI_Report_Chart_${new Date().toISOString().slice(0,10)}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      DOMURL.revokeObjectURL(url);
+      toast({ title: 'Chart downloaded', description: 'PNG saved locally' });
+    } catch (e) {
+      console.error('Chart export failed', e);
+      toast({ title: 'Export failed', description: 'Could not export chart', variant: 'destructive' });
+    }
+  };
+
+  const saveTemplate = async () => {
+    if (!reportResults?.generated_sql || !templateName.trim()) {
+      toast({ title: 'Missing info', description: 'Enter a template name', variant: 'destructive' });
+      return;
+    }
+    try {
+      const body: any = {
+        template_name: templateName.trim(),
+        description: templateDescription.trim() || undefined,
+        is_public: false,
+        category: 'AI Generated',
+        selected_tables: [],
+        selected_rows: [],
+        selected_columns: [],
+        selected_measures: [],
+        filters: [],
+        chart_type: effectiveChartType,
+        generated_sql: reportResults.generated_sql
+      };
+      const res = await fetch('/api/report/templates', {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error('Failed to save template');
+  setSaveOpen(false);
+  setTemplateName('');
+  setTemplateDescription('');
+  try { await savedTemplatesQuery.refetch(); } catch {}
+      toast({ title: 'Saved', description: 'Query saved as template' });
+    } catch (e) {
+      toast({ title: 'Save failed', description: e instanceof Error ? e.message : 'Error saving', variant: 'destructive' });
+    }
+  };
+
+  const openSaveDialog = () => {
+    // Auto-fill description from AI interpretation when available
+    const aiDesc = reportResults?.ai_analysis?.interpreted_request?.trim();
+    setTemplateDescription(aiDesc || '');
+    setSaveOpen(true);
   };
 
   return (
@@ -376,6 +611,41 @@ export function AIReportBuilder() {
               </CardContent>
             </Card>
           )}
+
+          {/* Saved Queries */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Saved Queries</CardTitle>
+              <CardDescription>Pick one to run it again</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {savedTemplatesQuery.isLoading && (
+                <p className="text-sm text-gray-500">Loading...</p>
+              )}
+              {savedTemplatesQuery.error && (
+                <p className="text-sm text-red-500">Failed to load saved queries</p>
+              )}
+              {savedTemplatesQuery.data && savedTemplatesQuery.data.length === 0 && (
+                <p className="text-sm text-gray-500">No saved queries yet</p>
+              )}
+              {savedTemplatesQuery.data && savedTemplatesQuery.data.length > 0 && (
+                <div className="max-h-72 overflow-y-auto space-y-2">
+                  {savedTemplatesQuery.data.map((t) => (
+                    <div key={t.id} className="border rounded p-2 flex items-center justify-between">
+                      <div className="min-w-0 mr-2">
+                        <div className="text-sm font-medium truncate">{t.template_name}</div>
+                        <div className="text-xs text-gray-500 truncate">{t.description || t.category || ''}</div>
+                      </div>
+                      <Button size="sm" onClick={() => runTemplate.mutate(t.id)} disabled={runTemplate.isPending}>
+                        {runTemplate.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}
+                        Run
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
 
@@ -393,12 +663,17 @@ export function AIReportBuilder() {
           </CardHeader>
           <CardContent>
             {/* Chart Section */}
-            {reportResults.chart_type !== 'table' && (
+            {effectiveChartType !== 'table' && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-4">
-                  {reportResults.chart_type?.charAt(0).toUpperCase() + reportResults.chart_type?.slice(1)} Chart
+                  {effectiveChartType?.charAt(0).toUpperCase() + effectiveChartType?.slice(1)} Chart
                 </h3>
-                {renderChart(reportResults.results, reportResults.chart_type || 'table')}
+                {renderChart(reportResults.results, effectiveChartType || 'table', chartContainerRef)}
+                <div className="mt-3 flex gap-2">
+                  <Button variant="secondary" onClick={downloadChartPNG}>
+                    <DownloadIcon className="h-4 w-4 mr-2" /> Download chart (PNG)
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -443,11 +718,46 @@ export function AIReportBuilder() {
                 <code className="text-sm text-gray-700 dark:text-gray-300 break-all">
                   {reportResults.generated_sql}
                 </code>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={copySQLToClipboard}>
+                    <CopyIcon className="h-4 w-4 mr-2" /> Copy SQL
+                  </Button>
+                  <Button variant="outline" onClick={openSaveDialog}>
+                    <SaveIcon className="h-4 w-4 mr-2" /> Save Query
+                  </Button>
+                  <Button onClick={exportDataToXLSX}>
+                    <DownloadIcon className="h-4 w-4 mr-2" /> Export data (.xlsx)
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
+
+      {/* Save Template Dialog */}
+      <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as Template</DialogTitle>
+            <DialogDescription>Store this generated SQL for quick access later.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="templateName">Name</Label>
+              <Input id="templateName" value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="e.g., Applications by Month" />
+            </div>
+            <div>
+              <Label htmlFor="templateDesc">Description (optional)</Label>
+              <Textarea id="templateDesc" value={templateDescription} onChange={(e) => setTemplateDescription(e.target.value)} placeholder="Brief description" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveOpen(false)}>Cancel</Button>
+            <Button onClick={saveTemplate}><SaveIcon className="h-4 w-4 mr-2" /> Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
