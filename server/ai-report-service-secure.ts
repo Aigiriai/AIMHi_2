@@ -157,6 +157,7 @@ TABLE ROLES & SYNONYMS:
 ASSIGNMENT LOGIC TIPS:
 - "jobs assigned to X" → count rows in job_assignments joined to users (by email/name) and jobs, filtered by organization.
 - "applications assigned to X" → count DISTINCT applications where the user is assigned to the job (via job_assignments) OR to the candidate (via candidate_assignments). Enforce organization filters on applications + joined jobs/candidates + users.
+ - IMPORTANT: job_assignments and candidate_assignments DO NOT have organization_id. Do NOT add org filters on these tables or their aliases; instead, apply organization scoping on users, jobs, candidates, and applications as appropriate.
 
 SECURITY & OUTPUT RULES (MANDATORY):
 1. Query MUST be a single SELECT. Never write mutating or DDL statements.
