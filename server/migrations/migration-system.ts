@@ -501,6 +501,18 @@ export class MigrationManager {
       this.db.exec(`VACUUM INTO '${backupPath}'`);
       
       console.log('✅ MIGRATION_SYSTEM: Backup created successfully');
+
+      // Also upload this pre-migration backup to Object Storage if configured
+      try {
+        // Lazy import to avoid coupling when cloud is not configured
+        const { DatabaseBackupService } = await import('../objectStorage');
+        const svc = new DatabaseBackupService();
+        const baseName = `pre-migration-${this.environment}-${timestamp}.db`;
+        const objectKey = await svc.uploadBackupFile(backupPath, baseName);
+        console.log(`☁️ MIGRATION_SYSTEM: Uploaded pre-migration backup to Object Storage as ${objectKey}`);
+      } catch (cloudError) {
+        console.warn('⚠️ MIGRATION_SYSTEM: Could not upload pre-migration backup to Object Storage:', cloudError instanceof Error ? cloudError.message : String(cloudError));
+      }
       return backupPath;
     } catch (error) {
       console.error('❌ MIGRATION_SYSTEM: Backup creation failed:', error);

@@ -481,6 +481,27 @@ export class DatabaseBackupService {
   return backupName; // return the file name (without env prefix)
   }
 
+  // Upload an existing local backup file (e.g., from VACUUM INTO) to Object Storage
+  // Returns full object key (including env prefix)
+  async uploadBackupFile(localFilePath: string, backupBaseName?: string): Promise<string> {
+    if (!localFilePath || !fs.existsSync(localFilePath)) {
+      throw new ObjectStorageUploadError(`Local backup not found: ${localFilePath}`);
+    }
+
+    const base = backupBaseName && backupBaseName.trim().length > 0
+      ? path.basename(backupBaseName)
+      : path.basename(localFilePath);
+
+    // Ensure an env-appropriate prefix in the name if one isn’t present
+    const prefix = this.getBackupNamePrefix();
+    const hasPrefix = base.startsWith('production-backup') || base.startsWith('development-backup') || base.startsWith('pre-migration-');
+    const finalName = hasPrefix ? base : `${prefix}-${base}`;
+
+    const key = await this.uploadDatabaseBackup(localFilePath, finalName);
+    // Optionally verify upload by metadata fetch (download is heavier); we already checksum on upload
+    return key;
+  }
+
   // Restore latest backup based on file modification timestamp
   async restoreLatestBackup(localDbPath: string): Promise<boolean> {
     console.log(`🛡️ Attempting to restore database from Object Storage...`);
