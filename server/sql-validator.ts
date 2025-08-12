@@ -109,8 +109,10 @@ export async function validateAndSanitizeSQL(
   const bypass = FORCE_SQL_VALIDATION_BYPASS || String(process?.env?.AI_SQL_VALIDATION_BYPASS || '').toLowerCase() === 'true';
     if (bypass) {
       console.warn('⚠️ SQL_VALIDATOR: BYPASS MODE ENABLED - advanced security checks are disabled');
-      const trimmedSQL = sql.trim();
-      if (!trimmedSQL.toUpperCase().startsWith('SELECT')) {
+      // Allow SELECT queries and CTEs starting with WITH; strip trailing semicolons for safety
+      const trimmedSQL = sql.trim().replace(/;+$/g, '');
+      const beginsWithSelectOrWith = /^\s*(SELECT|WITH)\b/i.test(trimmedSQL);
+      if (!beginsWithSelectOrWith) {
         result.errors.push('Bypass mode allows only SELECT queries');
         result.riskLevel = 'CRITICAL';
         return result;
