@@ -1315,9 +1315,9 @@ function RecruitmentDashboard() {
               <PipelineKanban />
             </TabsContent>
 
-            {/* Reports Tab - Custom Report Builder */}
+            {/* Reports Tab - AI Reporting only (hide classic builder/templates/results) */}
             <TabsContent value="reports" className="mt-0">
-              <SimpleReportBuilder />
+              <SimpleReportBuilder mode="ai-only" />
             </TabsContent>
           </Tabs>
 
