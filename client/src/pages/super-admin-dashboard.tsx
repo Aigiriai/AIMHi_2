@@ -135,8 +135,8 @@ export default function SuperAdminDashboard() {
                 <p className="text-gray-600">Manage all organizations and monitor platform usage</p>
               </div>
               <div className="flex items-center gap-3">
-                <Link href="/admin/logs">
-                  <Button variant="outline">Server Logs</Button>
+                <Link href="/management#system">
+                  <Button variant="outline">System Management</Button>
                 </Link>
               </div>
             </div>

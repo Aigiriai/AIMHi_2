@@ -952,46 +952,7 @@ function RecruitmentDashboard() {
               </Card>
               */}
 
-              {/* System Management - Only visible for Super Admin */}
-              {userRole === 'super_admin' && (
-                <div className="space-y-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-center mb-6">
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">System Management</h3>
-                          <p className="text-sm text-gray-600">
-                            Database backup and system maintenance tools (Super Admin Only)
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700"
-                          onClick={handleBackupDatabase}
-                        >
-                          <CloudIcon className="mr-2 h-4 w-4" />
-                          Backup Database
-                        </Button>
-                      </div>
-                    
-                    <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                      <div className="flex">
-                        <div className="ml-3">
-                          <p className="text-sm text-blue-700">
-                            <strong>Database Backup:</strong> Create a secure backup of your recruitment data to cloud storage. 
-                            This ensures your data is safely stored and can be restored if needed.
-                          </p>
-                          <p className="text-xs text-blue-600 mt-1">
-                            Note: Backups are only available in production environment and are automatically created during critical operations.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              )}
+              {/* System Management moved to Management > System tab for Super Admin */}
 
               {/* ATS DASHBOARD SPACE - Ready for high-level statistics, KPIs, charts, and graphs */}
               <div className="space-y-6">

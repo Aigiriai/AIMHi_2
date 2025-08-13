@@ -1,4 +1,4 @@
-import { useState, createContext } from "react";
+import { useEffect, useState, createContext } from "react";
 import ProtectedRoute from "@/components/auth/protected-route";
 import Navbar from "@/components/navigation/navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,18 +15,36 @@ import OrganizationsPage from "@/pages/organizations";
 import OnboardingDashboard from "@/pages/onboarding-dashboard";
 
 import SettingsPage from "@/pages/settings";
+import SystemManagement from "@/pages/system-management";
 
 // Create context to tell embedded components they're in a tab
 export const TabContext = createContext({ isInTab: false });
 
 function ManagementDashboard() {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const getInitialTab = () => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash) return hash;
+    }
+    return "dashboard";
+  };
+  const [activeTab, setActiveTab] = useState(getInitialTab);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      const hash = window.location.hash.replace('#', '').trim();
+      if (hash) setActiveTab(hash);
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
 
   const tabs = [
     { value: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { value: "organizations", label: "Organizations", icon: Building2 },
     { value: "onboarding", label: "Onboarding", icon: UserPlus },
-    { value: "settings", label: "Settings", icon: SettingsIcon }
+    { value: "settings", label: "Settings", icon: SettingsIcon },
+    { value: "system", label: "System", icon: SettingsIcon },
   ];
 
   return (
@@ -42,8 +60,8 @@ function ManagementDashboard() {
             <p className="text-gray-600">Multi-tenancy platform management and administration</p>
           </div>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4 mb-8">
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); if (typeof window !== 'undefined') window.location.hash = `#${v}`; }}>
+            <TabsList className="grid w-full grid-cols-5 mb-8">
               {tabs.map(tab => {
                 const Icon = tab.icon;
                 return (
@@ -97,6 +115,13 @@ function ManagementDashboard() {
             <TabsContent value="settings" className="mt-0">
               <div className="tab-content">
                 <SettingsPage />
+              </div>
+            </TabsContent>
+
+            {/* System Management Tab (Super Admin only) */}
+            <TabsContent value="system" className="mt-0">
+              <div className="tab-content">
+                <SystemManagement />
               </div>
             </TabsContent>
           </Tabs>

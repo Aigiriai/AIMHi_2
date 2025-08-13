@@ -83,3 +83,58 @@ export function closeLogger() {
     try { fileStream.end(); } catch {}
   }
 }
+
+// Force an immediate rotation of the current log file, ensuring the next write goes to a new file.
+// Returns the name of the rotated file if provided by the stream implementation.
+export async function rotateLogsNow(): Promise<{ rotatedFile?: string }> {
+  if (!fileStream || typeof fileStream.rotate !== 'function') {
+    // Rotation not available; best-effort no-op
+    return {};
+  }
+
+  return await new Promise((resolve, reject) => {
+    let resolved = false;
+    const done = (rotatedFile?: string) => {
+      if (!resolved) {
+        resolved = true;
+        resolve({ rotatedFile });
+      }
+    };
+
+    const onError = (err: any) => {
+      fileStream?.off?.('rotated', onRotated);
+      if (!resolved) {
+        resolved = true;
+        // Resolve without throwing to avoid taking down admin ops; caller can proceed to delete by list
+        resolve({});
+      }
+    };
+
+    const onRotated = (...args: any[]) => {
+      fileStream?.off?.('error', onError);
+      const rotatedArg = args && args.length > 0 ? args[0] : undefined;
+      const rotatedFile = typeof rotatedArg === 'string' ? rotatedArg : undefined;
+      done(rotatedFile);
+    };
+
+    try {
+      fileStream.once?.('rotated', onRotated);
+      fileStream.once?.('error', onError);
+      // Trigger rotation
+      fileStream.rotate();
+      // Safety timeout in case no events are emitted
+      setTimeout(() => done(undefined), 2000);
+    } catch {
+      done(undefined);
+    }
+  });
+}
+
+export function getCurrentLogBasename() {
+  // With rotating-file-stream, the current file is typically app.log in LOG_DIR
+  return 'app.log';
+}
+
+export function getLogPathFor(name: string) {
+  return path.join(LOG_DIR, name);
+}
