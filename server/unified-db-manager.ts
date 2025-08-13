@@ -264,45 +264,36 @@ async function performInitialization(): Promise<DatabaseInstance> {
     // ✅ ENHANCED LOGIC: Smart decision making for database initialization
     let result: DatabaseInstance;
     
-    // PRODUCTION: Preserve existing DB when healthy; restore only if missing or invalid
+    // PRODUCTION: Always attempt restore from latest cloud backup first (if available)
     if (process.env.NODE_ENV === "production") {
-      console.log("🏭 DB_MANAGER: Production mode - preserve if healthy, restore only if needed");
+      console.log("🏭 DB_MANAGER: Production mode - always attempt restore from latest backup first");
 
-      if (existsSync(dbPath)) {
-        console.log("📂 DB_MANAGER: Existing production database found - validating...");
+      console.log("🔄 DB_MANAGER: Attempting restoration from latest production backup before any other action...");
+      const backupRestoredFirst = await attemptBackupRestoration(dbPath);
+      if (backupRestoredFirst) {
         try {
           result = await openAndValidateDatabase(dbPath);
-          console.log("✅ DB_MANAGER: Existing production database is healthy - skipping restore");
-        } catch (error) {
-          console.warn("⚠️ DB_MANAGER: Existing production database validation failed:", (error as Error).message);
-          console.log("🔄 DB_MANAGER: Attempting restoration from latest production backup...");
-          const backupRestored = await attemptBackupRestoration(dbPath);
-          if (backupRestored) {
-            try {
-              result = await openAndValidateDatabase(dbPath);
-              console.log("✅ DB_MANAGER: Restored production database validated successfully");
-            } catch (restoreValidationError) {
-              console.warn("⚠️ DB_MANAGER: Restored DB validation failed:", (restoreValidationError as Error).message);
-              result = await createFreshDatabase(dbPath, true);
-            }
-          } else {
-            console.log("� DB_MANAGER: No valid backup available - creating fresh production database");
-            result = await createFreshDatabase(dbPath, true);
-          }
+          console.log("✅ DB_MANAGER: Restored production database validated successfully");
+          // Proceed with initialized restored DB
+        } catch (restoreValidationError) {
+          console.warn("⚠️ DB_MANAGER: Restored DB validation failed:", (restoreValidationError as Error).message);
+          console.log("📦 DB_MANAGER: Falling back to fresh production database creation");
+          result = await createFreshDatabase(dbPath, true);
         }
       } else {
-        console.log("📂 DB_MANAGER: No production database found - attempting restoration before fresh create...");
-        const backupRestored = await attemptBackupRestoration(dbPath);
-        if (backupRestored) {
+        // No backup available or restore failed; fallback to previous behavior
+        if (existsSync(dbPath)) {
+          console.log("📂 DB_MANAGER: Existing production database found - validating...");
           try {
             result = await openAndValidateDatabase(dbPath);
-            console.log("✅ DB_MANAGER: Restored production database validated successfully");
-          } catch (restoreValidationError) {
-            console.warn("⚠️ DB_MANAGER: Restored DB validation failed:", (restoreValidationError as Error).message);
-            result = await createFreshDatabase(dbPath, false);
+            console.log("✅ DB_MANAGER: Existing production database is healthy");
+          } catch (error) {
+            console.warn("⚠️ DB_MANAGER: Existing production database validation failed:", (error as Error).message);
+            console.log("📦 DB_MANAGER: Creating fresh production database");
+            result = await createFreshDatabase(dbPath, true);
           }
         } else {
-          console.log("📦 DB_MANAGER: No backup available - creating fresh production database...");
+          console.log("� DB_MANAGER: No production database found - creating fresh production database...");
           result = await createFreshDatabase(dbPath, false);
         }
       }
