@@ -27,10 +27,22 @@ interface UploadResult {
   };
 }
 
+interface ProgressData {
+  stage: 'starting' | 'extracting' | 'creating' | 'complete' | 'error';
+  message: string;
+  progress: number;
+  total: number;
+  currentFile?: string;
+  candidateName?: string;
+  results?: UploadResult;
+  error?: boolean;
+}
+
 export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploadStateChange }: BulkFileUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const [progressData, setProgressData] = useState<ProgressData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const directoryInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -39,31 +51,130 @@ export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploa
   const uploadMutation = useMutation({
     mutationFn: async (files: FileList) => {
       onUploadStateChange?.(true);
+      setProgressData(null);
+      
       const formData = new FormData();
       Array.from(files).forEach((file) => {
         formData.append('files', file);
       });
 
-      const endpoint = uploadType === 'jobs' ? '/api/jobs/bulk-upload' : '/api/candidates/bulk-upload';
+      // Use progress endpoint for candidates, regular endpoint for jobs
+      const endpoint = uploadType === 'jobs' ? '/api/jobs/bulk-upload' : '/api/candidates/bulk-upload-progress';
       const token = localStorage.getItem('authToken');
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      
+      if (uploadType === 'candidates') {
+        // Use Server-Sent Events for progress tracking
+        return new Promise((resolve, reject) => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            controller.abort();
+          }, 10 * 60 * 1000); // 10 minute timeout
+          
+          fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+            signal: controller.signal,
+          })
+          .then(response => {
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              throw new Error('Upload failed');
+            }
+            
+            const reader = response.body?.getReader();
+            if (!reader) {
+              throw new Error('No response reader available');
+            }
+            
+            const decoder = new TextDecoder();
+            let buffer = '';
+            
+            function readStream(): Promise<void> {
+              return reader!.read().then(({ done, value }) => {
+                if (done) {
+                  return;
+                }
+                
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+                
+                for (const line of lines) {
+                  if (line.startsWith('data: ')) {
+                    try {
+                      const data = JSON.parse(line.slice(6)) as ProgressData;
+                      setProgressData(data);
+                      
+                      if (data.stage === 'complete' && data.results) {
+                        resolve(data.results);
+                        return;
+                      } else if (data.stage === 'error') {
+                        reject(new Error(data.message || 'Upload failed'));
+                        return;
+                      }
+                    } catch (parseError) {
+                      console.warn('Failed to parse SSE data:', line);
+                    }
+                  }
+                }
+                
+                return readStream();
+              });
+            }
+            
+            return readStream();
+          })
+          .catch(error => {
+            clearTimeout(timeoutId);
+            if ((error as Error).name === 'AbortError') {
+              reject(new Error('Upload timeout: The upload took too long to complete. Please try with fewer files or check your internet connection.'));
+            } else {
+              reject(error);
+            }
+          });
+        });
+      } else {
+        // Regular upload for jobs (no progress tracking yet)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 10 * 60 * 1000);
+        
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+            body: formData,
+            signal: controller.signal,
+          });
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
+
+          return response.json();
+        } catch (error) {
+          clearTimeout(timeoutId);
+          if ((error as Error).name === 'AbortError') {
+            throw new Error('Upload timeout: The upload took too long to complete. Please try with fewer files or check your internet connection.');
+          }
+          throw error;
+        }
       }
-
-      return response.json();
     },
     onSuccess: (result: UploadResult) => {
       console.log('✅ BULK_UPLOAD: Upload mutation successful, starting post-processing...', { result });
       onUploadStateChange?.(false);
       setUploadResult(result);
+      setProgressData(null); // Clear progress data
       
       console.log('🔄 CACHE_INVALIDATION: Starting cache invalidation after successful upload', { uploadType, result });
       
@@ -88,7 +199,7 @@ export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploa
       
       // Now call the external onSuccess callback
       console.log('🎯 BULK_UPLOAD: Calling external onSuccess callback...');
-      onSuccess?.(result);
+      onSuccess?.();
       console.log('✅ BULK_UPLOAD: External onSuccess callback completed');
       
       // Use the custom message from backend if available, otherwise use default
@@ -101,8 +212,9 @@ export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploa
       
       onSuccess?.();
     },
-    onError: (error) => {
+    onError: (error: any) => {
       onUploadStateChange?.(false);
+      setProgressData(null); // Clear progress data on error
       toast({
         title: "Upload Failed",
         description: error instanceof Error ? error.message : "Failed to upload files",
@@ -171,13 +283,39 @@ export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploa
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-              <div>
+              <div className="flex-1">
                 <p className="font-medium text-blue-900 dark:text-blue-100">
-                  Processing {selectedFiles?.length || 0} files...
+                  {progressData ? progressData.message : `Processing ${selectedFiles?.length || 0} files...`}
                 </p>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Please keep this window open. Processing may take several minutes.
-                </p>
+                {progressData && (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex justify-between text-sm text-blue-700 dark:text-blue-300">
+                      <span>
+                        {progressData.stage === 'extracting' ? 'Extracting text from documents' : 
+                         progressData.stage === 'creating' ? 'Creating candidate profiles' : 
+                         progressData.stage === 'complete' ? 'Complete!' : 'Processing...'}
+                      </span>
+                      <span>{progressData.progress}/{progressData.total}</span>
+                    </div>
+                    <Progress 
+                      value={(progressData.progress / progressData.total) * 100} 
+                      className="w-full h-2"
+                    />
+                    {progressData.currentFile && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400 truncate">
+                        {progressData.candidateName ? 
+                          `Creating profile for: ${progressData.candidateName}` : 
+                          `Processing: ${progressData.currentFile}`
+                        }
+                      </p>
+                    )}
+                  </div>
+                )}
+                {!progressData && (
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Large uploads may take up to 10 minutes.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>

@@ -968,6 +968,218 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Progress-enabled bulk candidate upload with Server-Sent Events
+  app.post('/api/candidates/bulk-upload-progress', authenticateToken, requireOrganization, upload.array('files', 50), async (req: AuthRequest, res) => {
+    try {
+      const currentUser = req.user!;
+      
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+
+      const forceOverwrite = req.body.forceOverwrite === 'true';
+
+      // Set up Server-Sent Events
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      });
+
+      const sendProgress = (data: any) => {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      // Send initial progress
+      sendProgress({
+        stage: 'starting',
+        message: 'Starting file processing...',
+        progress: 0,
+        total: files.length
+      });
+
+      // All files uploaded to resume endpoint are treated as resumes
+      const resumes = [];
+      const ignored = [];
+
+      // Stage 1: Text extraction
+      sendProgress({
+        stage: 'extracting',
+        message: 'Extracting text from documents...',
+        progress: 0,
+        total: files.length
+      });
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        try {
+          sendProgress({
+            stage: 'extracting',
+            message: `Extracting text from ${file.originalname}...`,
+            progress: i + 1,
+            total: files.length,
+            currentFile: file.originalname
+          });
+
+          const content = await extractTextFromDocument(file.buffer, file.originalname, file.mimetype);
+          
+          if (content.trim().length < 50) {
+            ignored.push(file.originalname);
+            continue;
+          }
+
+          // Always treat as resume since this is the resume upload endpoint
+          const resumeDetails = await extractResumeDetails(content, file.originalname, file.buffer);
+          resumes.push({
+            filename: file.originalname,
+            content,
+            isResume: true,
+            extractedData: resumeDetails,
+            buffer: file.buffer
+          });
+        } catch (error) {
+          console.error(`Error processing file ${file.originalname}:`, error);
+          ignored.push(file.originalname);
+        }
+      }
+      
+      console.log(`Document processing results: ${resumes.length} resumes, ${ignored.length} ignored`);
+      
+      const createdCandidates = [];
+      const errors = [];
+      const skippedDuplicates = [];
+
+      // Stage 2: Creating candidates
+      sendProgress({
+        stage: 'creating',
+        message: 'Creating candidate profiles...',
+        progress: 0,
+        total: resumes.length
+      });
+
+      for (let i = 0; i < resumes.length; i++) {
+        const resumeDoc = resumes[i];
+        try {
+          sendProgress({
+            stage: 'creating',
+            message: `Creating profile for ${resumeDoc.extractedData.name}...`,
+            progress: i + 1,
+            total: resumes.length,
+            currentFile: resumeDoc.filename,
+            candidateName: resumeDoc.extractedData.name
+          });
+
+          console.log(`Processing resume: ${resumeDoc.filename}`);
+          
+          // Check for true duplicates: same email, name, AND phone number
+          const existingCandidate = await storage.getCandidateByEmail(resumeDoc.extractedData.email);
+          if (existingCandidate && existingCandidate.organizationId === req.user!.organizationId) {
+            // Only treat as duplicate if email, name, and phone all match
+            const nameMatch = existingCandidate.name.toLowerCase().trim() === resumeDoc.extractedData.name.toLowerCase().trim();
+            const phoneMatch = existingCandidate.phone.replace(/\D/g, '') === resumeDoc.extractedData.phone.replace(/\D/g, '');
+            
+            if (nameMatch && phoneMatch) {
+              if (!forceOverwrite) {
+                // True duplicate found - all three fields match
+                console.log(`True duplicate found: ${resumeDoc.extractedData.name} (${resumeDoc.extractedData.email}) - same name, email, and phone`);
+                skippedDuplicates.push({ 
+                  filename: resumeDoc.filename, 
+                  reason: `Candidate with same name, email, and phone already exists`,
+                  existingCandidate: existingCandidate.name,
+                  isDuplicate: true,
+                  canOverwrite: true
+                });
+                continue;
+              } else {
+                // Force overwrite - update existing candidate
+                const { FileStorageService } = await import('./file-storage');
+                const fileStorage = new FileStorageService();
+                await fileStorage.storeResumeFile(existingCandidate.id, resumeDoc.extractedData.resumeFileName, resumeDoc.buffer);
+                
+                await storage.updateCandidate(existingCandidate.id, {
+                  name: resumeDoc.extractedData.name,
+                  phone: resumeDoc.extractedData.phone,
+                  experience: resumeDoc.extractedData.experience,
+                  resumeContent: resumeDoc.extractedData.resumeContent,
+                  resumeFileName: resumeDoc.extractedData.resumeFileName,
+                  updatedAt: new Date()
+                });
+                
+                const updatedCandidate = await storage.getCandidate(existingCandidate.id);
+                createdCandidates.push({ 
+                  filename: resumeDoc.filename, 
+                  candidate: { ...updatedCandidate, wasUpdated: true }
+                });
+                continue;
+              }
+            } else {
+              // Different name or phone - not a duplicate, proceed with creation
+              console.log(`Not a duplicate: ${resumeDoc.extractedData.name} has same email as ${existingCandidate.name} but different name/phone`);
+            }
+          }
+          
+          // Add organization context from authenticated user
+          const completeData = {
+            ...resumeDoc.extractedData,
+            organizationId: req.user!.organizationId,
+            addedBy: req.user!.id
+          };
+          
+          const candidateData = insertCandidateSchema.parse(completeData);
+          const candidate = await storage.createCandidate(candidateData);
+          
+          // Store the original file in file storage
+          const { FileStorageService } = await import('./file-storage');
+          const fileStorage = new FileStorageService();
+          await fileStorage.storeResumeFile(candidate.id, resumeDoc.extractedData.resumeFileName, resumeDoc.buffer);
+          
+          createdCandidates.push({ filename: resumeDoc.filename, candidate });
+        } catch (error: any) {
+          console.error(`Error processing ${resumeDoc.filename}:`, error);
+          errors.push({ filename: resumeDoc.filename, error: error.message });
+        }
+      }
+
+      // Send final results
+      const baseMessage = `Processed ${files.length} files`;
+      const roleSpecificMessage = ['team_lead', 'recruiter'].includes(currentUser.role) 
+        ? `${baseMessage}. Your submissions will be reviewed by managers for assignment to jobs. Please follow up with your HR manager for status updates.`
+        : baseMessage;
+
+      sendProgress({
+        stage: 'complete',
+        message: roleSpecificMessage,
+        progress: resumes.length,
+        total: resumes.length,
+        results: {
+          created: createdCandidates.length,
+          ignored: ignored.length,
+          skipped: skippedDuplicates.length,
+          errors: errors.length,
+          details: {
+            createdCandidates,
+            ignoredFiles: ignored,
+            skippedDuplicates,
+            errors
+          }
+        }
+      });
+
+      res.end();
+    } catch (error: any) {
+      console.error("Error in bulk candidate upload with progress:", error);
+      res.write(`data: ${JSON.stringify({
+        stage: 'error',
+        message: error.message || "Failed to process files",
+        error: true
+      })}\n\n`);
+      res.end();
+    }
+  });
+
 
 
   app.get('/api/candidates', authenticateToken, requireOrganization, async (req: AuthRequest, res) => {

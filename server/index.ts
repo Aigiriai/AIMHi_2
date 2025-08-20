@@ -78,9 +78,10 @@ app.use((req, res, next) => {
     return originalJson(data);
   };
   
-  // Track request timeout
-  req.setTimeout(30000, () => {
-    console.log(`⏰ REQUEST[${requestId}]: Request timeout after 30s - ${req.method} ${req.originalUrl}`);
+  // Track request timeout - extended for bulk uploads
+  const timeoutMs = 600000; // 10 minutes for bulk uploads
+  req.setTimeout(timeoutMs, () => {
+    console.log(`⏰ REQUEST[${requestId}]: Request timeout after ${timeoutMs/1000}s - ${req.method} ${req.originalUrl}`);
   });
   
   next();
