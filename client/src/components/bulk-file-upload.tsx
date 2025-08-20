@@ -345,23 +345,9 @@ export default function BulkFileUpload({ uploadType, onSuccess, onClose, onUploa
               Drop files here or click to browse
             </h3>
             <div className="mb-4">
-              <p className="text-gray-700 font-medium mb-2">
-                ✅ Supported Formats:
+              <p className="text-sm text-gray-600 mb-2">
+                📄 Supported: .docx, .txt, .jpg/.png (OCR), .doc (limited) | ❌ No PDFs
               </p>
-              <div className="text-sm text-gray-600 space-y-1">
-                <p>• Microsoft Word (.docx)</p>
-                <p>• Plain Text (.txt)</p>
-                <p>• Image files (.jpg, .jpeg, .png, .gif, .bmp, .webp) - with OCR</p>
-                <p>• Legacy Word (.doc) - limited support</p>
-              </div>
-              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-                <p className="text-sm text-red-700 font-medium">
-                  ❌ PDF files are NOT supported in this environment
-                </p>
-                <p className="text-xs text-red-600 mt-1">
-                  Please convert PDFs to .docx or .txt format before uploading
-                </p>
-              </div>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
