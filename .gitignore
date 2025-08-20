@@ -6,11 +6,20 @@ vite.config.ts.*
 *.tar.gz
 
 # Database files - production and development data should not be committed
-data/production.db*
-data/development.db*
+production.db*
+development.db
 *.sqlite
 *.db
-
+*.db-shm
+*.db-wal
+# SQLite WAL files and shared memory files
+*.shm
+*.wal
+# Database backup files
+*backup*.db*
+verify-*.db*
+# Call context files (may contain sensitive candidate data)
+call-context*.json
 
 # Sensitive files with API keys and secrets
 attached_assets/call_with_ai.py
