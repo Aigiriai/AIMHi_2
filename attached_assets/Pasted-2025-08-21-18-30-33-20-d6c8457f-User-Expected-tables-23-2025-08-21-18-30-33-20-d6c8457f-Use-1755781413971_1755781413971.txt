@@ -1,0 +1,140 @@
+2025-08-21 18:30:33.20
+d6c8457f
+User
+- Expected tables: 23
+2025-08-21 18:30:33.20
+d6c8457f
+User
+- Missing tables: 0
+2025-08-21 18:30:33.20
+d6c8457f
+User
+- Extra tables: 0
+2025-08-21 18:30:33.20
+d6c8457f
+User
+- Missing columns: 0
+2025-08-21 18:30:33.20
+d6c8457f
+User
+- Needs migration: false
+2025-08-21 18:30:33.20
+d6c8457f
+User
+✅ SCHEMA_MANAGER: Database schema is ready
+2025-08-21 18:30:33.20
+d6c8457f
+User
+✅ STARTUP_VALIDATOR: Migration system completed successfully in 9100ms
+2025-08-21 18:30:33.20
+d6c8457f
+User
+🔍 STARTUP_VALIDATOR: Step 4/5 - Verifying migration success and schema integrity...
+2025-08-21 18:30:33.20
+d6c8457f
+User
+🔍 STARTUP_VALIDATOR: Performing detailed schema analysis...
+2025-08-21 18:30:33.20
+d6c8457f
+User
+📋 STARTUP_VALIDATOR: Checking for missing tables...
+2025-08-21 18:30:33.20
+d6c8457f
+User
+📊 STARTUP_VALIDATOR: Found 23 existing tables
+2025-08-21 18:30:33.20
+d6c8457f
+User
+🗑️ STARTUP_VALIDATOR: Checking for extra tables that need cleanup...
+2025-08-21 18:30:33.20
+d6c8457f
+User
+✅ STARTUP_VALIDATOR: No extra tables found
+2025-08-21 18:30:33.30
+d6c8457f
+User
+✅ STARTUP_VALIDATOR: All expected tables are present
+2025-08-21 18:30:33.30
+d6c8457f
+User
+📋 STARTUP_VALIDATOR: Checking for missing columns in existing tables...
+2025-08-21 18:30:33.30
+d6c8457f
+User
+📋 STARTUP_VALIDATOR: Table users has 18 columns
+2025-08-21 18:30:33.30
+d6c8457f
+User
+📋 STARTUP_VALIDATOR: Table organizations has 18 columns
+2025-08-21 18:30:33.40
+d6c8457f
+User
+📋 STARTUP_VALIDATOR: Table jobs has 25 columns
+2025-08-21 18:30:33.40
+d6c8457f
+User
+📋 STARTUP_VALIDATOR: Table candidates has 15 columns
+2025-08-21 18:30:33.40
+d6c8457f
+User
+✅ STARTUP_VALIDATOR: All essential columns are present
+2025-08-21 18:30:33.40
+d6c8457f
+User
+🔍 STARTUP_VALIDATOR: Performing database integrity check...
+2025-08-21 18:30:33.40
+d6c8457f
+User
+✅ STARTUP_VALIDATOR: Database integrity check passed
+2025-08-21 18:30:33.40
+d6c8457f
+User
+🎉 STARTUP_VALIDATOR: Schema analysis complete - database is perfect!
+2025-08-21 18:30:33.40
+d6c8457f
+User
+✅ STARTUP_VALIDATOR: All schema issues resolved successfully (verified in 202ms)
+2025-08-21 18:30:33.40
+d6c8457f
+User
+🎯 STARTUP_VALIDATOR: Database schema is now fully compatible with application code
+2025-08-21 18:30:33.40
+d6c8457f
+User
+📄 STARTUP_VALIDATOR: Step 5/5 - Backup update skipped (appropriate for current environment)
+2025-08-21 18:30:33.40
+d6c8457f
+User
+🎉 STARTUP_VALIDATOR: Schema validation completed successfully in 10202ms
+2025-08-21 18:30:33.40
+d6c8457f
+User
+📊 STARTUP_VALIDATOR: Applied 1 schema fixes automatically
+2025-08-21 18:30:33.40
+d6c8457f
+User
+🚀 STARTUP_VALIDATOR: Application ready - zero runtime validation overhead guaranteed
+2025-08-21 18:30:33.40
+d6c8457f
+User
+✅ DB_MANAGER: Existing database schema validation completed in 10202ms
+2025-08-21 18:30:33.40
+d6c8457f
+User
+📋 DB_MANAGER: Applied 1 schema fixes to existing database
+2025-08-21 18:30:33.40
+d6c8457f
+User
+✅ DB_MANAGER: Existing database validated successfully in 10202ms
+2025-08-21 18:30:33.40
+d6c8457f
+User
+✅ DB_MANAGER: Restored production database validated successfully
+2025-08-21 18:30:33.40
+d6c8457f
+User
+✅ DB_MANAGER: Database initialization completed successfully
+2025-08-21 18:30:44.98
+d58c42c8
+System
+system: received signal terminated
