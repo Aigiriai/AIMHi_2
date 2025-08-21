@@ -1,0 +1,76 @@
+2025-08-21 16:55:21.18
+6be02ac1
+User
+🔐 AUTH[mpwgwu8g0]: ============= AUTHENTICATION SUCCESS =============
+2025-08-21 16:55:21.18
+6be02ac1
+User
+🔄 MANUAL BACKUP: User superadmin@aimhi.app (super_admin) requested manual database backup
+2025-08-21 16:55:21.18
+6be02ac1
+User
+📊 MANUAL BACKUP: NODE_ENV = production
+2025-08-21 16:55:21.18
+6be02ac1
+User
+🏢 MANUAL BACKUP: Organization ID = 1
+2025-08-21 16:55:21.18
+6be02ac1
+User
+🚨 Manual backup triggered (any environment): manual_trigger_from_api
+2025-08-21 16:55:21.18
+6be02ac1
+User
+🔍 BACKUP: Organizations in database: AIM Hi System (aimhi.app), Aigir (no-domain)
+2025-08-21 16:55:21.18
+6be02ac1
+User
+✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup
+2025-08-21 16:55:21.18
+6be02ac1
+User
+🔄 BACKUP: Creating backup from production.db database...
+2025-08-21 16:55:21.18
+6be02ac1
+User
+📁 BACKUP: Source: /home/runner/workspace/data/production.db
+2025-08-21 16:55:21.18
+6be02ac1
+User
+📁 BACKUP: Target: /home/runner/workspace/backups/prod/backup.db
+2025-08-21 16:55:21.18
+6be02ac1
+User
+🔄 BACKUP: Forcing SQLite checkpoint before backup creation
+2025-08-21 16:55:21.18
+6be02ac1
+User
+🔍 BACKUP VERIFY: Organizations after checkpoint: AIM Hi System (aimhi.app), Aigir (no-domain)
+2025-08-21 16:55:21.38
+6be02ac1
+User
+☁️ Uploading database backup: database-backups/prod/production-backup-2025-08-21T11-25-21-387Z.db (284KB)
+2025-08-21 16:55:21.45
+6be02ac1
+System
+retry request: failed. sleeping for 183.032189ms error=no allowed resources attempt=1
+2025-08-21 16:55:21.67
+6be02ac1
+System
+retry request: failed. sleeping for 971.682793ms error=no allowed resources attempt=2
+2025-08-21 16:55:22.68
+6be02ac1
+System
+retry request: failed. sleeping for 1.406295464s attempt=3 error=no allowed resources
+2025-08-21 16:55:24.12
+6be02ac1
+System
+retry request: failed. sleeping for 1.0879602s attempt=4 error=no allowed resources
+2025-08-21 16:55:25.28
+6be02ac1
+System
+retry request: failed. sleeping for 3.034933793s attempt=5 error=no allowed resources
+2025-08-21 16:55:28.32
+6be02ac1
+User
+❌ Failed to upload database backup: Error: no allowed resources
