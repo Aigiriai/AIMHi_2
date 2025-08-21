@@ -271,7 +271,13 @@ export class DatabaseBackupService {
       console.log(`☁️ Downloading database backup: ${objectKey}`);
 
       // Download the file
-      await client.downloadToFilename(objectKey, localDbPath);
+      const { ok, error } = await client.downloadToFilename(objectKey, localDbPath);
+      
+      if (!ok) {
+        throw new ObjectStorageDownloadError(
+          `Download failed: ${error?.message || 'Unknown error'}`
+        );
+      }
 
       // Verify downloaded file exists and is not empty
       if (!fs.existsSync(localDbPath)) {
@@ -314,11 +320,13 @@ export class DatabaseBackupService {
       const envSeg = environment
         ? (environment === 'production' ? 'prod' : 'dev')
         : this.getEnvSegment();
-      const result = await client.list({
-        prefix: `database-backups/${envSeg}/`,
-        limit: 1000, // Limit to prevent memory issues
-      });
-      const files = result.objects || [];
+      const result = await client.list({ prefix: `database-backups/${envSeg}/` });
+      
+      if (!result.ok) {
+        throw new Error(`Failed to list backups: ${result.error?.message || 'Unknown error'}`);
+      }
+      
+      const files = result.value || [];
 
       // Filter and sort backups
       const backupNames = files
@@ -474,26 +482,29 @@ export class DatabaseBackupService {
       // Get all backup files with their metadata
       const envSeg = this.getEnvSegment();
       const bucket = this.getBucket();
-  const [files] = await bucket.getFiles({
-        prefix: `database-backups/${envSeg}/`,
-        maxResults: 1000,
-      });
+      const result = await bucket.list({ prefix: `database-backups/${envSeg}/` });
+      
+      if (!result.ok) {
+        throw new Error(`Failed to list backups: ${result.error?.message || 'Unknown error'}`);
+      }
+      
+      const files = result.value || [];
 
-      // Filter backup files and get their metadata
-  const backupFiles = files
+      // Filter backup files and extract metadata
+      const backupFiles = files
         .filter(
-          (file: File) =>
-    file.name.startsWith(`database-backups/${envSeg}/`) &&
+          (file: any) =>
+            file.name.startsWith(`database-backups/${envSeg}/`) &&
             file.name.endsWith(".db"),
         )
-        .map(async (file) => {
-          const [metadata] = await file.getMetadata();
-          const objEnv = (metadata.metadata && (metadata.metadata as any).environment) || undefined;
+        .map((file: any) => {
+          // Use the metadata from the list response
+          const objEnv = (file.metadata && file.metadata.environment) || undefined;
           return {
             name: file.name.replace(`database-backups/${envSeg}/`, ""),
             fullName: file.name, // full object key
-            timeCreated: new Date(metadata.timeCreated || 0),
-            updated: new Date(metadata.updated || metadata.timeCreated || 0),
+            timeCreated: new Date(file.timeCreated || file.created || 0),
+            updated: new Date(file.updated || file.timeCreated || file.created || 0),
             env: objEnv as ('production' | 'development' | undefined),
           };
         });
@@ -503,8 +514,8 @@ export class DatabaseBackupService {
         return false;
       }
 
-      // Wait for all metadata to be retrieved
-  let backupsWithMetadata: BackupMeta[] = await Promise.all(backupFiles);
+      // Metadata is already available from the list response
+      let backupsWithMetadata: BackupMeta[] = backupFiles;
 
       // Additional safeguard: only consider backups whose metadata.environment matches our current env.
       const currentEnv = this.getEnvironment();
@@ -632,13 +643,16 @@ export class DatabaseBackupService {
 
       const bucket = this.getBucket();
       const envSeg = this.getEnvSegment();
-      const [files] = await bucket.getFiles({
-        prefix: `database-backups/${envSeg}/`,
-        maxResults: 1000,
-      });
+      const result = await bucket.list({ prefix: `database-backups/${envSeg}/` });
+      
+      if (!result.ok) {
+        throw new Error(`Failed to list backups: ${result.error?.message || 'Unknown error'}`);
+      }
+      
+      const files = result.value || [];
 
       const backupFiles = files.filter(
-        (file: File) =>
+        (file: any) =>
           file.name.startsWith(`database-backups/${envSeg}/`) &&
           file.name.endsWith(".db"),
       );
@@ -653,9 +667,9 @@ export class DatabaseBackupService {
       );
 
       // Delete all backup files
-    const deletePromises = backupFiles.map(async (file: File, index: number) => {
+      const deletePromises = backupFiles.map(async (file: any, index: number) => {
         try {
-          await file.delete();
+          await bucket.delete(file.name);
           console.log(
             `  ✓ Deleted backup ${index + 1}/${backupFiles.length}: ${file.name}`,
           );
