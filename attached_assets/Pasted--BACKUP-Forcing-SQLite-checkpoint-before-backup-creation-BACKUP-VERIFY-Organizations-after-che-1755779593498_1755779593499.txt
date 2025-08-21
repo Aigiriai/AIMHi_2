@@ -1,0 +1,54 @@
+ BACKUP: Forcing SQLite checkpoint before backup creation
+🔍 BACKUP VERIFY: Organizations after checkpoint: AIM Hi System (aimhi.app), Aigiri (no-domain)
+☁️ Uploading database backup: database-backups/dev/development-backup-2025-08-21T12-32-32-989Z.db (148KB)
+✅ Database backup uploaded successfully: database-backups/dev/development-backup-2025-08-21T12-32-32-989Z.db
+🔍 BACKUP VERIFY: Downloading backup to verify content...
+☁️ Downloading database backup: database-backups/dev/development-backup-2025-08-21T12-32-32-989Z.db
+🔄 Trying downloadAsBytes method as alternative...
+❌ Failed to download database backup: TypeError [ERR_INVALID_ARG_TYPE]: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received an instance of Array
+    at Module.writeFileSync (node:fs:2376:5)
+    at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:311:10)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+    at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:479:3)
+    at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+    at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+    at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+  code: 'ERR_INVALID_ARG_TYPE'
+}
+❌ Error during backup verification: ObjectStorageDownloadError: Failed to download database backup 'database-backups/dev/development-backup-2025-08-21T12-32-32-989Z.db': The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received an instance of Array
+    at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:341:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+    at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:479:3)
+    at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+    at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+    at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+  originalError: TypeError [ERR_INVALID_ARG_TYPE]: The "data" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received an instance of Array
+      at Module.writeFileSync (node:fs:2376:5)
+      at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:311:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+      at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:479:3)
+      at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+      at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+      at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+    code: 'ERR_INVALID_ARG_TYPE'
+  }
+}
+✅ Database backup created in Object Storage: development-backup-2025-08-21T12-32-32-989Z.db
+✅ Local backup copy created: /home/runner/workspace/backups/dev/backup.db
+✅ Manual backup completed: development-backup-2025-08-21T12-32-32-989Z.db
+Audit event (disabled): {
+  organizationId: 1,
+  userId: 1,
+  action: 'manual_backup_requested',
+  resourceType: 'system',
+  resourceId: undefined,
+  details: { requestedBy: 'superadmin@aimhi.app', organizationId: 1 }
+}
+📤 RESPONSE[ltq1zres5]: ============= OUTGOING RESPONSE =============
+📤 RESPONSE[ltq1zres5]: Status: 200 | Duration: 1332ms
+📤 RESPONSE[ltq1zres5]: Response size: 106 bytes
+📤 RESPONSE[ltq1zres5]: POST /api/auth/backup-database -> 200 (1332ms)
+12:32:34 PM [express] POST /api/auth/backup-database 200 in 1333ms :: {"success":true,"message":"Data…

@@ -303,8 +303,14 @@ export class DatabaseBackupService {
       }
 
       // Write bytes to file manually
-      const bytes = downloadResult.value;
-      if (!bytes || bytes.length === 0) {
+      let bytes = downloadResult.value;
+      
+      // Handle case where downloadAsBytes returns an Array containing a Buffer
+      if (Array.isArray(bytes) && bytes.length === 1 && Buffer.isBuffer(bytes[0])) {
+        bytes = bytes[0]; // Extract the Buffer from the Array
+      }
+      
+      if (!bytes || (Buffer.isBuffer(bytes) && bytes.length === 0)) {
         throw new ObjectStorageDownloadError("Downloaded data is empty");
       }
       
