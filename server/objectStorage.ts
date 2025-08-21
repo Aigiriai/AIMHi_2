@@ -538,11 +538,23 @@ export class DatabaseBackupService {
         .map((file: any) => {
           // Use the metadata from the list response
           const objEnv = (file.metadata && file.metadata.environment) || undefined;
+          // Extract timestamp from filename if metadata timestamps fail
+          let extractedTime = 0;
+          const timestampMatch = file.name.match(/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/);
+          if (timestampMatch) {
+            const isoString = timestampMatch[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1:$2:$3.$4Z');
+            extractedTime = new Date(isoString).getTime();
+          }
+          
+          // Use metadata timestamps if available, otherwise fall back to filename parsing
+          const metaTimeCreated = file.timeCreated || file.created;
+          const metaTimeUpdated = file.updated || file.timeCreated || file.created;
+          
           return {
             name: file.name.replace(`database-backups/${envSeg}/`, ""),
             fullName: file.name, // full object key
-            timeCreated: new Date(file.timeCreated || file.created || 0),
-            updated: new Date(file.updated || file.timeCreated || file.created || 0),
+            timeCreated: new Date(metaTimeCreated || extractedTime || 0),
+            updated: new Date(metaTimeUpdated || extractedTime || 0),
             env: objEnv as ('production' | 'development' | undefined),
           };
         });

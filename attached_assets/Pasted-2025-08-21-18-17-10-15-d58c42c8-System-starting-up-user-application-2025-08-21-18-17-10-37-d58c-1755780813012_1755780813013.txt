@@ -1,0 +1,116 @@
+2025-08-21 18:17:10.15
+d58c42c8
+System
+starting up user application
+2025-08-21 18:17:10.37
+d58c42c8
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-08-21 18:17:11.86
+d58c42c8
+User
+> rest-express@1.0.0 start
+2025-08-21 18:17:11.86
+d58c42c8
+User
+> NODE_ENV=production node dist/index.js
+2025-08-21 18:17:14.10
+d58c42c8
+User
+⚠️ DEPRECATED: sqlite-db.ts is deprecated. Use unified-db-manager.ts instead
+2025-08-21 18:17:14.12
+d58c42c8
+User
+☁️ Object Storage backup service initialized
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Expected tables: 23
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Missing tables: 0
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Extra tables: 0
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Missing columns: 1
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Needs migration: true
+2025-08-21 18:17:15.20
+d58c42c8
+User
+🗑️ MIGRATION_SYSTEM: Processing schema cleanup...
+2025-08-21 18:17:15.20
+d58c42c8
+User
+🔄 MIGRATION_SYSTEM: Generated comprehensive schema alignment migration:
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Description: Auto-generated schema alignment - 1 columns, 0 tables added, 0 tables removed
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Up statements: 1
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Schema cleanup: NO
+2025-08-21 18:17:15.20
+d58c42c8
+User
+🚀 MIGRATION_SYSTEM: Applying migration auto_migration_1755780435208...
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Version: 1
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Description: Auto-generated schema alignment - 1 columns, 0 tables added, 0 tables removed
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Environment: production
+2025-08-21 18:17:15.20
+d58c42c8
+User
+- Executing: ALTER TABLE candidates ADD COLUMN settings TEXT DE...
+2025-08-21 18:17:15.21
+d58c42c8
+User
+✅ MIGRATION_SYSTEM: Migration auto_migration_1755780435208 applied successfully
+2025-08-21 18:17:15.21
+d58c42c8
+User
+✅ MIGRATION_SYSTEM: Migration completed in 2ms
+2025-08-21 18:17:15.21
+d58c42c8
+User
+✅ MIGRATION_SYSTEM: Auto-migration completed successfully
+2025-08-21 18:17:15.21
+d58c42c8
+User
+🔍 MIGRATION_SYSTEM: Checking for schema drift...
+2025-08-21 18:17:15.21
+d58c42c8
+User
+📊 MIGRATION_SYSTEM: Schema analysis complete
+2025-08-21 18:17:15.21
+d58c42c8
+User
+- Current tables: 23
+2025-08-21 18:17:15.21
+d58c42c8
+User
+- Expected tables: 23
+2025-08-21 18:17:15.21
+d58c42c8
+User
+- Missing tables: 0
