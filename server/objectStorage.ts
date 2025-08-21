@@ -529,6 +529,8 @@ export class DatabaseBackupService {
       const files = result.value || [];
 
       // Filter backup files and extract metadata
+      // CRITICAL FIX: Replit Object Storage list() only returns 'name' - no size/timestamps
+      // We must extract ALL metadata from filename patterns since API doesn't provide it
       const backupFiles = files
         .filter(
           (file: any) =>
@@ -536,26 +538,35 @@ export class DatabaseBackupService {
             file.name.endsWith(".db"),
         )
         .map((file: any) => {
-          // Use the metadata from the list response
-          const objEnv = (file.metadata && file.metadata.environment) || undefined;
-          // Extract timestamp from filename if metadata timestamps fail
+          console.log(`🔍 Processing backup file: ${file.name}`);
+          
+          // Extract timestamp from filename (only reliable source)
           let extractedTime = 0;
           const timestampMatch = file.name.match(/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/);
           if (timestampMatch) {
             const isoString = timestampMatch[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1:$2:$3.$4Z');
             extractedTime = new Date(isoString).getTime();
+            console.log(`   📅 Extracted timestamp: ${new Date(extractedTime).toISOString()}`);
+          } else {
+            console.log(`   ⚠️ No timestamp found in filename`);
           }
           
-          // Use metadata timestamps if available, otherwise fall back to filename parsing
-          const metaTimeCreated = file.timeCreated || file.created;
-          const metaTimeUpdated = file.updated || file.timeCreated || file.created;
+          // Determine environment from filename pattern
+          let objEnv: 'production' | 'development' | undefined = undefined;
+          if (file.name.includes('production-backup-') || file.name.includes('-production-')) {
+            objEnv = 'production';
+          } else if (file.name.includes('development-backup-') || file.name.includes('-development-')) {
+            objEnv = 'development';
+          }
           
           return {
             name: file.name.replace(`database-backups/${envSeg}/`, ""),
             fullName: file.name, // full object key
-            timeCreated: new Date(metaTimeCreated || extractedTime || 0),
-            updated: new Date(metaTimeUpdated || extractedTime || 0),
-            env: objEnv as ('production' | 'development' | undefined),
+            timeCreated: new Date(extractedTime || 0),
+            updated: new Date(extractedTime || 0), // Use same timestamp
+            env: objEnv,
+            // Flag to indicate this is filename-derived metadata
+            metadataSource: 'filename'
           };
         });
 
@@ -574,34 +585,15 @@ export class DatabaseBackupService {
         backupsWithMetadata = envMatched;
       }
 
-      // Sort by most recent modification time (updated timestamp)
-      // CRITICAL FIX: Since Object Storage metadata timestamps are unreliable,
-      // use filename parsing as primary sorting method in production
+      // Sort by timestamp extracted from filename (most reliable method)
+      // Object Storage list() API doesn't provide timestamps, so filename parsing is the only option
       backupsWithMetadata.sort((a: BackupMeta, b: BackupMeta) => {
         const timeA = a.updated.getTime();
         const timeB = b.updated.getTime();
         
-        // If both timestamps are epoch (1970), use filename parsing instead
-        if (timeA === 0 && timeB === 0) {
-          console.log(`🔧 Using filename-based sorting (metadata timestamps failed)`);
-          
-          // Extract actual timestamps from filenames for proper sorting
-          const extractTime = (filename: string) => {
-            const match = filename.match(/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/);
-            if (match) {
-              const isoString = match[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1:$2:$3.$4Z');
-              return new Date(isoString).getTime();
-            }
-            return 0;
-          };
-          
-          const timeFromFilenameA = extractTime(a.name);
-          const timeFromFilenameB = extractTime(b.name);
-          
-          return timeFromFilenameB - timeFromFilenameA; // Newer times first
-        }
+        console.log(`📊 Sorting: ${a.name} (${new Date(timeA).toISOString()}) vs ${b.name} (${new Date(timeB).toISOString()})`);
         
-        return timeB - timeA;
+        return timeB - timeA; // Newer timestamps first
       });
 
   console.log(`📋 Found ${backupsWithMetadata.length} ${envSeg} backup files, checking most recent:`);
@@ -612,11 +604,24 @@ export class DatabaseBackupService {
         const timeStr = backup.updated.toISOString();
         console.log(`  ${i + 1}. ${backup.name} (modified: ${timeStr})`);
 
-        // Download and check organizations in this backup
+        // Download and check organizations in this backup + get real file size
         try {
-          const tempPath = path.join(os.tmpdir(), `debug_backup_${i}.db`);
-          const downloaded = await this.downloadDatabaseBackup(backup.fullName, tempPath);
-          if (downloaded) {
+          // Get actual file size by downloading bytes
+          const downloadResult = await this.getBucket().downloadAsBytes(backup.fullName);
+          let actualSize = 0;
+          
+          if (downloadResult.ok) {
+            let bytes = downloadResult.value;
+            if (Array.isArray(bytes) && bytes.length === 1 && Buffer.isBuffer(bytes[0])) {
+              bytes = bytes[0];
+            }
+            actualSize = bytes.length;
+            console.log(`     📦 Actual size: ${Math.round(actualSize / 1024)}KB`);
+            
+            // Save to temp file for database analysis
+            const tempPath = path.join(os.tmpdir(), `debug_backup_${i}.db`);
+            fs.writeFileSync(tempPath, bytes);
+            
             // Use dynamic import instead of require for ES modules
             const Database: any = (await import("better-sqlite3")).default;
             const db = new Database(tempPath, { readonly: true });
@@ -643,6 +648,8 @@ export class DatabaseBackupService {
 
             db.close();
             fs.unlinkSync(tempPath); // Clean up temp file
+          } else {
+            console.log(`     ❌ Failed to download for analysis: ${downloadResult.error}`);
           }
         } catch (error) {
           console.log(
