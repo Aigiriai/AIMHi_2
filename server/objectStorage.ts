@@ -1,4 +1,4 @@
-import { Storage, File } from "@google-cloud/storage";
+import { Client } from "@replit/object-storage";
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
@@ -12,9 +12,6 @@ type BackupMeta = {
   updated: Date;
   env?: 'production' | 'development';
 };
-
-const REPLIT_SIDECAR_ENDPOINT =
-  process.env.REPLIT_SIDECAR_ENDPOINT || "http://127.0.0.1:1106";
 
 // Custom error types for better error handling
 export class ObjectStorageConfigError extends Error {
@@ -48,23 +45,9 @@ export class ObjectStorageDownloadError extends Error {
 }
 
 // The object storage client is used to interact with the object storage service.
-export const objectStorageClient = new Storage({
-  credentials: {
-    audience: "replit",
-    subject_token_type: "access_token",
-    token_url: `${REPLIT_SIDECAR_ENDPOINT}/token`,
-    type: "external_account",
-    credential_source: {
-      url: `${REPLIT_SIDECAR_ENDPOINT}/credential`,
-      format: {
-        type: "json",
-        subject_token_field_name: "access_token",
-      },
-    },
-    universe_domain: "googleapis.com",
-  },
-  projectId: "",
-});
+// Initialize with bucket ID for Replit Object Storage  
+const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "";
+export const objectStorageClient = bucketId ? new Client({ bucketId }) : new Client();
 
 export class ObjectNotFoundError extends Error {
   constructor() {
@@ -96,7 +79,7 @@ export class DatabaseBackupService {
   }
 
   private getBucket() {
-    return objectStorageClient.bucket(this.bucketId);
+    return objectStorageClient;
   }
 
   // Determine current environment and path prefix
@@ -163,7 +146,7 @@ export class DatabaseBackupService {
             console.log(
               `✅ BACKUP VERIFIED: Organizations in backup file:`,
               orgs
-                .map((o) => `${o.name} (${o.domain || "no-domain"})`)
+                .map((o: any) => `${(o as any).name} (${(o as any).domain || "no-domain"})`)
                 .join(", ") || "None",
             );
           } else {
@@ -182,7 +165,7 @@ export class DatabaseBackupService {
           `❌ BACKUP VERIFICATION FAILED: Could not download backup for verification`,
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Error during backup verification:", error);
     }
   }
@@ -223,29 +206,15 @@ export class DatabaseBackupService {
     }
 
     try {
-      const bucket = this.getBucket();
+      const client = this.getBucket();
       const envSegment = this.getEnvSegment();
-  const destinationPath = `database-backups/${envSegment}/${sanitizedName}`;
+      const destinationPath = `database-backups/${envSegment}/${sanitizedName}`;
 
       console.log(
         `☁️ Uploading database backup: ${destinationPath} (${Math.round(stats.size / 1024)}KB)`,
       );
 
-      await bucket.upload(localDbPath, {
-        destination: destinationPath,
-        metadata: {
-          metadata: {
-            uploadedAt: new Date().toISOString(),
-            originalPath: localDbPath,
-            backupType: this.getEnvironment(),
-            environment: this.getEnvironment(),
-            fileSize: stats.size.toString(),
-            checksumMD5: await this.calculateFileChecksum(localDbPath),
-          },
-        },
-        resumable: false, // Use simple upload for smaller database files
-        timeout: 60000, // 60 second timeout
-      });
+      await client.uploadFromFilename(destinationPath, localDbPath);
 
       console.log(`✅ Database backup uploaded successfully: ${destinationPath}`);
       return destinationPath; // return full key
@@ -285,34 +254,24 @@ export class DatabaseBackupService {
     }
 
     try {
-      const bucket = this.getBucket();
+      const client = this.getClient();
       // If a full key is provided (contains '/'), use it directly; otherwise, assume env-specific prefix
       const envSegment = this.getEnvSegment();
       const objectKey = backupKeyOrName.includes('/')
         ? backupKeyOrName
         : `database-backups/${envSegment}/${backupKeyOrName}`;
-      const file = bucket.file(objectKey);
 
       // Check if backup exists
-      const [exists] = await file.exists();
+      const exists = await client.exists(objectKey);
       if (!exists) {
         console.log(`⚠️ No backup found: ${objectKey}`);
         return false;
       }
 
-      // Get file metadata for logging
-      const [metadata] = await file.getMetadata();
-      const fileSize = metadata.size
-        ? Math.round(parseInt(metadata.size.toString()) / 1024)
-        : "unknown";
+      console.log(`☁️ Downloading database backup: ${objectKey}`);
 
-  console.log(`☁️ Downloading database backup: ${objectKey} (${fileSize}KB)`);
-
-      // Download with timeout and validation
-      await file.download({
-        destination: localDbPath,
-        validation: "md5", // Verify integrity during download
-      });
+      // Download the file
+      await client.downloadToFilename(objectKey, localDbPath);
 
       // Verify downloaded file exists and is not empty
       if (!fs.existsSync(localDbPath)) {
@@ -351,23 +310,24 @@ export class DatabaseBackupService {
   // List available database backups
   async listBackups(environment?: 'production' | 'development'): Promise<string[]> {
     try {
-      const bucket = this.getBucket();
+      const client = this.getClient();
       const envSeg = environment
         ? (environment === 'production' ? 'prod' : 'dev')
         : this.getEnvSegment();
-      const [files] = await bucket.getFiles({
+      const result = await client.list({
         prefix: `database-backups/${envSeg}/`,
-        maxResults: 1000, // Limit to prevent memory issues
+        limit: 1000, // Limit to prevent memory issues
       });
+      const files = result.objects || [];
 
       // Filter and sort backups
       const backupNames = files
         .filter(
-          (file) =>
+          (file: any) =>
             file.name.startsWith(`database-backups/${envSeg}/`) &&
             file.name.endsWith(".db"),
         )
-        .map((file) => file.name.replace(`database-backups/${envSeg}/`, ""))
+        .map((file: any) => file.name.replace(`database-backups/${envSeg}/`, ""))
         .sort(); // Sort alphabetically
 
       console.log(
