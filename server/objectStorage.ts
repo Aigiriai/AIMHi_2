@@ -254,7 +254,7 @@ export class DatabaseBackupService {
     }
 
     try {
-      const client = this.getClient();
+      const client = this.getBucket();
       // If a full key is provided (contains '/'), use it directly; otherwise, assume env-specific prefix
       const envSegment = this.getEnvSegment();
       const objectKey = backupKeyOrName.includes('/')
@@ -310,7 +310,7 @@ export class DatabaseBackupService {
   // List available database backups
   async listBackups(environment?: 'production' | 'development'): Promise<string[]> {
     try {
-      const client = this.getClient();
+      const client = this.getBucket();
       const envSeg = environment
         ? (environment === 'production' ? 'prod' : 'dev')
         : this.getEnvSegment();
