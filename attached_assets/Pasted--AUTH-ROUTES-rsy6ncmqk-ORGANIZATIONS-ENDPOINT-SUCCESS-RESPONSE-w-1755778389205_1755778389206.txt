@@ -1,0 +1,144 @@
+🚀 AUTH_ROUTES[rsy6ncmqk]: ============= ORGANIZATIONS ENDPOINT SUCCESS =============
+📤 RESPONSE[wp02mcjfs]: ============= OUTGOING RESPONSE =============
+📤 RESPONSE[wp02mcjfs]: Status: 200 | Duration: 9ms
+📤 RESPONSE[wp02mcjfs]: Response size: 1890 bytes
+📤 RESPONSE[wp02mcjfs]: GET /api/auth/organizations?page=1&limit=1000 -> 200 (9ms)
+12:12:07 PM [express] GET /api/auth/organizations 304 in 10ms :: {"organizations":[{"id":2,"name":"Ai…
+🔐 AUTH[xmtjwlgf5]: ============= AUTHENTICATION START =============
+🔐 AUTH[xmtjwlgf5]: Request details: {
+  method: 'GET',
+  path: '/api/admin/logs',
+  originalUrl: '/api/admin/logs',
+  ip: '172.31.117.2',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[xmtjwlgf5]: Authorization header present: true
+🔐 AUTH[xmtjwlgf5]: Token extracted: true
+🔐 AUTH[xmtjwlgf5]: Verifying JWT token...
+🔐 AUTH[xmtjwlgf5]: Token decoded for user 1 in 1ms
+🔐 AUTH[xmtjwlgf5]: Token payload: {
+  userId: 1,
+  iat: 1755778321,
+  exp: 1755864721,
+  expiresIn: '2025-08-22T12:12:01.000Z'
+}
+🔐 AUTH[xmtjwlgf5]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[zsdjssrrc]: Getting database instance (PID: 5853)
+🔍 DB_MANAGER[zsdjssrrc]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[zsdjssrrc]: Returning existing database instance (0ms)
+🔐 AUTH[xmtjwlgf5]: Database connection obtained in 1ms (attempt 1)
+🔐 AUTH[xmtjwlgf5]: Querying user data for user 1...
+🔐 AUTH[xmtjwlgf5]: User query returned 1 results for user 1 in 0ms
+✅ AUTH[xmtjwlgf5]: Authentication successful for user 1 (super_admin) in 3ms
+🔐 AUTH[xmtjwlgf5]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[xmtjwlgf5]: ============= AUTHENTICATION SUCCESS =============
+📤 RESPONSE[nf0ipa74f]: ============= OUTGOING RESPONSE =============
+📤 RESPONSE[nf0ipa74f]: Status: 200 | Duration: 3ms
+📤 RESPONSE[nf0ipa74f]: Response size: 144 bytes
+📤 RESPONSE[nf0ipa74f]: GET /api/admin/logs -> 200 (3ms)
+12:12:10 PM [express] GET /api/admin/logs 200 in 4ms :: {"directory":"/home/runner/workspace/server/l…
+🔐 AUTH[9l41oqo7x]: ============= AUTHENTICATION START =============
+🔐 AUTH[9l41oqo7x]: Request details: {
+  method: 'POST',
+  path: '/backup-database',
+  originalUrl: '/api/auth/backup-database',
+  ip: '172.31.117.2',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWeb...'
+}
+🔐 AUTH[9l41oqo7x]: Authorization header present: true
+🔐 AUTH[9l41oqo7x]: Token extracted: true
+🔐 AUTH[9l41oqo7x]: Verifying JWT token...
+🔐 AUTH[9l41oqo7x]: Token decoded for user 1 in 1ms
+🔐 AUTH[9l41oqo7x]: Token payload: {
+  userId: 1,
+  iat: 1755778321,
+  exp: 1755864721,
+  expiresIn: '2025-08-22T12:12:01.000Z'
+}
+🔐 AUTH[9l41oqo7x]: Getting database connection (attempt 1/3)...
+🔍 DB_MANAGER[74wyizeln]: Getting database instance (PID: 5853)
+🔍 DB_MANAGER[74wyizeln]: Current state - initialized: true, complete: true, initializing: false
+✅ DB_MANAGER[74wyizeln]: Returning existing database instance (0ms)
+🔐 AUTH[9l41oqo7x]: Database connection obtained in 1ms (attempt 1)
+🔐 AUTH[9l41oqo7x]: Querying user data for user 1...
+🔐 AUTH[9l41oqo7x]: User query returned 1 results for user 1 in 0ms
+✅ AUTH[9l41oqo7x]: Authentication successful for user 1 (super_admin) in 4ms
+🔐 AUTH[9l41oqo7x]: User data: {
+  id: 1,
+  email: 'superadmin@aimhi.app',
+  role: 'super_admin',
+  organizationId: 1
+}
+🔐 AUTH[9l41oqo7x]: ============= AUTHENTICATION SUCCESS =============
+🔄 MANUAL BACKUP: User superadmin@aimhi.app (super_admin) requested manual database backup
+📊 MANUAL BACKUP: NODE_ENV = development
+🏢 MANUAL BACKUP: Organization ID = 1
+🚨 Manual backup triggered (any environment): manual_trigger_from_api
+🔍 BACKUP: Organizations in database: AIM Hi System (aimhi.app), Aigiri (no-domain)
+✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup
+🔄 BACKUP: Creating backup from development.db database...
+📁 BACKUP: Source: /home/runner/workspace/data/development.db
+📁 BACKUP: Target: /home/runner/workspace/backups/dev/backup.db
+🔄 BACKUP: Forcing SQLite checkpoint before backup creation
+🔍 BACKUP VERIFY: Organizations after checkpoint: AIM Hi System (aimhi.app), Aigiri (no-domain)
+☁️ Uploading database backup: database-backups/dev/development-backup-2025-08-21T12-12-16-719Z.db (148KB)
+✅ Database backup uploaded successfully: database-backups/dev/development-backup-2025-08-21T12-12-16-719Z.db
+🔍 BACKUP VERIFY: Downloading backup to verify content...
+☁️ Downloading database backup: database-backups/dev/development-backup-2025-08-21T12-12-16-719Z.db
+🔄 Trying downloadAsBytes method as alternative...
+🔍 downloadAsBytes error details: {
+  error: { message: 'Error: Error code undefined' },
+  errorType: 'object',
+  errorKeys: [ 'message' ],
+  errorString: '[object Object]'
+}
+❌ Failed to download database backup: ObjectStorageDownloadError: Download failed: Error: Error code undefined
+    at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:302:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+    at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:479:3)
+    at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+    at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+    at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+  originalError: undefined
+}
+❌ Error during backup verification: ObjectStorageDownloadError: Failed to download database backup 'database-backups/dev/development-backup-2025-08-21T12-12-16-719Z.db': Download failed: Error: Error code undefined
+    at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:341:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+    at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:479:3)
+    at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+    at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+    at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+  originalError: ObjectStorageDownloadError: Download failed: Error: Error code undefined
+      at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:302:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+      at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:479:3)
+      at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+      at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+      at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+    originalError: undefined
+  }
+}
+✅ Database backup created in Object Storage: development-backup-2025-08-21T12-12-16-719Z.db
+✅ Local backup copy created: /home/runner/workspace/backups/dev/backup.db
+✅ Manual backup completed: development-backup-2025-08-21T12-12-16-719Z.db
+Audit event (disabled): {
+  organizationId: 1,
+  userId: 1,
+  action: 'manual_backup_requested',
+  resourceType: 'system',
+  resourceId: undefined,
+  details: { requestedBy: 'superadmin@aimhi.app', organizationId: 1 }
+}
+📤 RESPONSE[leti8hvlp]: ============= OUTGOING RESPONSE =============
+📤 RESPONSE[leti8hvlp]: Status: 200 | Duration: 16958ms
+📤 RESPONSE[leti8hvlp]: Response size: 106 bytes
+📤 RESPONSE[leti8hvlp]: POST /api/auth/backup-database -> 200 (16958ms)
+12:12:33 PM [express] POST /api/auth/backup-database 200 in 16958ms :: {"success":true,"message":"Dat…
