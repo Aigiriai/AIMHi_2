@@ -575,9 +575,34 @@ export class DatabaseBackupService {
       }
 
       // Sort by most recent modification time (updated timestamp)
-      backupsWithMetadata.sort(
-        (a: BackupMeta, b: BackupMeta) => b.updated.getTime() - a.updated.getTime(),
-      );
+      // CRITICAL FIX: Since Object Storage metadata timestamps are unreliable,
+      // use filename parsing as primary sorting method in production
+      backupsWithMetadata.sort((a: BackupMeta, b: BackupMeta) => {
+        const timeA = a.updated.getTime();
+        const timeB = b.updated.getTime();
+        
+        // If both timestamps are epoch (1970), use filename parsing instead
+        if (timeA === 0 && timeB === 0) {
+          console.log(`🔧 Using filename-based sorting (metadata timestamps failed)`);
+          
+          // Extract actual timestamps from filenames for proper sorting
+          const extractTime = (filename: string) => {
+            const match = filename.match(/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/);
+            if (match) {
+              const isoString = match[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1:$2:$3.$4Z');
+              return new Date(isoString).getTime();
+            }
+            return 0;
+          };
+          
+          const timeFromFilenameA = extractTime(a.name);
+          const timeFromFilenameB = extractTime(b.name);
+          
+          return timeFromFilenameB - timeFromFilenameA; // Newer times first
+        }
+        
+        return timeB - timeA;
+      });
 
   console.log(`📋 Found ${backupsWithMetadata.length} ${envSeg} backup files, checking most recent:`);
 
