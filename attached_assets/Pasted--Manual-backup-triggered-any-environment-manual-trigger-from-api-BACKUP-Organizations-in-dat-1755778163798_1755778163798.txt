@@ -1,0 +1,63 @@
+ Manual backup triggered (any environment): manual_trigger_from_api
+🔍 BACKUP: Organizations in database: AIM Hi System (aimhi.app), Aigiri (no-domain)
+✅ BACKUP VALIDATION: Database schema is complete, proceeding with backup
+🔄 BACKUP: Creating backup from development.db database...
+📁 BACKUP: Source: /home/runner/workspace/data/development.db
+📁 BACKUP: Target: /home/runner/workspace/backups/dev/backup.db
+🔄 BACKUP: Forcing SQLite checkpoint before backup creation
+🔍 BACKUP VERIFY: Organizations after checkpoint: AIM Hi System (aimhi.app), Aigiri (no-domain)
+☁️ Uploading database backup: database-backups/dev/development-backup-2025-08-21T12-08-44-519Z.db (148KB)
+✅ Database backup uploaded successfully: database-backups/dev/development-backup-2025-08-21T12-08-44-519Z.db
+🔍 BACKUP VERIFY: Downloading backup to verify content...
+☁️ Downloading database backup: database-backups/dev/development-backup-2025-08-21T12-08-44-519Z.db
+🔍 Download error details: {
+  error: { message: 'Error: Error code undefined' },
+  errorType: 'object',
+  errorKeys: [ 'message' ],
+  errorString: '[object Object]'
+}
+❌ Failed to download database backup: ObjectStorageDownloadError: Download failed: Error: Error code undefined
+    at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:300:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+    at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:468:3)
+    at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+    at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+    at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+  originalError: undefined
+}
+❌ Error during backup verification: ObjectStorageDownloadError: Failed to download database backup 'database-backups/dev/development-backup-2025-08-21T12-08-44-519Z.db': Download failed: Error: Error code undefined
+    at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:330:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+    at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:468:3)
+    at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+    at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+    at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+  originalError: ObjectStorageDownloadError: Download failed: Error: Error code undefined
+      at DatabaseBackupService.downloadDatabaseBackup (/home/runner/workspace/server/objectStorage.ts:300:15)
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async DatabaseBackupService.verifyBackupContent (/home/runner/workspace/server/objectStorage.ts:126:26)
+      at async DatabaseBackupService.createTimestampedBackup (/home/runner/workspace/server/objectStorage.ts:468:3)
+      at async DataPersistenceManager.createBackup (/home/runner/workspace/server/data-persistence.ts:94:33)
+      at async BackupIntegrationService.forceBackupAnyEnvironment (/home/runner/workspace/server/backup-integration.ts:231:26)
+      at async <anonymous> (/home/runner/workspace/server/auth-routes.ts:1200:21) {
+    originalError: undefined
+  }
+}
+✅ Database backup created in Object Storage: development-backup-2025-08-21T12-08-44-519Z.db
+✅ Local backup copy created: /home/runner/workspace/backups/dev/backup.db
+✅ Manual backup completed: development-backup-2025-08-21T12-08-44-519Z.db
+Audit event (disabled): {
+  organizationId: 1,
+  userId: 1,
+  action: 'manual_backup_requested',
+  resourceType: 'system',
+  resourceId: undefined,
+  details: { requestedBy: 'superadmin@aimhi.app', organizationId: 1 }
+}
+📤 RESPONSE[dmafj0tah]: ============= OUTGOING RESPONSE =============
+📤 RESPONSE[dmafj0tah]: Status: 200 | Duration: 24293ms
+📤 RESPONSE[dmafj0tah]: Response size: 106 bytes
+📤 RESPONSE[dmafj0tah]: POST /api/auth/backup-database -> 200 (24293ms)
+12:09:08 PM [express] POST /api/auth/backup-database 200 in 24294ms :: {"success":true,"message":"Dat…

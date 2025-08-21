@@ -270,19 +270,21 @@ export class DatabaseBackupService {
 
       console.log(`☁️ Downloading database backup: ${objectKey}`);
 
-      // Download the file
-      const { ok, error } = await client.downloadToFilename(objectKey, localDbPath);
+      // Try alternative download method - downloadAsBytes then write to file
+      console.log(`🔄 Trying downloadAsBytes method as alternative...`);
+      const downloadResult = await client.downloadAsBytes(objectKey);
       
-      if (!ok) {
-        console.error('🔍 Download error details:', {
-          error,
-          errorType: typeof error,
-          errorKeys: error ? Object.keys(error) : [],
-          errorString: error ? String(error) : 'No error object'
+      if (!downloadResult.ok) {
+        console.error('🔍 downloadAsBytes error details:', {
+          error: downloadResult.error,
+          errorType: typeof downloadResult.error,
+          errorKeys: downloadResult.error ? Object.keys(downloadResult.error) : [],
+          errorString: downloadResult.error ? String(downloadResult.error) : 'No error object'
         });
         
         // Handle different error object structures
         let errorMsg = 'Unknown error';
+        const error = downloadResult.error;
         if (error) {
           if (typeof error === 'string') {
             errorMsg = error;
@@ -299,6 +301,15 @@ export class DatabaseBackupService {
         
         throw new ObjectStorageDownloadError(`Download failed: ${errorMsg}`);
       }
+
+      // Write bytes to file manually
+      const bytes = downloadResult.value;
+      if (!bytes || bytes.length === 0) {
+        throw new ObjectStorageDownloadError("Downloaded data is empty");
+      }
+      
+      fs.writeFileSync(localDbPath, bytes);
+      console.log(`✅ Downloaded ${bytes.length} bytes using downloadAsBytes method`);
 
       // Verify downloaded file exists and is not empty
       if (!fs.existsSync(localDbPath)) {
