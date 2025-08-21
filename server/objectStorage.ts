@@ -475,10 +475,8 @@ export class DatabaseBackupService {
   const backupName = `${namePrefix}-${timestamp}.db`;
   const uploadedKey = await this.uploadDatabaseBackup(localDbPath, backupName);
 
-  // TEMPORARILY DISABLED: Verify backup by downloading and reading it
-  // Note: Download verification disabled due to Object Storage permission issue
-  // The backup upload is confirmed successful, verification will be re-enabled after fixing download permissions
-  console.log("⏭️ BACKUP VERIFY: Skipping download verification (upload confirmed successful)");
+  // CRITICAL: Verify backup by downloading and reading it (use full key returned)
+  await this.verifyBackupContent(uploadedKey);
 
   return backupName; // return the file name (without env prefix)
   }
