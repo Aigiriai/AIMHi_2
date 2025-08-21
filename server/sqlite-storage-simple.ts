@@ -948,14 +948,14 @@ export class SQLiteStorage implements IStorage {
   async createInterview(insertInterview: InsertInterview): Promise<Interview> {
     await this.ensureConnection();
     
-    const stmt = this.sqlite.prepare(`
-      INSERT INTO interviews (
-        organization_id, job_id, candidate_id, scheduled_by, scheduled_date_time,
-        duration, status, interview_type, meeting_link, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    const result = stmt.run(
+      const stmt = this.sqlite.prepare(`
+        INSERT INTO interviews (
+        organization_id, job_id, candidate_id, scheduled_by, scheduled_at,
+        duration, status, interview_type, meeting_link, notes, feedback, interviewer_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      const result = stmt.run(
       insertInterview.organizationId,
       insertInterview.jobId,
       insertInterview.candidateId,
@@ -965,10 +965,10 @@ export class SQLiteStorage implements IStorage {
       insertInterview.status || 'scheduled',
       insertInterview.interviewType || 'video',
       insertInterview.meetingLink || null,
-      insertInterview.notes || null
-    );
-    
-    const interview = this.sqlite.prepare('SELECT * FROM interviews WHERE id = ?').get(result.lastInsertRowid);
+      insertInterview.notes || '',
+      JSON.stringify(insertInterview.feedback || {}),
+      insertInterview.interviewerId
+    );    const interview = this.sqlite.prepare('SELECT * FROM interviews WHERE id = ?').get(result.lastInsertRowid);
     return {
       ...interview,
       organizationId: interview.organization_id,
@@ -1059,7 +1059,7 @@ export class SQLiteStorage implements IStorage {
         jobId: interview.job_id,
         candidateId: interview.candidate_id,
         scheduledBy: interview.scheduled_by,
-        scheduledDateTime: new Date(interview.scheduled_date_time),
+        scheduledDateTime: new Date(interview.scheduled_at || interview.scheduled_date_time),
         duration: interview.duration,
         interviewType: interview.interview_type,
         interviewerName: interview.interviewer_name,

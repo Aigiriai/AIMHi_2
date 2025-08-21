@@ -235,12 +235,42 @@ export class MigrationManager {
         }
       } else if (tableName === 'candidates' && columnName === 'settings') {
         alterStatement = `ALTER TABLE candidates ADD COLUMN settings TEXT DEFAULT '{}';`;
+      } else if (tableName === 'interviews') {
+        // Handle missing interview columns
+        if (columnName === 'match_id') {
+          alterStatement = `ALTER TABLE interviews ADD COLUMN match_id INTEGER REFERENCES job_matches(id);`;
+        } else if (columnName === 'scheduled_by') {
+          alterStatement = `ALTER TABLE interviews ADD COLUMN scheduled_by INTEGER NOT NULL REFERENCES users(id);`;
+        } else if (columnName === 'duration') {
+          alterStatement = `ALTER TABLE interviews ADD COLUMN duration INTEGER NOT NULL DEFAULT 60;`;
+        } else if (columnName === 'interview_type') {
+          alterStatement = `ALTER TABLE interviews ADD COLUMN interview_type TEXT NOT NULL DEFAULT 'video';`;
+        } else if (columnName === 'meeting_link') {
+          alterStatement = `ALTER TABLE interviews ADD COLUMN meeting_link TEXT;`;
+        } else if (columnName === 'feedback') {
+          alterStatement = `ALTER TABLE interviews ADD COLUMN feedback TEXT DEFAULT '{}';`;
+        }
       }
       
       if (alterStatement) {
         upStatements.push(alterStatement);
         downStatements.push(`-- Note: SQLite doesn't support DROP COLUMN for ${columnRef}`);
       }
+    }
+
+    // CRITICAL: Handle column renames for existing deployments
+    const columnRenames = await this.checkColumnRenames();
+    for (const rename of columnRenames) {
+      console.log(`🔄 MIGRATION_SYSTEM: Handling column rename: ${rename.table}.${rename.oldColumn} → ${rename.newColumn}`);
+      
+      // SQLite doesn't support RENAME COLUMN directly, so we need to:
+      // 1. Add new column
+      // 2. Copy data from old column
+      // 3. Drop old column (which we can't do, so we leave it)
+      upStatements.push(`ALTER TABLE ${rename.table} ADD COLUMN ${rename.newColumn} ${rename.dataType};`);
+      upStatements.push(`UPDATE ${rename.table} SET ${rename.newColumn} = ${rename.oldColumn} WHERE ${rename.oldColumn} IS NOT NULL;`);
+      
+      downStatements.push(`-- Note: Column rename rollback not fully supported in SQLite`);
     }
 
     // SCHEMA CLEANUP: Handle extra tables that need to be removed
@@ -278,6 +308,36 @@ export class MigrationManager {
     console.log(`   - Up statements: ${upStatements.length}`);
     console.log(`   - Schema cleanup: ${drift.extraTables.length > 0 ? 'YES' : 'NO'}`);
     return migration;
+  }
+
+  /**
+   * Check for column renames that need to be handled
+   */
+  async checkColumnRenames(): Promise<Array<{table: string, oldColumn: string, newColumn: string, dataType: string}>> {
+    const renames: Array<{table: string, oldColumn: string, newColumn: string, dataType: string}> = [];
+    
+    try {
+      // Check if interviews table has scheduled_date_time but needs scheduled_at
+      const interviewsInfo = this.db.prepare(`PRAGMA table_info(interviews)`).all() as any[];
+      const hasOldColumn = interviewsInfo.some(col => col.name === 'scheduled_date_time');
+      const hasNewColumn = interviewsInfo.some(col => col.name === 'scheduled_at');
+      
+      if (hasOldColumn && !hasNewColumn) {
+        renames.push({
+          table: 'interviews',
+          oldColumn: 'scheduled_date_time', 
+          newColumn: 'scheduled_at',
+          dataType: 'TEXT NOT NULL'
+        });
+      }
+      
+      // Add other column renames here as needed
+      
+    } catch (error) {
+      console.warn('⚠️ MIGRATION_SYSTEM: Could not check column renames:', error);
+    }
+    
+    return renames;
   }
 
   /**

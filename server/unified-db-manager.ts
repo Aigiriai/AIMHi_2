@@ -921,10 +921,16 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
       organization_id INTEGER NOT NULL,
       job_id INTEGER NOT NULL,
       candidate_id INTEGER NOT NULL,
+      match_id INTEGER,
       interviewer_id INTEGER NOT NULL,
+      scheduled_by INTEGER NOT NULL,
       scheduled_at TEXT NOT NULL,
+      duration INTEGER NOT NULL DEFAULT 60,
       status TEXT NOT NULL DEFAULT 'scheduled',
+      interview_type TEXT NOT NULL DEFAULT 'video',
+      meeting_link TEXT,
       notes TEXT DEFAULT '',
+      feedback TEXT DEFAULT '{}',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP NOT NULL,
       interviewer_name TEXT,
@@ -935,7 +941,9 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
       FOREIGN KEY (organization_id) REFERENCES organizations(id),
       FOREIGN KEY (job_id) REFERENCES jobs(id),
       FOREIGN KEY (candidate_id) REFERENCES candidates(id),
-      FOREIGN KEY (interviewer_id) REFERENCES users(id)
+      FOREIGN KEY (match_id) REFERENCES job_matches(id),
+      FOREIGN KEY (interviewer_id) REFERENCES users(id),
+      FOREIGN KEY (scheduled_by) REFERENCES users(id)
     );
 
     -- Applications table
@@ -1282,6 +1290,23 @@ async function createUnifiedTables(sqlite: Database.Database): Promise<void> {
 async function createPerformanceIndexes(sqlite: Database.Database): Promise<void> {
   console.log("📊 DB_MANAGER: Creating performance indexes...");
 
+  // Check which interview scheduling column exists
+  let scheduledColumnName = 'scheduled_at';
+  try {
+    const interviewColumns = sqlite.prepare(`PRAGMA table_info(interviews)`).all() as any[];
+    const hasOldColumn = interviewColumns.some((col: any) => col.name === 'scheduled_date_time');
+    const hasNewColumn = interviewColumns.some((col: any) => col.name === 'scheduled_at');
+    
+    if (hasOldColumn && !hasNewColumn) {
+      scheduledColumnName = 'scheduled_date_time';
+      console.log("📊 DB_MANAGER: Using legacy column name 'scheduled_date_time' for indexes");
+    } else {
+      console.log("📊 DB_MANAGER: Using current column name 'scheduled_at' for indexes");
+    }
+  } catch (error) {
+    console.warn("⚠️ DB_MANAGER: Could not check interview columns, using default 'scheduled_at'");
+  }
+
   const indexSQL = `
     CREATE INDEX IF NOT EXISTS idx_users_org_email ON users(organization_id, email);
     CREATE INDEX IF NOT EXISTS idx_jobs_org ON jobs(organization_id);
@@ -1319,11 +1344,20 @@ async function createPerformanceIndexes(sqlite: Database.Database): Promise<void
     CREATE INDEX IF NOT EXISTS idx_applications_org_status ON applications(organization_id, status);
     CREATE INDEX IF NOT EXISTS idx_applications_org_applied ON applications(organization_id, applied_at);
     CREATE INDEX IF NOT EXISTS idx_interviews_org_status ON interviews(organization_id, status);
-    CREATE INDEX IF NOT EXISTS idx_interviews_org_scheduled ON interviews(organization_id, scheduled_date_time);
     CREATE INDEX IF NOT EXISTS idx_job_matches_org_created ON job_matches(organization_id, created_at);
   `;
 
   sqlite.exec(indexSQL);
+  
+  // Create the interview scheduled index with the correct column name
+  try {
+    const scheduledIndexSQL = `CREATE INDEX IF NOT EXISTS idx_interviews_org_scheduled ON interviews(organization_id, ${scheduledColumnName});`;
+    sqlite.exec(scheduledIndexSQL);
+    console.log(`✅ DB_MANAGER: Interview scheduled index created using column '${scheduledColumnName}'`);
+  } catch (error) {
+    console.warn(`⚠️ DB_MANAGER: Could not create interview scheduled index:`, error);
+  }
+  
   console.log("✅ DB_MANAGER: Performance indexes created");
 }
 
