@@ -274,9 +274,30 @@ export class DatabaseBackupService {
       const { ok, error } = await client.downloadToFilename(objectKey, localDbPath);
       
       if (!ok) {
-        throw new ObjectStorageDownloadError(
-          `Download failed: ${error?.message || 'Unknown error'}`
-        );
+        console.error('🔍 Download error details:', {
+          error,
+          errorType: typeof error,
+          errorKeys: error ? Object.keys(error) : [],
+          errorString: error ? String(error) : 'No error object'
+        });
+        
+        // Handle different error object structures
+        let errorMsg = 'Unknown error';
+        if (error) {
+          if (typeof error === 'string') {
+            errorMsg = error;
+          } else if (error.message) {
+            errorMsg = error.message;
+          } else if ((error as any).code) {
+            errorMsg = `Error code: ${(error as any).code}`;
+          } else if (error.toString) {
+            errorMsg = error.toString();
+          } else {
+            errorMsg = JSON.stringify(error);
+          }
+        }
+        
+        throw new ObjectStorageDownloadError(`Download failed: ${errorMsg}`);
       }
 
       // Verify downloaded file exists and is not empty
