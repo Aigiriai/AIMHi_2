@@ -1,0 +1,112 @@
+2025-08-21 10:46:10.47
+b1966566
+User
+📊 DB_MANAGER: Creating performance indexes...
+2025-08-21 10:46:10.47
+b1966566
+User
+❌ DB_MANAGER: Fresh database creation failed after 84ms: SqliteError: no such column: scheduled_date_time
+2025-08-21 10:46:10.47
+b1966566
+User
+at Database.exec (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/wrappers.js:9:14)
+2025-08-21 10:46:10.47
+b1966566
+User
+at createPerformanceIndexes (file:///home/runner/workspace/dist/index.js:3244:10)
+2025-08-21 10:46:10.47
+b1966566
+User
+at createFreshDatabase (file:///home/runner/workspace/dist/index.js:2547:11)
+2025-08-21 10:46:10.47
+b1966566
+User
+at async performInitialization (file:///home/runner/workspace/dist/index.js:2372:20)
+2025-08-21 10:46:10.47
+b1966566
+User
+at async performInitializationWithTimeout (file:///home/runner/workspace/dist/index.js:2282:20)
+2025-08-21 10:46:10.47
+b1966566
+User
+at async getDatabase (file:///home/runner/workspace/dist/index.js:2215:20) {
+2025-08-21 10:46:10.47
+b1966566
+User
+code: 'SQLITE_ERROR'
+2025-08-21 10:46:10.47
+b1966566
+User
+}
+2025-08-21 10:46:10.47
+b1966566
+User
+🧹 DB_MANAGER: Cleaning up failed database connection...
+2025-08-21 10:46:10.47
+b1966566
+User
+✅ DB_MANAGER: Database connection closed after failure
+2025-08-21 10:46:10.47
+b1966566
+User
+🗑️ DB_MANAGER: Removed partially created database file
+2025-08-21 10:46:10.48
+b1966566
+User
+❌ DB_MANAGER: Initialization failed: SqliteError: no such column: scheduled_date_time
+2025-08-21 10:46:10.48
+b1966566
+User
+at Database.exec (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/wrappers.js:9:14)
+2025-08-21 10:46:10.48
+b1966566
+User
+at createPerformanceIndexes (file:///home/runner/workspace/dist/index.js:3244:10)
+2025-08-21 10:46:10.48
+b1966566
+User
+at createFreshDatabase (file:///home/runner/workspace/dist/index.js:2547:11)
+2025-08-21 10:46:10.48
+b1966566
+User
+at async performInitialization (file:///home/runner/workspace/dist/index.js:2372:20)
+2025-08-21 10:46:10.48
+b1966566
+User
+at async performInitializationWithTimeout (file:///home/runner/workspace/dist/index.js:2282:20)
+2025-08-21 10:46:10.48
+b1966566
+User
+at async getDatabase (file:///home/runner/workspace/dist/index.js:2215:20) {
+2025-08-21 10:46:10.48
+b1966566
+User
+code: 'SQLITE_ERROR'
+2025-08-21 10:46:10.48
+b1966566
+User
+}
+2025-08-21 10:46:10.48
+b1966566
+User
+❌ DB_MANAGER: Database initialization failed after 116ms
+2025-08-21 10:46:10.48
+b1966566
+User
+❌ DB_MANAGER: Error type: SqliteError
+2025-08-21 10:46:10.48
+b1966566
+User
+❌ DB_MANAGER: Error message: no such column: scheduled_date_time
+2025-08-21 10:46:10.48
+b1966566
+User
+❌ DB_MANAGER: Error stack: SqliteError: no such column: scheduled_date_time
+2025-08-21 10:46:10.48
+b1966566
+User
+at Database.exec (/home/runner/workspace/node_modules/better-sqlite3/lib/methods/wrappers.js:9:14)
+2025-08-21 10:46:10.48
+b1966566
+User
+at createPerformanceIndexes (file:///home/runner/workspace/dist/index.js:3244:10)
