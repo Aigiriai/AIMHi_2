@@ -1177,6 +1177,8 @@ function RecruitmentDashboard() {
                                     </div>
                                   </div>
                                   <div className="flex space-x-2">
+                                    {/* HIDDEN: Apply to Job button */}
+                                    {/*
                                     <ApplyToJobDropdown 
                                       candidateId={candidate.id} 
                                       candidateName={candidate.name}
@@ -1185,6 +1187,7 @@ function RecruitmentDashboard() {
                                         queryClient.invalidateQueries({ queryKey: ['/api/pipeline/stats'] });
                                       }}
                                     />
+                                    */}
                                     <Button 
                                       variant="outline" 
                                       size="sm"
@@ -1202,9 +1205,12 @@ function RecruitmentDashboard() {
                                         </Button>
                                       }
                                     />
+                                    {/* HIDDEN: Schedule Interview button */}
+                                    {/*
                                     <Button variant="outline" size="sm">
                                       Schedule Interview
                                     </Button>
+                                    */}
                                   </div>
                                 </div>
                               </div>
