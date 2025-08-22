@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { authenticateToken, requireOrganization, type AuthRequest } from "./auth";
 import { getSQLiteDB } from "./unified-db-manager";
-import { generateSQLFromPrompt } from "./ai-report-service-secure";
+import { generateSQLFromPrompt } from "./ai-report-service";
 import { validateAndSanitizeSQL, sanitizePrompt } from "./simple-sql-validator";
 
 // Rate limiter for AI requests (10 requests per minute per user)

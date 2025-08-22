@@ -205,34 +205,6 @@ function validateTableAccess(sql: string): { isValid: boolean; errors: string[] 
   // Simplified: Allow all tables since we're focusing on organization scoping
   return { isValid: true, errors: [] };
 }
-  
-  try {
-    // Extract table names from SQL (handle aliases, e.g., "FROM jobs j", "JOIN applications AS a")
-    const usedTables: string[] = [];
-    const tableRegex = /\b(?:FROM|JOIN)\s+([a-zA-Z_][\w]*)/gi;
-    let m: RegExpExecArray | null;
-    while ((m = tableRegex.exec(sql)) !== null) {
-      usedTables.push(m[1].toLowerCase());
-    }
-
-    // Check if all tables are in allowed list
-    for (const table of usedTables) {
-      if (!SECURE_SCHEMA.allowedTables.includes(table)) {
-        errors.push(`Unauthorized table access: ${table}`);
-      }
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  } catch (error) {
-    return {
-      isValid: false,
-      errors: ['Failed to validate table access']
-    };
-  }
-}
 
 // Validate that organization_id filter is properly applied where required
 function validateOrganizationFilter(sql: string, organizationId: number): { isValid: boolean; errors: string[] } {
