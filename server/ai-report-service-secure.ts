@@ -239,7 +239,7 @@ export async function generateSQLFromPrompt(
           content: aiPrompt
         }
       ],
-      max_tokens: 500,
+      max_tokens: 5000, // Increased from 500 to handle complex queries
       temperature: 0.1, // Low temperature for consistent results
     });
 

@@ -230,27 +230,59 @@ export function AIReportBuilder() {
     onError: (e: any) => toast({ title: 'Run failed', description: e?.message || 'Could not execute saved query', variant: 'destructive' })
   });
 
-  // Load persisted state (results survive navigation)
+  // Load persisted state with better error handling and version checking
   useEffect(() => {
+    console.log('🤖 AI_REPORT_FRONTEND: Loading persisted state...');
     try {
       const raw = sessionStorage.getItem('aiReport:last');
       if (raw) {
         const parsed = JSON.parse(raw);
-        setPrompt(parsed.prompt || '');
-        setChartType(parsed.chartType || 'auto');
-        setAdditionalContext(parsed.additionalContext || '');
-        setReportResults(parsed.reportResults || null);
-        setShowResults(!!parsed.reportResults);
+        console.log('🤖 AI_REPORT_FRONTEND: Found persisted state:', {
+          hasPrompt: !!parsed.prompt,
+          hasResults: !!parsed.reportResults,
+          timestamp: parsed.timestamp,
+          version: parsed.version
+        });
+        
+        // Check if state is not too old (24 hours)
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+        const age = Date.now() - (parsed.timestamp || 0);
+        
+        if (age > maxAge) {
+          console.log('🤖 AI_REPORT_FRONTEND: State is too old, clearing...');
+          sessionStorage.removeItem('aiReport:last');
+          return;
+        }
+        
+        // Restore state
+        if (parsed.prompt) setPrompt(parsed.prompt);
+        if (parsed.chartType) setChartType(parsed.chartType);
+        if (parsed.additionalContext) setAdditionalContext(parsed.additionalContext);
+        if (parsed.reportResults) {
+          setReportResults(parsed.reportResults);
+          setShowResults(true);
+          console.log('🤖 AI_REPORT_FRONTEND: Restored previous report results');
+        }
+      } else {
+        console.log('🤖 AI_REPORT_FRONTEND: No persisted state found');
       }
     } catch (e) {
-      console.warn('AI_REPORT: Failed to load persisted state');
+      console.warn('🤖 AI_REPORT_FRONTEND: Failed to load persisted state:', e);
+      // Clear corrupted state
+      try {
+        sessionStorage.removeItem('aiReport:last');
+      } catch (clearError) {
+        console.error('🤖 AI_REPORT_FRONTEND: Failed to clear corrupted state:', clearError);
+      }
     }
   }, []);
 
-  // Execute AI report generation
+  // Execute AI report generation with improved error handling
   const generateAIReport = useMutation({
     mutationFn: async (request: AIReportRequest) => {
-      console.log('🤖 AI_REPORT: Generating AI report with prompt:', request.prompt);
+      console.log('🤖 AI_REPORT_FRONTEND: Starting report generation with prompt:', request.prompt);
+      console.log('🤖 AI_REPORT_FRONTEND: Request details:', request);
+      
       const response = await fetch('/api/report/ai-generate', {
         method: 'POST',
         headers: {
@@ -260,38 +292,100 @@ export function AIReportBuilder() {
         body: JSON.stringify(request),
       });
       
+      console.log('🤖 AI_REPORT_FRONTEND: Response status:', response.status);
+      
       if (!response.ok) {
-        console.error('🤖 AI_REPORT: Generation failed:', response.status, response.statusText);
-        throw new Error('Failed to generate AI report');
+        let errorData;
+        try {
+          errorData = await response.json();
+          console.error('🤖 AI_REPORT_FRONTEND: Server error response:', errorData);
+        } catch (parseError) {
+          console.error('🤖 AI_REPORT_FRONTEND: Failed to parse error response:', parseError);
+          errorData = { 
+            error: 'Server Error', 
+            details: `Server returned ${response.status}: ${response.statusText}` 
+          };
+        }
+        
+        // Create detailed error for user
+        const error = new Error(errorData.details || errorData.error || 'Failed to generate report');
+        (error as any).serverResponse = errorData;
+        (error as any).status = response.status;
+        throw error;
       }
       
       const data = await response.json();
-      console.log('🤖 AI_REPORT: AI report generated:', data);
+      console.log('🤖 AI_REPORT_FRONTEND: Report generated successfully:', {
+        execution_id: data.execution_id,
+        row_count: data.row_count,
+        chart_type: data.chart_type,
+        confidence: data.ai_analysis?.confidence_score
+      });
       return data;
     },
     onSuccess: (data) => {
-      console.log('🤖 AI_REPORT: Results received:', data);
+      console.log('🤖 AI_REPORT_FRONTEND: Processing successful response');
       setReportResults(data);
       setShowResults(true);
+      
+      // Enhanced state persistence
       try {
-        sessionStorage.setItem('aiReport:last', JSON.stringify({
+        const stateToSave = {
           prompt,
           chartType,
           additionalContext,
           reportResults: data,
-        }));
-      } catch {}
+          timestamp: Date.now(),
+          version: '1.0'
+        };
+        sessionStorage.setItem('aiReport:last', JSON.stringify(stateToSave));
+        console.log('🤖 AI_REPORT_FRONTEND: State saved to session storage');
+      } catch (storageError) {
+        console.warn('🤖 AI_REPORT_FRONTEND: Failed to save state:', storageError);
+      }
+      
       toast({
-        title: 'AI Report Generated',
-        description: `Generated report with ${data.row_count} rows using AI analysis`,
+        title: '✅ Report Generated Successfully',
+        description: `Generated ${data.row_count} rows with ${data.ai_analysis?.confidence_score || 'N/A'}% confidence`,
       });
     },
-    onError: (error: Error) => {
-      console.error('🤖 AI_REPORT: Generation error:', error);
+    onError: (error: any) => {
+      console.error('🤖 AI_REPORT_FRONTEND: Generation error:', error);
+      console.error('🤖 AI_REPORT_FRONTEND: Error details:', {
+        message: error.message,
+        status: error.status,
+        serverResponse: error.serverResponse
+      });
+      
+      // User-friendly error messages
+      let title = '❌ Report Generation Failed';
+      let description = 'Unable to generate your report. Please try again.';
+      
+      if (error.serverResponse) {
+        const serverError = error.serverResponse;
+        title = serverError.error || title;
+        description = serverError.details || description;
+        
+        // Show suggestions if available
+        if (serverError.suggestions && Array.isArray(serverError.suggestions)) {
+          description += '\n\nSuggestions:\n• ' + serverError.suggestions.join('\n• ');
+        }
+      } else if (error.status === 401) {
+        title = '🔒 Authentication Required';
+        description = 'Please log in again to generate reports.';
+      } else if (error.status === 403) {
+        title = '⛔ Access Denied';
+        description = 'You don\'t have permission to generate reports for this organization.';
+      } else if (error.status >= 500) {
+        title = '🔧 Server Error';
+        description = 'Our servers are experiencing issues. Please try again in a moment.';
+      }
+      
       toast({
-        title: 'Generation Failed',
-        description: error.message,
+        title,
+        description,
         variant: 'destructive',
+        duration: 8000, // Longer duration for error messages
       });
     },
   });
@@ -531,14 +625,22 @@ export function AIReportBuilder() {
               <Button 
                 onClick={handleGenerateReport}
                 disabled={generateAIReport.isPending || !prompt.trim()}
-                className="w-full"
+                className="w-full relative"
               >
                 {generateAIReport.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <span>Generating Report...</span>
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-500 animate-pulse rounded-full"></div>
+                    </div>
+                  </>
                 ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate AI Report
+                  </>
                 )}
-                {generateAIReport.isPending ? 'Generating...' : 'Generate AI Report'}
               </Button>
             </CardContent>
           </Card>

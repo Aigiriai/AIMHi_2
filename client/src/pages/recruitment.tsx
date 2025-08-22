@@ -91,10 +91,10 @@ function RecruitmentDashboard() {
 
   const { data: jobs = [], isLoading: jobsLoading, error: jobsError } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
-    // Override global 4-hour cache for frequently changing data
-    staleTime: 0,               // Always fetch fresh data - temporarily for debugging
-    gcTime: 1000,               // Keep in cache for 1 second - temporarily for debugging  
-    refetchOnMount: true,       // Always fetch fresh data when component mounts
+    // Reasonable cache times to prevent auth issues
+    staleTime: 5 * 60 * 1000,   // 5 minutes fresh data
+    gcTime: 30 * 60 * 1000,     // Keep in cache for 30 minutes
+    refetchOnMount: false,      // Use cached data if available
   });
 
   // Debug jobs query
@@ -102,20 +102,23 @@ function RecruitmentDashboard() {
 
   const { data: candidates = [], isLoading: candidatesLoading } = useQuery<Candidate[]>({
     queryKey: ["/api/candidates"],
-    // Override global 4-hour cache for frequently changing data  
-    staleTime: 2 * 60 * 1000,   // 2 minutes for candidates
-    gcTime: 10 * 60 * 1000,     // Keep in cache for 10 minutes
-    refetchOnMount: true,       // Always fetch fresh data when component mounts
+    // Reasonable cache times to prevent auth issues
+    staleTime: 5 * 60 * 1000,   // 5 minutes for candidates
+    gcTime: 30 * 60 * 1000,     // Keep in cache for 30 minutes
+    refetchOnMount: false,      // Use cached data if available
   });
 
   const { data: interviews = [], isLoading: interviewsLoading } = useQuery<InterviewWithDetails[]>({
     queryKey: ["/api/interviews"],
+    staleTime: 5 * 60 * 1000,   // 5 minutes for interviews
+    gcTime: 30 * 60 * 1000,     // Keep in cache for 30 minutes
   });
 
   // Get current user info for permission checking
   const { data: currentUser, error: userError, isLoading: userLoading } = useQuery({
     queryKey: ["/api/auth/me"],
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 10 * 60 * 1000, // 10 minutes - longer cache for user info
+    gcTime: 60 * 60 * 1000,    // 1 hour cache retention
   });
 
   // Debug user query
