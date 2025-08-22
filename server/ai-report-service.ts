@@ -61,7 +61,7 @@ USER REQUEST: "${userPrompt}"
 ${additionalContext ? `ADDITIONAL CONTEXT: "${additionalContext}"` : ''}
 
 Respond with valid JSON only:
-{"sql":"SELECT u.name, u.role, COUNT(ja.job_id) as job_count FROM users u LEFT JOIN job_assignments ja ON u.id = ja.user_id WHERE u.organization_id = ${organizationId} GROUP BY u.id LIMIT 100","chart_type":"table","interpretation":"Brief explanation","confidence":95}`;
+{"sql":"SELECT CONCAT(u.firstName, ' ', u.lastName) as full_name, u.role, COUNT(ja.job_id) as job_count FROM users u LEFT JOIN job_assignments ja ON u.id = ja.user_id WHERE u.organization_id = ${organizationId} GROUP BY u.id LIMIT 100","chart_type":"table","interpretation":"Brief explanation","confidence":95}`;
 
   return basePrompt;
 }
@@ -74,8 +74,9 @@ function loadUnifiedSchema(): string {
 -- Compact Database Schema for AIMHi Recruitment AI Reports
 -- Optimized for token efficiency while maintaining completeness
 
-users(id, organization_id, email, name, role, created_at)
+users(id, organization_id, email, firstName, lastName, role, created_at)
 -- role: 'super_admin', 'org_admin', 'hiring_manager', 'recruiter', 'interviewer'
+-- NOTE: Use firstName and lastName, not 'name'
 
 organizations(id, name, created_at)
 
@@ -127,7 +128,8 @@ export async function generateSQLFromPrompt(
   confidence: number;
 }> {
   console.log('🤖 AI_REPORT: Starting SQL generation for organization:', organizationId);
-  console.log('🤖 AI_REPORT: User prompt:', userPrompt);
+  console.log('🤖 AI_REPORT: User prompt (length=' + userPrompt.length + '):', userPrompt);
+  console.log('🤖 AI_REPORT: User prompt FULL TEXT:', userPrompt); // Explicit full logging
   console.log('🤖 AI_REPORT: Preferred chart type:', preferredChartType);
   console.log('🤖 AI_REPORT: Additional context:', additionalContext);
   console.log('🤖 AI_REPORT: OpenAI API key configured:', !!process.env.OPENAI_API_KEY);
@@ -145,6 +147,10 @@ export async function generateSQLFromPrompt(
     const aiPrompt = generateAIPrompt(userPrompt, schema, organizationId, additionalContext);
     console.log('🤖 AI_REPORT: Generated AI prompt, length:', aiPrompt.length);
     console.log('🤖 AI_REPORT: Estimated tokens (approx):', Math.ceil(aiPrompt.length / 4)); // Rough token estimate
+    console.log('🤖 AI_REPORT: COMPLETE AI PROMPT BEING SENT TO OPENAI:');
+    console.log('='.repeat(80));
+    console.log(aiPrompt);
+    console.log('='.repeat(80));
     
     console.log('🤖 AI_REPORT: Sending request to OpenAI GPT-4o with max_tokens: 5000...');
     const startTime = Date.now();
@@ -279,7 +285,7 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
   if ((isComplexUserReport || isUserJobCandidateReport) && isSingleTableFormat) {
     // Complex user report with job assignments and candidate assignments in single table
     sql = `SELECT 
-      u.name as user_name,
+      CONCAT(u.firstName, ' ', u.lastName) as user_name,
       u.role as user_role,
       COUNT(DISTINCT ja.job_id) as assigned_jobs_count,
       COUNT(DISTINCT ca.candidate_id) as assigned_candidates_count,
@@ -297,7 +303,7 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
     LEFT JOIN jobs j ON ja.job_id = j.id AND j.organization_id = ${organizationId}
     LEFT JOIN candidates c ON ca.candidate_id = c.id AND c.organization_id = ${organizationId}
     WHERE u.organization_id = ${organizationId}
-    GROUP BY u.id, u.name, u.role
+    GROUP BY u.id, u.firstName, u.lastName, u.role
     ORDER BY assigned_jobs_count DESC, assigned_candidates_count DESC
     LIMIT 100`;
     interpretation = 'Comprehensive single-table user report with job assignments, candidate assignments, roles, and pipeline statuses';
