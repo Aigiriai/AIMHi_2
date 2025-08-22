@@ -366,20 +366,36 @@ export class DatabaseBackupService {
       
       const files = result.value || [];
 
-      // Filter and sort backups
-      const backupNames = files
+      // Filter backups and extract timestamp metadata for proper sorting
+      const backupFiles = files
         .filter(
           (file: any) =>
             file.name.startsWith(`database-backups/${envSeg}/`) &&
             file.name.endsWith(".db"),
         )
-        .map((file: any) => file.name.replace(`database-backups/${envSeg}/`, ""))
-        .sort(); // Sort alphabetically
+        .map((file: any) => {
+          const name = file.name.replace(`database-backups/${envSeg}/`, "");
+          
+          // Extract timestamp from filename for proper chronological sorting
+          let extractedTime = 0;
+          const timestampMatch = file.name.match(/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/);
+          if (timestampMatch) {
+            const isoString = timestampMatch[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1:$2:$3.$4Z');
+            extractedTime = new Date(isoString).getTime();
+          }
+          
+          return {
+            name,
+            timestamp: extractedTime
+          };
+        })
+        .sort((a: { name: string; timestamp: number }, b: { name: string; timestamp: number }) => b.timestamp - a.timestamp) // Sort by timestamp (newest first)
+        .map((file: { name: string; timestamp: number }) => file.name); // Extract just the names
 
       console.log(
-        `📋 Found ${backupNames.length} ${envSeg} database backups in Object Storage`,
+        `📋 Found ${backupFiles.length} ${envSeg} database backups in Object Storage (sorted chronologically)`,
       );
-      return backupNames;
+      return backupFiles;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
