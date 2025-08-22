@@ -145,12 +145,14 @@ export default function Navbar() {
 
         {/* User Menu */}
         <div className="flex items-center space-x-3">
-          {/* Organization Plan Badge */}
+          {/* Organization Plan Badge - HIDDEN */}
+          {/* 
           {user.role !== 'super_admin' && (
             <Badge variant="outline" className="hidden sm:inline-flex">
               {user.organizationPlan?.toUpperCase() || 'TRIAL'}
             </Badge>
           )}
+          */}
 
           {/* User Dropdown */}
           <DropdownMenu>
