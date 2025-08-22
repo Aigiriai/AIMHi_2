@@ -33,144 +33,86 @@ interface AIReportResponse {
   };
 }
 
-// Generate AI prompt for SQL generation (simplified version)
+// Generate AI prompt for SQL generation (optimized version)
 function generateAIPrompt(
   userPrompt: string,
   schema: string,
   organizationId: number,
   additionalContext?: string
 ): string {
-  const basePrompt = `You are an SQL generator for a recruitment platform. Generate a safe SQLite SELECT query from the user's request.
+  const basePrompt = `You are an expert SQL analyst for a recruitment platform. Generate a precise SQLite SELECT query from the user's request.
 
-DATABASE TABLES:
+DATABASE SCHEMA:
 ${schema}
 
-SIMPLE RULES:
-1. Always add: WHERE organization_id = ${organizationId} 
-2. Always add: LIMIT 100
-3. Use simple table aliases (j, c, a, i for jobs, candidates, applications, interviews)
-4. For time requests: use created_at column with date functions
-5. Choose appropriate chart type: 'bar' for comparisons, 'pie' for distributions, 'line' for time series, 'table' for everything else
+CRITICAL RULES:
+1. ALWAYS include: WHERE organization_id = ${organizationId} (for data isolation)
+2. ALWAYS include: LIMIT 100 (for performance)
+3. Use aliases: u=users, j=jobs, c=candidates, a=applications, i=interviews, ja=job_assignments, ca=candidate_assignments
+4. For multi-table requests: Use appropriate JOINs to combine data
+5. Chart types: 'table' for complex data, 'bar' for comparisons, 'pie' for distributions, 'line' for time series
+
+EXAMPLES:
+- "users with job counts" → JOIN users with job_assignments
+- "candidates assigned to users" → JOIN users with candidate_assignments  
+- "user pipeline status" → JOIN users with jobs/candidates and their statuses
 
 USER REQUEST: "${userPrompt}"
-${additionalContext ? `CONTEXT: "${additionalContext}"` : ''}
+${additionalContext ? `ADDITIONAL CONTEXT: "${additionalContext}"` : ''}
 
-Return JSON only:
-{"sql":"SELECT ...","chart_type":"bar","interpretation":"Brief explanation","confidence":85}`;
+Respond with valid JSON only:
+{"sql":"SELECT u.name, u.role, COUNT(ja.job_id) as job_count FROM users u LEFT JOIN job_assignments ja ON u.id = ja.user_id WHERE u.organization_id = ${organizationId} GROUP BY u.id LIMIT 100","chart_type":"table","interpretation":"Brief explanation","confidence":95}`;
 
   return basePrompt;
 }
 
 // Load the unified schema file - use all available tables
 function loadUnifiedSchema(): string {
-  try {
-    const schemaPath = path.join(process.cwd(), 'unified-schema.ts');
-    if (fs.existsSync(schemaPath)) {
-      console.log('🤖 AI_REPORT: Loading unified schema from file');
-      return fs.readFileSync(schemaPath, 'utf8');
-    }
-    
-    // Enhanced fallback schema with all main tables
-    console.warn('🤖 AI_REPORT: unified-schema.ts not found, using comprehensive fallback schema');
-    return `
--- Comprehensive Database Schema for AIMHi Recruitment System
--- All available tables for reporting
+  // Use compact schema optimized for AI prompts instead of the full Drizzle schema
+  console.log('🤖 AI_REPORT: Using optimized compact schema for AI prompts');
+  return `
+-- Compact Database Schema for AIMHi Recruitment AI Reports
+-- Optimized for token efficiency while maintaining completeness
 
-CREATE TABLE users (
-  id INTEGER PRIMARY KEY,
-  organization_id INTEGER NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  name TEXT NOT NULL,
-  role TEXT NOT NULL, -- 'super_admin', 'org_admin', 'hiring_manager', 'recruiter', 'interviewer'
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+users(id, organization_id, email, name, role, created_at)
+-- role: 'super_admin', 'org_admin', 'hiring_manager', 'recruiter', 'interviewer'
 
-CREATE TABLE organizations (
-  id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+organizations(id, name, created_at)
 
-CREATE TABLE jobs (
-  id INTEGER PRIMARY KEY,
-  organization_id INTEGER NOT NULL,
-  title TEXT NOT NULL,
-  department TEXT,
-  location TEXT,
-  status TEXT NOT NULL, -- 'active', 'draft', 'closed', 'paused'
-  source TEXT, -- 'internal', 'website', 'linkedin'
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+jobs(id, organization_id, title, department, location, status, source, created_at)
+-- status: 'active', 'draft', 'closed', 'paused'
 
-CREATE TABLE candidates (
-  id INTEGER PRIMARY KEY,
-  organization_id INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  email TEXT,
-  phone TEXT,
-  status TEXT NOT NULL, -- 'active', 'hired', 'rejected', 'withdrawn'
-  source TEXT, -- 'referral', 'linkedin', 'website', 'agency'
-  experience INTEGER, -- years of experience
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+candidates(id, organization_id, name, email, phone, status, source, experience, created_at)
+-- status: 'active', 'hired', 'rejected', 'withdrawn'
 
-CREATE TABLE applications (
-  id INTEGER PRIMARY KEY,
-  organization_id INTEGER NOT NULL,
-  job_id INTEGER REFERENCES jobs(id),
-  candidate_id INTEGER REFERENCES candidates(id),
-  status TEXT NOT NULL, -- 'applied', 'screening', 'interview', 'offer', 'hired', 'rejected'
-  source TEXT, -- how application was received
-  applied_month TEXT, -- YYYY-MM format for easier grouping
-  match_percentage REAL, -- AI matching score 0-100
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+applications(id, organization_id, job_id, candidate_id, status, source, applied_month, match_percentage, created_at)
+-- status: 'applied', 'screening', 'interview', 'offer', 'hired', 'rejected'
 
-CREATE TABLE interviews (
-  id INTEGER PRIMARY KEY,
-  organization_id INTEGER NOT NULL,
-  application_id INTEGER REFERENCES applications(id),
-  job_id INTEGER REFERENCES jobs(id),
-  candidate_id INTEGER REFERENCES candidates(id),
-  interviewer_id INTEGER REFERENCES users(id),
-  scheduled_at DATETIME,
-  completed_at DATETIME,
-  score REAL, -- interview score 0-10
-  status TEXT, -- 'scheduled', 'completed', 'cancelled'
-  feedback TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+interviews(id, organization_id, application_id, job_id, candidate_id, interviewer_id, scheduled_at, completed_at, score, status, feedback, created_at)
+-- status: 'scheduled', 'completed', 'cancelled'
 
-CREATE TABLE job_matches (
-  id INTEGER PRIMARY KEY,
-  organization_id INTEGER NOT NULL,
-  job_id INTEGER REFERENCES jobs(id),
-  candidate_id INTEGER REFERENCES candidates(id),
-  match_percentage REAL, -- AI matching score 0-100
-  match_criteria TEXT, -- JSON string with detailed match analysis
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+job_matches(id, organization_id, job_id, candidate_id, match_percentage, match_criteria, created_at)
 
-CREATE TABLE job_assignments (
-  id INTEGER PRIMARY KEY,
-  job_id INTEGER REFERENCES jobs(id),
-  user_id INTEGER REFERENCES users(id),
-  role TEXT, -- 'owner', 'assigned', 'viewer'
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+job_assignments(id, job_id, user_id, role, created_at)
+-- role: 'owner', 'assigned', 'viewer'
 
-CREATE TABLE candidate_assignments (
-  id INTEGER PRIMARY KEY,
-  candidate_id INTEGER REFERENCES candidates(id),
-  user_id INTEGER REFERENCES users(id),
-  role TEXT, -- 'owner', 'assigned', 'viewer'
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+candidate_assignments(id, candidate_id, user_id, role, created_at)
+-- role: 'owner', 'assigned', 'viewer'
+
+RELATIONSHIPS:
+- users.organization_id → organizations.id
+- jobs.organization_id → organizations.id  
+- candidates.organization_id → organizations.id
+- applications.job_id → jobs.id
+- applications.candidate_id → candidates.id
+- interviews.job_id → jobs.id
+- interviews.candidate_id → candidates.id
+- interviews.interviewer_id → users.id
+- job_assignments.job_id → jobs.id
+- job_assignments.user_id → users.id
+- candidate_assignments.candidate_id → candidates.id
+- candidate_assignments.user_id → users.id
 `;
-  } catch (error) {
-    console.error('🤖 AI_REPORT: Error loading schema:', error);
-    return 'Schema loading failed - using minimal fallback';
-  }
 }
 
 export async function generateSQLFromPrompt(
@@ -188,6 +130,8 @@ export async function generateSQLFromPrompt(
   console.log('🤖 AI_REPORT: User prompt:', userPrompt);
   console.log('🤖 AI_REPORT: Preferred chart type:', preferredChartType);
   console.log('🤖 AI_REPORT: Additional context:', additionalContext);
+  console.log('🤖 AI_REPORT: OpenAI API key configured:', !!process.env.OPENAI_API_KEY);
+  console.log('🤖 AI_REPORT: OpenAI API key length:', process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0);
   
   if (!process.env.OPENAI_API_KEY) {
     console.warn('🤖 AI_REPORT: OpenAI API key not configured, using enhanced fallback');
@@ -200,12 +144,13 @@ export async function generateSQLFromPrompt(
     
     const aiPrompt = generateAIPrompt(userPrompt, schema, organizationId, additionalContext);
     console.log('🤖 AI_REPORT: Generated AI prompt, length:', aiPrompt.length);
+    console.log('🤖 AI_REPORT: Estimated tokens (approx):', Math.ceil(aiPrompt.length / 4)); // Rough token estimate
     
-    console.log('🤖 AI_REPORT: Sending request to OpenAI with max_tokens: 5000...');
+    console.log('🤖 AI_REPORT: Sending request to OpenAI GPT-4o with max_tokens: 5000...');
     const startTime = Date.now();
     
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o", // Higher token limit model (128k context)
       messages: [
         {
           role: "system",
@@ -216,7 +161,7 @@ export async function generateSQLFromPrompt(
           content: aiPrompt
         }
       ],
-      max_tokens: 5000,
+      max_tokens: 5000, // Restored to original higher limit
       temperature: 0.1,
     });
 
@@ -230,12 +175,24 @@ export async function generateSQLFromPrompt(
     }
 
     console.log('🤖 AI_REPORT: OpenAI response received, length:', responseText.length);
-    console.log('🤖 AI_REPORT: Raw response:', responseText.substring(0, 200) + '...');
+    console.log('🤖 AI_REPORT: Raw response (first 500 chars):', responseText.substring(0, 500) + (responseText.length > 500 ? '...' : ''));
     
     // Parse JSON response with better error handling
     let aiResponse;
     try {
-      aiResponse = JSON.parse(responseText);
+      // First, try to clean the response in case there's extra text
+      let cleanedResponse = responseText.trim();
+      
+      // Remove common prefixes that might be added
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      }
+      if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      console.log('🤖 AI_REPORT: Attempting to parse cleaned response:', cleanedResponse.substring(0, 200) + '...');
+      aiResponse = JSON.parse(cleanedResponse);
       console.log('🤖 AI_REPORT: Successfully parsed JSON response');
     } catch (parseError) {
       console.error('🤖 AI_REPORT: Failed to parse JSON response:', parseError);
@@ -279,6 +236,15 @@ export async function generateSQLFromPrompt(
     if (error instanceof Error) {
       console.error('🤖 AI_REPORT: Error details:', error.message);
       console.error('🤖 AI_REPORT: Error stack:', error.stack);
+      
+      // Check for specific error types
+      if (error.message.includes('context_length_exceeded')) {
+        console.error('🤖 AI_REPORT: Token limit exceeded even with GPT-4o - this should not happen with compact schema');
+      } else if (error.message.includes('API key')) {
+        console.error('🤖 AI_REPORT: API key issue detected');
+      } else if (error.message.includes('rate limit')) {
+        console.error('🤖 AI_REPORT: Rate limit exceeded');
+      }
     }
     console.log('🤖 AI_REPORT: Falling back to enhanced rule-based SQL generation');
     return generateFallbackSQL(userPrompt, organizationId, preferredChartType);
@@ -299,8 +265,45 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
   let interpretation = '';
   let chartType = preferredChartType || 'table';
   
-  // Enhanced rule-based SQL generation with better pattern matching
-  if (prompt.includes('user') || prompt.includes('staff') || prompt.includes('recruiter')) {
+  // Check for complex multi-table requests first (before simple patterns)
+  const isComplexUserReport = prompt.includes('user') && 
+    (prompt.includes('job') || prompt.includes('candidate') || prompt.includes('resume')) &&
+    (prompt.includes('assign') || prompt.includes('count') || prompt.includes('pipeline') || prompt.includes('status'));
+  
+  const isUserJobCandidateReport = prompt.includes('user') && prompt.includes('job') && 
+    (prompt.includes('candidate') || prompt.includes('resume'));
+
+  const isSingleTableFormat = prompt.includes('single table') || prompt.includes('table format');
+  
+  // Enhanced rule-based SQL generation with complex pattern matching first
+  if ((isComplexUserReport || isUserJobCandidateReport) && isSingleTableFormat) {
+    // Complex user report with job assignments and candidate assignments in single table
+    sql = `SELECT 
+      u.name as user_name,
+      u.role as user_role,
+      COUNT(DISTINCT ja.job_id) as assigned_jobs_count,
+      COUNT(DISTINCT ca.candidate_id) as assigned_candidates_count,
+      CASE 
+        WHEN COUNT(DISTINCT j.id) > 0 THEN GROUP_CONCAT(DISTINCT j.status)
+        ELSE 'No jobs assigned'
+      END as job_statuses,
+      CASE 
+        WHEN COUNT(DISTINCT c.id) > 0 THEN GROUP_CONCAT(DISTINCT c.status) 
+        ELSE 'No candidates assigned'
+      END as candidate_statuses
+    FROM users u
+    LEFT JOIN job_assignments ja ON u.id = ja.user_id
+    LEFT JOIN candidate_assignments ca ON u.id = ca.user_id  
+    LEFT JOIN jobs j ON ja.job_id = j.id AND j.organization_id = ${organizationId}
+    LEFT JOIN candidates c ON ca.candidate_id = c.id AND c.organization_id = ${organizationId}
+    WHERE u.organization_id = ${organizationId}
+    GROUP BY u.id, u.name, u.role
+    ORDER BY assigned_jobs_count DESC, assigned_candidates_count DESC
+    LIMIT 100`;
+    interpretation = 'Comprehensive single-table user report with job assignments, candidate assignments, roles, and pipeline statuses';
+    chartType = 'table';
+  }
+  else if (prompt.includes('user') || prompt.includes('staff') || prompt.includes('recruiter')) {
     sql = `SELECT 
       role,
       COUNT(*) as user_count
