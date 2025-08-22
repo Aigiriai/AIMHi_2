@@ -61,7 +61,7 @@ USER REQUEST: "${userPrompt}"
 ${additionalContext ? `ADDITIONAL CONTEXT: "${additionalContext}"` : ''}
 
 Respond with valid JSON only:
-{"sql":"SELECT CONCAT(u.firstName, ' ', u.lastName) as full_name, u.role, COUNT(ja.job_id) as job_count FROM users u LEFT JOIN job_assignments ja ON u.id = ja.user_id WHERE u.organization_id = ${organizationId} GROUP BY u.id LIMIT 100","chart_type":"table","interpretation":"Brief explanation","confidence":95}`;
+{"sql":"SELECT CONCAT(u.first_name, ' ', u.last_name) as full_name, u.role, COUNT(ja.job_id) as job_count FROM users u LEFT JOIN job_assignments ja ON u.id = ja.user_id WHERE u.organization_id = ${organizationId} GROUP BY u.id LIMIT 100","chart_type":"table","interpretation":"Brief explanation","confidence":95}`;
 
   return basePrompt;
 }
@@ -74,9 +74,9 @@ function loadUnifiedSchema(): string {
 -- Compact Database Schema for AIMHi Recruitment AI Reports
 -- Optimized for token efficiency while maintaining completeness
 
-users(id, organization_id, email, firstName, lastName, role, created_at)
+users(id, organization_id, email, first_name, last_name, role, created_at)
 -- role: 'super_admin', 'org_admin', 'hiring_manager', 'recruiter', 'interviewer'
--- NOTE: Use firstName and lastName, not 'name'
+-- NOTE: Use first_name and last_name (with underscores), not firstName/lastName
 
 organizations(id, name, created_at)
 
@@ -86,11 +86,13 @@ jobs(id, organization_id, title, department, location, status, source, created_a
 candidates(id, organization_id, name, email, phone, status, source, experience, created_at)
 -- status: 'active', 'hired', 'rejected', 'withdrawn'
 
-applications(id, organization_id, job_id, candidate_id, status, source, applied_month, match_percentage, created_at)
--- status: 'applied', 'screening', 'interview', 'offer', 'hired', 'rejected'
+applications(id, organization_id, job_id, candidate_id, applied_by, status, substatus, current_stage, applied_at, match_percentage, source, notes, created_at)
+-- status: 'new', 'screening', 'interview', 'decided'
+-- NOTE: Use applied_by (user who applied), applied_at (timestamp), current_stage
 
-interviews(id, organization_id, application_id, job_id, candidate_id, interviewer_id, scheduled_at, completed_at, score, status, feedback, created_at)
+interviews(id, organization_id, match_id, job_id, candidate_id, scheduled_by, scheduled_date_time, duration, interview_type, status, meeting_link, notes, created_at)
 -- status: 'scheduled', 'completed', 'cancelled'
+-- NOTE: Use scheduled_by (not interviewer_id), scheduled_date_time (not scheduled_at)
 
 job_matches(id, organization_id, job_id, candidate_id, match_percentage, match_criteria, created_at)
 
@@ -106,9 +108,10 @@ RELATIONSHIPS:
 - candidates.organization_id → organizations.id
 - applications.job_id → jobs.id
 - applications.candidate_id → candidates.id
+- applications.applied_by → users.id
 - interviews.job_id → jobs.id
 - interviews.candidate_id → candidates.id
-- interviews.interviewer_id → users.id
+- interviews.scheduled_by → users.id
 - job_assignments.job_id → jobs.id
 - job_assignments.user_id → users.id
 - candidate_assignments.candidate_id → candidates.id
@@ -285,7 +288,7 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
   if ((isComplexUserReport || isUserJobCandidateReport) && isSingleTableFormat) {
     // Complex user report with job assignments and candidate assignments in single table
     sql = `SELECT 
-      CONCAT(u.firstName, ' ', u.lastName) as user_name,
+      CONCAT(u.first_name, ' ', u.last_name) as user_name,
       u.role as user_role,
       COUNT(DISTINCT ja.job_id) as assigned_jobs_count,
       COUNT(DISTINCT ca.candidate_id) as assigned_candidates_count,
@@ -303,7 +306,7 @@ function generateFallbackSQL(userPrompt: string, organizationId: number, preferr
     LEFT JOIN jobs j ON ja.job_id = j.id AND j.organization_id = ${organizationId}
     LEFT JOIN candidates c ON ca.candidate_id = c.id AND c.organization_id = ${organizationId}
     WHERE u.organization_id = ${organizationId}
-    GROUP BY u.id, u.firstName, u.lastName, u.role
+    GROUP BY u.id, u.first_name, u.last_name, u.role
     ORDER BY assigned_jobs_count DESC, assigned_candidates_count DESC
     LIMIT 100`;
     interpretation = 'Comprehensive single-table user report with job assignments, candidate assignments, roles, and pipeline statuses';
