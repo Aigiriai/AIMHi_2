@@ -12,6 +12,10 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// Cache for auto-generated schema to avoid re-parsing on every request
+let cachedSchema: string | null = null;
+let schemaLastModified: number = 0;
+
 interface AIReportRequest {
   prompt: string;
   preferred_chart_type?: string;
@@ -66,13 +70,360 @@ Respond with valid JSON only:
   return basePrompt;
 }
 
-// Load the unified schema file - use all available tables
+// Load the unified schema file - auto-generate compact schema from actual unified-schema.ts
 function loadUnifiedSchema(): string {
-  // Use compact schema optimized for AI prompts instead of the full Drizzle schema
-  console.log('🤖 AI_REPORT: Using optimized compact schema for AI prompts');
+  try {
+    console.log('🤖 AI_REPORT: Auto-generating compact schema from unified-schema.ts');
+    
+    // Check if we need to refresh the cached schema
+    const currentSchema = generateCompactSchemaFromUnified();
+    
+    return currentSchema;
+  } catch (error) {
+    console.warn('🤖 AI_REPORT: Failed to auto-generate schema, using fallback:', error);
+    return getFallbackCompactSchema();
+  }
+}
+
+// Auto-generate compact AI schema by parsing the actual unified-schema.ts file
+function generateCompactSchemaFromUnified(): string {
+  // Try multiple possible paths for unified-schema.ts
+  const possiblePaths = [
+    path.join(process.cwd(), 'unified-schema.ts'),
+    path.join(process.cwd(), 'server', 'unified-schema.ts'),
+    path.join(process.cwd(), '..', 'unified-schema.ts'),
+    './unified-schema.ts',
+    '../unified-schema.ts',
+    '../../unified-schema.ts'
+  ];
+  
+  let schemaPath = '';
+  let schemaStats: any = null;
+  
+  for (const testPath of possiblePaths) {
+    try {
+      if (fs.existsSync(testPath)) {
+        // Test if we can actually read the file
+        const testContent = fs.readFileSync(testPath, 'utf-8');
+        if (testContent.includes('sqliteTable') && testContent.includes('export const')) {
+          schemaPath = testPath;
+          schemaStats = fs.statSync(testPath);
+          break;
+        }
+      }
+    } catch (error) {
+      console.warn(`🤖 AI_REPORT: Cannot access ${testPath}:`, error);
+    }
+  }
+  
+  if (!schemaPath || !schemaStats) {
+    throw new Error(`Valid unified-schema.ts not found. Searched: ${possiblePaths.join(', ')}`);
+  }
+  
+  // Check if schema file has been modified since last cache
+  const fileModified = schemaStats.mtime.getTime();
+  
+  if (cachedSchema && fileModified <= schemaLastModified) {
+    console.log('🤖 AI_REPORT: Using cached auto-generated schema');
+    return cachedSchema;
+  }
+  
+  console.log(`🤖 AI_REPORT: Schema file modified, regenerating from: ${schemaPath}`);
+  const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+  console.log(`🤖 AI_REPORT: Parsing unified-schema.ts file (${schemaContent.length} chars)...`);
+  
+  // Extract table definitions using regex patterns
+  const tables = extractTableDefinitions(schemaContent);
+  
+  if (tables.length === 0) {
+    throw new Error('No table definitions found in unified-schema.ts');
+  }
+  
+  console.log(`🤖 AI_REPORT: Extracted ${tables.length} table definitions`);
+  
+  // Generate compact schema string
+  const compactSchema = buildCompactSchemaString(tables);
+  console.log(`🤖 AI_REPORT: Generated compact schema (${compactSchema.length} chars)`);
+  
+  // Cache the generated schema
+  cachedSchema = compactSchema;
+  schemaLastModified = fileModified;
+  
+  return compactSchema;
+}
+
+// Extract table definitions from unified-schema.ts content
+function extractTableDefinitions(content: string): Array<{
+  name: string;
+  columns: Array<{ name: string; type: string; dbColumn: string }>;
+  comments: string[];
+}> {
+  const tables: Array<{
+    name: string;
+    columns: Array<{ name: string; type: string; dbColumn: string }>;
+    comments: string[];
+  }> = [];
+  
+  // More robust regex patterns to match different table definition formats
+  const tablePatterns = [
+    // Standard format: export const tableName = sqliteTable("table_name", { ... });
+    /export\s+const\s+(\w+)\s*=\s*sqliteTable\s*\(\s*["'](\w+)["']\s*,\s*\{([\s\S]*?)\}\s*\);/g,
+    // With comments: export const tableName = sqliteTable("table_name", { ... }); // comment
+    /export\s+const\s+(\w+)\s*=\s*sqliteTable\s*\(\s*["'](\w+)["']\s*,\s*\{([\s\S]*?)\}\s*\);\s*(?:\/\/.*)?/g
+  ];
+  
+  // Try each pattern to maximize table detection
+  for (const tableRegex of tablePatterns) {
+    let match;
+    // Reset regex lastIndex for each new pattern
+    tableRegex.lastIndex = 0;
+    
+    while ((match = tableRegex.exec(content)) !== null) {
+      const tableName = match[2]; // Use the database table name, not the TypeScript variable name
+      const tableContent = match[3];
+      
+      // Skip if we already processed this table
+      if (tables.some(t => t.name === tableName)) {
+        continue;
+      }
+      
+      // Only include tables relevant for reporting
+      if (!isReportingRelevantTable(tableName)) {
+        console.log(`🤖 AI_REPORT: Skipping non-reporting table: ${tableName}`);
+        continue;
+      }
+      
+      // Extract columns from the table definition
+      const columns = extractColumns(tableContent);
+      
+      // Only include if we found some columns
+      if (columns.length === 0) {
+        console.warn(`🤖 AI_REPORT: No columns found for table ${tableName}, skipping`);
+        continue;
+      }
+      
+      // Extract comments for status values and other important info
+      const comments = extractTableComments(tableContent);
+      
+      const filteredColumns = columns.filter(col => isReportingRelevantColumn(col.dbColumn));
+      
+      tables.push({
+        name: tableName,
+        columns: filteredColumns,
+        comments
+      });
+      
+      console.log(`🤖 AI_REPORT: Processed table '${tableName}' with ${filteredColumns.length} relevant columns`);
+    }
+  }
+  
+  // If no tables found with patterns, log detailed error
+  if (tables.length === 0) {
+    console.error('🤖 AI_REPORT: No tables extracted. Schema content preview:', content.substring(0, 500));
+  }
+  
+  return tables;
+}
+
+// Extract column definitions from table content
+function extractColumns(tableContent: string): Array<{ name: string; type: string; dbColumn: string }> {
+  const columns: Array<{ name: string; type: string; dbColumn: string }> = [];
+  
+  // More robust regex patterns to handle various column definition formats
+  const columnPatterns = [
+    // Standard pattern: columnName: type("db_column_name")
+    /(\w+):\s*(text|integer|real)\s*\(\s*["']([^"']+)["']\s*\)/g,
+    // Pattern with chaining: columnName: type("db_column_name").notNull()
+    /(\w+):\s*(text|integer|real)\s*\(\s*["']([^"']+)["']\s*\)[^,}]*/g,
+    // Pattern with complex chaining: columnName: type("db_column_name").primaryKey(...)
+    /(\w+):\s*(text|integer|real)\s*\(\s*["']([^"']+)["']\s*\)[\s\S]*?(?=,|\}|$)/g
+  ];
+  
+  // Try each pattern to maximize column detection
+  for (const pattern of columnPatterns) {
+    let match;
+    // Reset regex lastIndex for each new pattern
+    pattern.lastIndex = 0;
+    
+    while ((match = pattern.exec(tableContent)) !== null) {
+      const propertyName = match[1];
+      const dataType = match[2];
+      const dbColumnName = match[3];
+      
+      // Avoid duplicates
+      if (!columns.some(col => col.dbColumn === dbColumnName)) {
+        columns.push({
+          name: propertyName,
+          type: dataType,
+          dbColumn: dbColumnName
+        });
+      }
+    }
+  }
+  
+  console.log(`🤖 AI_REPORT: Extracted ${columns.length} columns`);
+  
+  // If no columns found, try a more lenient approach
+  if (columns.length === 0) {
+    console.warn('🤖 AI_REPORT: No columns found with standard patterns, trying fallback extraction');
+    return extractColumnsFallback(tableContent);
+  }
+  
+  return columns;
+}
+
+// Fallback column extraction for edge cases
+function extractColumnsFallback(tableContent: string): Array<{ name: string; type: string; dbColumn: string }> {
+  const columns: Array<{ name: string; type: string; dbColumn: string }> = [];
+  
+  // Very lenient pattern to catch any type with quoted strings
+  const fallbackRegex = /(\w+):\s*(?:text|integer|real)[\s\S]*?["']([^"']+)["']/g;
+  
+  let match;
+  while ((match = fallbackRegex.exec(tableContent)) !== null) {
+    const propertyName = match[1];
+    const dbColumnName = match[2];
+    
+    // Guess the type based on common patterns
+    let dataType = 'text'; // default
+    if (propertyName.includes('id') || propertyName.includes('Id') || propertyName.includes('count') || propertyName.includes('Count')) {
+      dataType = 'integer';
+    } else if (propertyName.includes('percentage') || propertyName.includes('score')) {
+      dataType = 'real';
+    }
+    
+    columns.push({
+      name: propertyName,
+      type: dataType,
+      dbColumn: dbColumnName
+    });
+  }
+  
+  console.log(`🤖 AI_REPORT: Fallback extraction found ${columns.length} columns`);
+  return columns;
+}
+
+// Extract status values and other important comments
+function extractTableComments(tableContent: string): string[] {
+  const comments: string[] = [];
+  
+  // Extract status enum values - try multiple patterns
+  const statusPatterns = [
+    /\/\/\s*status:\s*['"]([^'"]+)['"]/i,
+    /\/\/\s*([^,\n]*status[^,\n]*)/i,
+    /status.*?['"]([^'"]+)['"]/i,
+    /\/\/\s*(draft|active|closed|paused|new|screening|interview|decided|scheduled|completed|cancelled)/i
+  ];
+  
+  for (const pattern of statusPatterns) {
+    const statusMatch = tableContent.match(pattern);
+    if (statusMatch && statusMatch[1] && !comments.some(c => c.includes(statusMatch[1]))) {
+      comments.push(`status: ${statusMatch[1]}`);
+      break; // Only add first match to avoid duplicates
+    }
+  }
+  
+  // Extract role enum values - try multiple patterns
+  const rolePatterns = [
+    /\/\/\s*role:\s*['"]([^'"]+)['"]/i,
+    /\/\/\s*([^,\n]*role[^,\n]*)/i,
+    /role.*?['"]([^'"]+)['"]/i,
+    /\/\/\s*(super_admin|org_admin|hiring_manager|recruiter|interviewer|owner|assigned|viewer)/i
+  ];
+  
+  for (const pattern of rolePatterns) {
+    const roleMatch = tableContent.match(pattern);
+    if (roleMatch && roleMatch[1] && !comments.some(c => c.includes(roleMatch[1]))) {
+      comments.push(`role: ${roleMatch[1]}`);
+      break; // Only add first match to avoid duplicates
+    }
+  }
+  
+  console.log(`🤖 AI_REPORT: Extracted ${comments.length} comments`);
+  return comments;
+}
+
+// Check if table is relevant for reporting
+function isReportingRelevantTable(tableName: string): boolean {
+  const reportingTables = [
+    'users', 'organizations', 'jobs', 'candidates', 'applications', 
+    'interviews', 'job_matches', 'job_assignments', 'candidate_assignments',
+    'teams', 'user_teams' // Additional tables that might be useful for reporting
+  ];
+  const isRelevant = reportingTables.includes(tableName);
+  if (!isRelevant) {
+    console.log(`🤖 AI_REPORT: Excluding table '${tableName}' from AI schema`);
+  }
+  return isRelevant;
+}
+
+// Check if column is relevant for reporting (exclude internal/system columns)
+function isReportingRelevantColumn(columnName: string): boolean {
+  const excludeColumns = ['password_hash', 'settings', 'permissions', 'temporary_password'];
+  return !excludeColumns.includes(columnName);
+}
+
+// Build the compact schema string for AI prompts
+function buildCompactSchemaString(tables: Array<{
+  name: string;
+  columns: Array<{ name: string; type: string; dbColumn: string }>;
+  comments: string[];
+}>): string {
+  let schema = `-- Auto-Generated Compact Database Schema for AIMHi Recruitment AI Reports
+-- Generated from unified-schema.ts on ${new Date().toISOString()}
+-- Optimized for token efficiency while maintaining 100% accuracy
+
+`;
+
+  // Add table definitions
+  for (const table of tables) {
+    const columnNames = table.columns.map(col => col.dbColumn).join(', ');
+    schema += `${table.name}(${columnNames})\n`;
+    
+    // Add comments for status/role values
+    for (const comment of table.comments) {
+      schema += `-- ${comment}\n`;
+    }
+    
+    // Add special notes for commonly problematic fields
+    if (table.name === 'users') {
+      schema += '-- NOTE: Use first_name and last_name (with underscores), not firstName/lastName\n';
+    }
+    if (table.name === 'interviews') {
+      schema += '-- NOTE: Use scheduled_by (not interviewer_id), scheduled_date_time (not scheduled_at)\n';
+    }
+    if (table.name === 'applications') {
+      schema += '-- NOTE: Use applied_by (user who applied), applied_at (timestamp), current_stage\n';
+    }
+    
+    schema += '\n';
+  }
+  
+  // Add relationships section
+  schema += 'RELATIONSHIPS:\n';
+  schema += '- users.organization_id → organizations.id\n';
+  schema += '- jobs.organization_id → organizations.id\n';
+  schema += '- candidates.organization_id → organizations.id\n';
+  schema += '- applications.job_id → jobs.id\n';
+  schema += '- applications.candidate_id → candidates.id\n';
+  schema += '- applications.applied_by → users.id\n';
+  schema += '- interviews.job_id → jobs.id\n';
+  schema += '- interviews.candidate_id → candidates.id\n';
+  schema += '- interviews.scheduled_by → users.id\n';
+  schema += '- job_assignments.job_id → jobs.id\n';
+  schema += '- job_assignments.user_id → users.id\n';
+  schema += '- candidate_assignments.candidate_id → candidates.id\n';
+  schema += '- candidate_assignments.user_id → users.id\n';
+  
+  return schema;
+}
+
+// Fallback compact schema (used if auto-generation fails)
+function getFallbackCompactSchema(): string {
+  console.log('🤖 AI_REPORT: Using fallback compact schema');
   return `
--- Compact Database Schema for AIMHi Recruitment AI Reports
--- Optimized for token efficiency while maintaining completeness
+-- Fallback Compact Database Schema for AIMHi Recruitment AI Reports
+-- Used when auto-generation from unified-schema.ts fails
 
 users(id, organization_id, email, first_name, last_name, role, created_at)
 -- role: 'super_admin', 'org_admin', 'hiring_manager', 'recruiter', 'interviewer'
