@@ -502,7 +502,11 @@ export default function SettingsPage() {
                                     <span className="text-muted-foreground text-sm">Set by user</span>
                                   )}
                                 </TableCell>
-                                <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                                <TableCell>
+                                  {user.createdAt && !isNaN(new Date(user.createdAt).getTime()) 
+                                    ? new Date(user.createdAt).toLocaleDateString() 
+                                    : 'N/A'}
+                                </TableCell>
                                 <TableCell className="text-right">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
