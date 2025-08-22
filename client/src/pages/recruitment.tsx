@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -27,9 +27,9 @@ import { CandidateAssignmentModal } from "@/components/candidate-assignment-moda
 import { PipelineKanban } from "@/components/pipeline-kanban";
 import { ApplyToJobDropdown } from "@/components/apply-to-job-dropdown";
 import { SimpleReportBuilder } from "@/components/reporting/SimpleReportBuilder";
+import * as XLSX from 'xlsx';
 
 import type { JobMatchResult, Job, Candidate, InterviewWithDetails } from "@shared/schema";
-import * as XLSX from 'xlsx';
 import { authService } from "@/lib/auth";
 
 interface Stats {
@@ -153,7 +153,7 @@ function RecruitmentDashboard() {
   const canManagePipelineStages = userRole && ['super_admin', 'org_admin'].includes(userRole);
   const canManageAutomationRules = userRole && ['super_admin', 'org_admin'].includes(userRole);
 
-  const filteredMatches = matches.filter(match =>
+  const filteredMatches = matches.filter((match: any) =>
     searchTerm === "" ||
     match.job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     match.candidate.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -187,136 +187,239 @@ function RecruitmentDashboard() {
     // Create a new workbook
     const workbook = XLSX.utils.book_new();
 
-    // Main summary sheet
+    // 1. EXECUTIVE SUMMARY SHEET
+    const currentDate = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    const topMatches = filteredMatches.filter((m: any) => m.matchPercentage >= 80);
+    const goodMatches = filteredMatches.filter((m: any) => m.matchPercentage >= 60 && m.matchPercentage < 80);
+    const avgMatchPercentage = Math.round(filteredMatches.reduce((sum: number, m: any) => sum + m.matchPercentage, 0) / filteredMatches.length);
+    
+    const executiveSummaryData = [
+      ['AI MATCHING ANALYSIS - EXECUTIVE SUMMARY'],
+      ['Generated on:', currentDate],
+      ['Total Candidates Analyzed:', filteredMatches.length],
+      [''],
+      ['KEY METRICS'],
+      ['Metric', 'Value', 'Category'],
+      ['Top Tier Matches (80%+)', topMatches.length, 'Immediate Consideration'],
+      ['Good Matches (60-79%)', goodMatches.length, 'Secondary Review'],
+      ['Average Match Score', `${avgMatchPercentage}%`, 'Overall Quality'],
+      [''],
+      ['TOP 5 RECOMMENDED CANDIDATES'],
+      ['Rank', 'Candidate Name', 'Match %', 'Job Position', 'Key Strengths'],
+      ...filteredMatches
+        .sort((a: any, b: any) => b.matchPercentage - a.matchPercentage)
+        .slice(0, 5)
+        .map((match: any, index: number) => {
+          const skillAnalysis = extractSkillAnalysis(match);
+          const keyStrengths = skillAnalysis ? 
+            Object.values(skillAnalysis)
+              .map((analysis: any) => analysis.skillsHas || [])
+              .flat()
+              .slice(0, 3)
+              .join(', ') || 'Skills analysis pending'
+            : 'Skills analysis pending';
+          
+          return [
+            index + 1,
+            match.candidate.name,
+            `${Math.round(match.matchPercentage)}%`,
+            match.job.title,
+            keyStrengths
+          ];
+        }),
+      [''],
+      ['RECOMMENDATIONS'],
+      ['Priority 1:', 'Interview top 3 candidates immediately'],
+      ['Priority 2:', 'Schedule phone screenings for 60%+ matches'],
+      ['Priority 3:', 'Review detailed analysis for hiring decision support']
+    ];
+
+    const executiveSheet = XLSX.utils.aoa_to_sheet(executiveSummaryData);
+    executiveSheet['!cols'] = [
+      { wch: 25 }, // Labels
+      { wch: 15 }, // Values
+      { wch: 25 }, // Categories/Details
+      { wch: 30 }, // Job Position
+      { wch: 40 }  // Key Strengths
+    ];
+    
+    XLSX.utils.book_append_sheet(workbook, executiveSheet, 'Executive Summary');
+
+    // 2. DETAILED SUMMARY SHEET (Enhanced)
     const summaryData = [
-      ['Job ID', 'Job Title', 'Candidate ID', 'Candidate Name', 'Email', 'Phone', 'Experience (Years)', 'Match Percentage', 'Match Label', 'Status'],
-      ...filteredMatches.map(match => [
-        match.job.id,
-        match.job.title,
-        match.candidate.id,
-        match.candidate.name,
-        match.candidate.email,
-        match.candidate.phone,
-        match.candidate.experience,
-        Math.round(match.matchPercentage),
-        calculateMatchLabel(match.matchPercentage, filteredMatches).label,
-        match.status || 'Pending'
-      ])
+      ['DETAILED AI MATCHING RESULTS'],
+      [''],
+      ['Candidate', 'Job Position', 'Match %', 'Experience', 'Email', 'Phone', 'Match Grade', 'Recommendation'],
+      ...filteredMatches
+        .sort((a: any, b: any) => b.matchPercentage - a.matchPercentage)
+        .map((match: any) => {
+          const matchLabel = calculateMatchLabel(match.matchPercentage, filteredMatches);
+          const recommendation = match.matchPercentage >= 80 ? 'Immediate Interview' :
+                               match.matchPercentage >= 60 ? 'Phone Screening' :
+                               match.matchPercentage >= 40 ? 'Secondary Review' : 'Not Recommended';
+          
+          return [
+            match.candidate.name,
+            match.job.title,
+            `${Math.round(match.matchPercentage)}%`,
+            `${match.candidate.experience} years`,
+            match.candidate.email,
+            match.candidate.phone,
+            matchLabel.label,
+            recommendation
+          ];
+        })
     ];
 
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-    
-    // Auto-size columns for better readability
-    const summaryColWidths = [
-      { wch: 8 },   // Job ID
-      { wch: 40 },  // Job Title
-      { wch: 12 },  // Candidate ID
-      { wch: 20 },  // Candidate Name
-      { wch: 25 },  // Email
-      { wch: 15 },  // Phone
-      { wch: 12 },  // Experience
-      { wch: 12 },  // Match %
-      { wch: 15 },  // Match Label
-      { wch: 10 }   // Status
+    summarySheet['!cols'] = [
+      { wch: 20 }, // Candidate Name
+      { wch: 30 }, // Job Position
+      { wch: 10 }, // Match %
+      { wch: 12 }, // Experience
+      { wch: 25 }, // Email
+      { wch: 15 }, // Phone
+      { wch: 15 }, // Match Grade
+      { wch: 18 }  // Recommendation
     ];
-    summarySheet['!cols'] = summaryColWidths;
     
-    XLSX.utils.book_append_sheet(workbook, summarySheet, 'AI Matching Summary');
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Detailed Summary');
 
-    // Create detailed analysis sheets for each candidate
-    filteredMatches.forEach((match) => {
-      const skillAnalysis = extractSkillAnalysis(match);
-      
-      if (skillAnalysis) {
-        // Parse criteria scores
-        let criteriaData = [];
+    // 3. INDIVIDUAL CANDIDATE ANALYSIS SHEETS
+    filteredMatches
+      .sort((a: any, b: any) => b.matchPercentage - a.matchPercentage)
+      .forEach((match: any, index: number) => {
+        const skillAnalysis = extractSkillAnalysis(match);
+        
+        // Build comprehensive candidate analysis
+        const analysisData = [
+          ['CANDIDATE ANALYSIS REPORT'],
+          [''],
+          ['CANDIDATE INFORMATION'],
+          ['Name:', match.candidate.name],
+          ['Position Applied:', match.job.title],
+          ['Email:', match.candidate.email],
+          ['Phone:', match.candidate.phone],
+          ['Experience:', `${match.candidate.experience} years`],
+          [''],
+          ['MATCH ANALYSIS'],
+          ['Overall Match Score:', `${Math.round(match.matchPercentage)}%`],
+          ['Match Grade:', calculateMatchLabel(match.matchPercentage, filteredMatches).label],
+          ['Ranking:', `#${index + 1} of ${filteredMatches.length} candidates`],
+          [''],
+          ['SCORING BREAKDOWN']
+        ];
+
+        // Add criteria breakdown
         try {
           const criteria = typeof match.matchCriteria === 'string' 
             ? JSON.parse(match.matchCriteria) 
             : match.matchCriteria;
           
-          if (criteria.criteriaScores && criteria.weightedScores) {
-            criteriaData = [
-              ['Criteria', 'Score (%)', 'Weight (%)', 'Weighted Points'],
-              ['Skills Match', criteria.criteriaScores.skillsMatch, 30, criteria.weightedScores.skillsMatch],
-              ['Experience Level', criteria.criteriaScores.experienceLevel, 20, criteria.weightedScores.experienceLevel],
-              ['Keyword Relevance', criteria.criteriaScores.keywordRelevance, 35, criteria.weightedScores.keywordRelevance],
-              ['Professional Depth', criteria.criteriaScores.professionalDepth, 10, criteria.weightedScores.professionalDepth],
-              ['Domain Experience', criteria.criteriaScores.domainExperience, 5, criteria.weightedScores.domainExperience],
-              ['', '', '', ''],
-              ['Overall Match Score', Math.round(match.matchPercentage), '100%', Math.round(match.matchPercentage)]
+          if (criteria?.criteriaScores && criteria?.weightedScores) {
+            analysisData.push(['Criteria', 'Raw Score', 'Weight', 'Weighted Points', 'Performance']);
+            
+            const criteriaDetails = [
+              ['Skills Match', criteria.criteriaScores.skillsMatch, '30%', criteria.weightedScores.skillsMatch],
+              ['Experience Level', criteria.criteriaScores.experienceLevel, '20%', criteria.weightedScores.experienceLevel],
+              ['Keyword Relevance', criteria.criteriaScores.keywordRelevance, '35%', criteria.weightedScores.keywordRelevance],
+              ['Professional Depth', criteria.criteriaScores.professionalDepth, '10%', criteria.weightedScores.professionalDepth],
+              ['Domain Experience', criteria.criteriaScores.domainExperience, '5%', criteria.weightedScores.domainExperience]
             ];
+            
+            criteriaDetails.forEach(([name, rawScore, weight, weightedScore]) => {
+              const performance = rawScore >= 80 ? 'Excellent' :
+                                rawScore >= 60 ? 'Good' :
+                                rawScore >= 40 ? 'Fair' : 'Needs Improvement';
+              analysisData.push([name, `${Math.round(rawScore)}%`, weight, Math.round(weightedScore), performance]);
+            });
+            
+            analysisData.push(['', '', '', '', '']);
+            analysisData.push(['TOTAL WEIGHTED SCORE', '', '', Math.round(match.matchPercentage), '']);
           }
         } catch (error) {
           console.error('Error parsing criteria for export:', error);
+          analysisData.push(['Scoring details unavailable due to parsing error']);
         }
 
-        // Create detailed analysis data
-        const analysisData = [
-          ['Candidate Analysis Report'],
-          ['Candidate:', match.candidate.name],
-          ['Job Position:', match.job.title],
-          ['Overall Match:', `${Math.round(match.matchPercentage)}%`],
-          [''],
-          ['CRITERIA BREAKDOWN'],
-          ...criteriaData,
-          [''],
-          ['DETAILED SKILL ANALYSIS'],
-          ['']
-        ];
+        // Add detailed skill analysis
+        analysisData.push(['']);
+        analysisData.push(['DETAILED SKILL ASSESSMENT']);
+        
+        if (skillAnalysis) {
+          Object.entries(skillAnalysis).forEach(([criteriaName, analysis]: [string, any]) => {
+            const formattedName = criteriaName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            
+            analysisData.push(['']);
+            analysisData.push([`${formattedName.toUpperCase()}`]);
+            analysisData.push(['Assessment:', analysis.criteriaExplanation || 'No detailed explanation available']);
+            
+            if (analysis.skillsHas && analysis.skillsHas.length > 0) {
+              analysisData.push(['Strengths Found:', analysis.skillsHas.join(', ')]);
+            }
+            
+            if (analysis.skillsMissing && analysis.skillsMissing.length > 0) {
+              analysisData.push(['Areas for Development:', analysis.skillsMissing.join(', ')]);
+            }
+          });
+        } else {
+          analysisData.push(['Detailed skill analysis not available']);
+        }
 
-        // Add skill analysis for each criteria
-        Object.entries(skillAnalysis).forEach(([criteriaName, analysis]: [string, any]) => {
-          const formattedName = criteriaName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        // Add hiring recommendation
+        analysisData.push(['']);
+        analysisData.push(['HIRING RECOMMENDATION']);
+        
+        const recommendation = match.matchPercentage >= 80 ? 
+          'STRONGLY RECOMMENDED: Schedule immediate interview. Candidate shows excellent alignment with job requirements.' :
+          match.matchPercentage >= 60 ? 
+          'RECOMMENDED: Schedule phone screening. Good potential match with some development areas.' :
+          match.matchPercentage >= 40 ?
+          'CONSIDER: Secondary review recommended. May be suitable with additional training.' :
+          'NOT RECOMMENDED: Significant gaps in required qualifications.';
+        
+        analysisData.push(['Recommendation:', recommendation]);
+        
+        // Add next steps
+        const nextSteps = match.matchPercentage >= 80 ? 
+          'Schedule in-person/video interview, prepare technical assessment, check references' :
+          match.matchPercentage >= 60 ? 
+          'Conduct phone screening, verify key skills, assess cultural fit' :
+          'Review portfolio/additional materials, consider for future opportunities';
           
-          analysisData.push([`${formattedName.toUpperCase()}`]);
-          analysisData.push(['Skills Present:']);
-          if (analysis.skillsHas && analysis.skillsHas.length > 0) {
-            analysis.skillsHas.forEach((skill: string) => {
-              analysisData.push([`✓ ${skill}`]);
-            });
-          } else {
-            analysisData.push(['None specified']);
-          }
-          
-          analysisData.push(['Skills Missing:']);
-          if (analysis.skillsMissing && analysis.skillsMissing.length > 0) {
-            analysis.skillsMissing.forEach((skill: string) => {
-              analysisData.push([`✗ ${skill}`]);
-            });
-          } else {
-            analysisData.push(['None identified']);
-          }
-          
-          analysisData.push(['Analysis:']);
-          analysisData.push([analysis.criteriaExplanation || 'No detailed explanation available']);
-          analysisData.push(['']);
-        });
+        analysisData.push(['Suggested Next Steps:', nextSteps]);
 
         // Create worksheet for this candidate
         const candidateSheet = XLSX.utils.aoa_to_sheet(analysisData);
         
-        // Set column widths for better readability
+        // Set column widths for professional appearance
         candidateSheet['!cols'] = [
-          { wch: 50 }, // Main content column
-          { wch: 15 }, // Secondary column
-          { wch: 15 }, // Weight column
-          { wch: 15 }  // Points column
+          { wch: 25 }, // Labels
+          { wch: 15 }, // Values
+          { wch: 12 }, // Weight
+          { wch: 15 }, // Points
+          { wch: 15 }  // Performance
         ];
         
-        // Safe sheet name (Excel has limitations on sheet names)
-        let sheetName = `${match.candidate.name} Analysis`;
+        // Safe sheet name for Excel
+        let sheetName = `${index + 1}. ${match.candidate.name}`;
         if (sheetName.length > 31) {
-          sheetName = `${match.candidate.name.substring(0, 20)} Analysis`;
+          sheetName = `${index + 1}. ${match.candidate.name.substring(0, 25)}`;
         }
-        // Remove invalid characters for Excel sheet names
         sheetName = sheetName.replace(/[:\\/?*\[\]]/g, '');
         
         XLSX.utils.book_append_sheet(workbook, candidateSheet, sheetName);
-      }
-    });
+      });
 
-    // Generate Excel file
+    // Generate Excel file with professional naming
+    const timestamp = new Date().toISOString().split('T')[0];
+    const jobTitles = Array.from(new Set(filteredMatches.map((m: any) => m.job.title))).join('_').substring(0, 30);
+    
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     
@@ -324,15 +427,15 @@ function RecruitmentDashboard() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `AI_Matching_Results_${new Date().toISOString().split('T')[0]}.xlsx`;
+    a.download = `AI_Matching_Executive_Report_${jobTitles}_${timestamp}.xlsx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 
     toast({
-      title: "Export Complete",
-      description: `Generated Excel file with ${filteredMatches.length} matches and detailed analysis sheets.`,
+      title: "Export Successful",
+      description: `Executive report exported with ${filteredMatches.length} candidate analyses`,
     });
   };
 
@@ -389,7 +492,7 @@ function RecruitmentDashboard() {
     
     // For multiple jobs, show them the first job's deletion impact as an example
     if (selectedJobs.length === 1) {
-      const selectedJob = jobs.find(job => job.id === selectedJobs[0]);
+      const selectedJob = jobs.find((job: any) => job.id === selectedJobs[0]);
       if (selectedJob) {
         await handleDeleteJobClick(selectedJob.id, selectedJob.title);
         return;
@@ -399,7 +502,7 @@ function RecruitmentDashboard() {
     // For multiple jobs, use old behavior but with better error handling
     setIsDeleting(true);
     try {
-      const deletePromises = selectedJobs.map(async (jobId) => {
+      const deletePromises = selectedJobs.map(async (jobId: any) => {
         const response = await fetch(`/api/jobs/${jobId}`, { 
           method: "DELETE",
           headers: {
@@ -495,7 +598,7 @@ function RecruitmentDashboard() {
     
     setIsDeleting(true);
     try {
-      const deletePromises = selectedCandidates.map(async (candidateId) => {
+      const deletePromises = selectedCandidates.map(async (candidateId: any) => {
         const response = await fetch(`/api/candidates/${candidateId}`, { 
           method: "DELETE",
           headers: {
@@ -537,17 +640,17 @@ function RecruitmentDashboard() {
   };
 
   const toggleJobSelection = (jobId: number) => {
-    setSelectedJobs(prev =>
+    setSelectedJobs((prev: any) =>
       prev.includes(jobId)
-        ? prev.filter(id => id !== jobId)
+        ? prev.filter((id: any) => id !== jobId)
         : [...prev, jobId]
     );
   };
 
   const toggleCandidateSelection = (candidateId: number) => {
-    setSelectedCandidates(prev =>
+    setSelectedCandidates((prev: any) =>
       prev.includes(candidateId)
-        ? prev.filter(id => id !== candidateId)
+        ? prev.filter((id: any) => id !== candidateId)
         : [...prev, candidateId]
     );
   };
@@ -556,7 +659,7 @@ function RecruitmentDashboard() {
     if (selectedJobs.length === jobs.length) {
       setSelectedJobs([]);
     } else {
-      setSelectedJobs(jobs.map(job => job.id));
+      setSelectedJobs(jobs.map((job: any) => job.id));
     }
   };
 
@@ -564,7 +667,7 @@ function RecruitmentDashboard() {
     if (selectedCandidates.length === candidates.length) {
       setSelectedCandidates([]);
     } else {
-      setSelectedCandidates(candidates.map(candidate => candidate.id));
+      setSelectedCandidates(candidates.map((candidate: any) => candidate.id));
     }
   };
 
