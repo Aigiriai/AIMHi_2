@@ -380,7 +380,10 @@ export class DatabaseBackupService {
           let extractedTime = 0;
           const timestampMatch = file.name.match(/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/);
           if (timestampMatch) {
-            const isoString = timestampMatch[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1:$2:$3.$4Z');
+            // Fix: Only replace dashes in time portion, preserve date format
+            // Input: 2025-08-21T12-44-15-530Z
+            // Output: 2025-08-21T12:44:15.530Z
+            const isoString = timestampMatch[1].replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/, 'T$1:$2:$3.$4Z');
             extractedTime = new Date(isoString).getTime();
           }
           
@@ -560,7 +563,10 @@ export class DatabaseBackupService {
           let extractedTime = 0;
           const timestampMatch = file.name.match(/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z)/);
           if (timestampMatch) {
-            const isoString = timestampMatch[1].replace(/-/g, ':').replace(/(\d{2}):(\d{2}):(\d{2}):(\d{3})Z/, '$1:$2:$3.$4Z');
+            // Fix: Only replace dashes in time portion, preserve date format
+            // Input: 2025-08-21T12-44-15-530Z
+            // Output: 2025-08-21T12:44:15.530Z
+            const isoString = timestampMatch[1].replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z/, 'T$1:$2:$3.$4Z');
             extractedTime = new Date(isoString).getTime();
             console.log(`   📅 Extracted timestamp: ${new Date(extractedTime).toISOString()}`);
           } else {
